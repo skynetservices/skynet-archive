@@ -97,14 +97,10 @@ func main() {
 
 	skylib.Setup(sName)
 
-	route, err = skylib.GetRoute(sName)
-	if err != nil {
-		CreateInitialRoute()
-	}
+	CreateInitialRoute()
 
 	r := &RouteService{Name: *skylib.Name}
 
-	skylib.RegisterHeartbeat()
 	rpc.Register(r)
 	rpc.HandleHTTP()
 
