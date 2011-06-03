@@ -77,6 +77,7 @@ func (rs *RouteService) Route<%ServiceName%>Request(cr *<%PackageName%>.<%Servic
 
 	skylib.Requests.Add(1)
 	return nil
+
 }
 
 
@@ -98,6 +99,11 @@ func main() {
 	skylib.Setup(sName)
 
 	CreateInitialRoute()
+
+	route, err = skylib.GetRoute(sName)
+	if err!=nil {
+		log.Panic("Unable to retrieve route.")
+	}
 
 	r := &RouteService{Name: *skylib.Name}
 
@@ -130,10 +136,10 @@ func checkError(error *os.Error) {
 // Today this function creates a route in Doozer for the
 // RouteService.RouteCreditRequest method - which is CLARITY SPECIFIC
 // and adds it too Doozer
-func CreateInitialRoute() (r skylib.Route) {
+func CreateInitialRoute()  {
 
-	r = skylib.Route{}
-	r.Name = "RouteService.Route<%ServiceName%>Request"
+	r := &skylib.Route{}
+	r.Name = sName
 	r.LastUpdated = time.Seconds()
 	r.Revision = 1
 
