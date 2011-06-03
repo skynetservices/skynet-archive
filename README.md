@@ -8,6 +8,13 @@ Servers die, stop communicating, catch on fire, get killed by robots from the fu
 
 Skynet probably won’t die unless your data center gets hit by a comet.  We recommend at least 2 data centers in that scenario.
 
+SkyNet is built on the premise that there will be at least three distinct process types:
+
+1. Initiators - Initiators are the source of inbound requests.  On a web-centric system, they'd be running HTTP listeners and accept web based requests.  That isn't required, however.  We have initiators for flat files and TCP connections, too.  If you can get the bytes in using Go, it can be an initiator.
+1. Routers - 	Routers are the "controller" of the system, they call services according to the stored route configuration that matches the request type.(Technically routers are optional, but if they're not used, Initiators will call Services directly.  This is an advanced configuration.)
+1. Services -Services are where the work gets done.  These are the processes that service the requests, process the API calls, get the external data, log the requests, authenticate the users, etc.  You chain services together in a Route to build an application.
+1. (Optional) Watchers -Watchers are tasks that run and know about the system, but aren't responding to individual requests.  An example of a watcher would be a process that watches the other processes in the system and reports on statistics or availability.  The Reaper is a specialized watcher that checks each Skynet cluster member, culling dead processes from the configuration file.
+
 ##Shut up and tell me what to do!
 Install [Go](http://golang.org) and [doozer](https://github.com/ha/doozerd)
 
@@ -55,13 +62,6 @@ Now, go to http://127.0.0.1:9100/debug/vars (if you haven't killed that router p
 	"RouteService.RouteGetACHDataRequest-errors": 2
 	}
 	
-##What does it look like?
-SkyNet is built on the premise that there will be at least three distinct process types:
-
-1. Initiators - Initiators are the source of inbound requests.  On a web-centric system, they'd be running HTTP listeners and accept web based requests.  That isn't required, however.  We have initiators for flat files and TCP connections, too.  If you can get the bytes in using Go, it can be an initiator.
-1. Routers - 	Routers are the "controller" of the system, they call services according to the stored route configuration that matches the request type.(Technically routers are optional, but if they're not used, Initiators will call Services directly.  This is an advanced configuration.)
-1. Services -Services are where the work gets done.  These are the processes that service the requests, process the API calls, get the external data, log the requests, authenticate the users, etc.
-1. (Optional) Watchers -Watchers are tasks that run and know about the system, but aren't responding to individual requests.  An example of a watcher would be a process that watches the other processes in the system and reports on statistics or availability.  The Reaper is a specialized watcher that checks each Skynet cluster member, culling dead processes from the configuration file.
 
 ##How?
 Each process in SkyNet receives its configuration from a centralized configuration repository (currently Doozer - possibly pluggable in the future).  Configuration changes are pushed to each process when new skynet services are started.  This means that starting a new service automatically
