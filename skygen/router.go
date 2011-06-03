@@ -9,7 +9,7 @@ import (
 	"log"
 	"http"
 	"flag"
-	"skylib"
+	"github.com/bketelsen/skynet/skylib"
 	"time"
 	"container/vector"
 	"json"

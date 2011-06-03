@@ -3,7 +3,7 @@ package main
 const initiatorTemplate = `package main
 
 
-import "skylib"
+import "github.com/bketelsen/skynet/skylib"
 import "<%PackageName%>"
 import "log"
 import "os"
