@@ -56,11 +56,11 @@ func generateLibrary() {
 
 func generateInitiator() {
 	//mkdir for the initiator
-	err := os.MkdirAll(*TargetFullPath+"/initiators/", 0755)
+	err := os.MkdirAll(*TargetFullPath+"/initiators/web/", 0755)
 	if err != nil {
 		fmt.Println("Unable to create directory, ", err.String())
 	}
-	f, err := os.Create(*TargetFullPath + "/initiators/" + "web.go")
+	f, err := os.Create(*TargetFullPath + "/initiators/web/" + "web.go")
 	if err != nil {
 		fmt.Println(err.String())
 	}
@@ -84,11 +84,11 @@ func generateInitiator() {
 
 func generateRouter() {
 	//mkdir for the initiator
-	err := os.MkdirAll(*TargetFullPath+"/routers/", 0755)
+	err := os.MkdirAll(*TargetFullPath+"/router/", 0755)
 	if err != nil {
 		fmt.Println("Unable to create directory, ", err.String())
 	}
-	f, err := os.Create(*TargetFullPath + "/routers/" + "router.go")
+	f, err := os.Create(*TargetFullPath + "/router/" + "router.go")
 	if err != nil {
 		fmt.Println(err.String())
 	}
@@ -112,11 +112,11 @@ func generateRouter() {
 
 func generateService() {
 	//mkdir for the initiator
-	err := os.MkdirAll(*TargetFullPath+"/services/", 0755)
+	err := os.MkdirAll(*TargetFullPath+"/service/", 0755)
 	if err != nil {
 		fmt.Println("Unable to create directory, ", err.String())
 	}
-	f, err := os.Create(*TargetFullPath + "/services/" + "service.go")
+	f, err := os.Create(*TargetFullPath + "/service/" + "service.go")
 	if err != nil {
 		fmt.Println(err.String())
 	}

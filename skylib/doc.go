@@ -18,6 +18,7 @@ Initiators -
 
 Routers - 
 	Routers are the "controller" of the system, they call services according to the stored route configuration that matches the request type.
+	Technically routers are optional, but if they're not used, Initiators will call Services directly.
 
 Services -
 	Services are where the work gets done.  These are the processes that service the requests, process the API calls, get the external data, log the requests, authenticate the users, etc.
