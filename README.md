@@ -13,13 +13,14 @@ Skynet was designed with the assumption that services, processes and servers die
 	$ skygen -packageName=myCompany -serviceName=GetWidgets -targetFullPath="/Users/bketelsen/skynetTest/"
 
 The skygen command generates a source tree with a running sample application.  After running skygen, cd into your target directory and build each service.  We use the awesome [go-gb](https://github.com/skelterjohn/go-gb).  Using gb, you simply issue the command "gb" from the root directory.  Each service will be compiled, and the executable will be named the same as its containing folder.  If you're following along, you'll have:
+
 	skynetTest/
-		/bin
-			router
-			service
-			watcher
-			reaper
-			initiator
+	skynetTest/bin/
+	skynetTest/bin/router
+	skynetTest/bin/service
+	skynetTest/bin/watcher
+	skynetTest/bin/reaper
+	skynetTest/bin/initiator
 			
 Before you can run skynet you'll need to have at least one [doozer](https://github.com/ha/doozerd) process running.  
 Now start each service, on a different port:
