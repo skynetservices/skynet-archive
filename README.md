@@ -11,9 +11,9 @@ Skynet probably won’t die unless your data center gets hit by a comet.  We rec
 ##Shut up and tell me what to do!
 Install [Go](http://golang.org) and [doozer](https://github.com/ha/doozerd)
 
-	$ goinstall github.com/bketelsen/skynet/skygen
-	$ goinstall github.com/bketelsen/skynet/skylib
-	$ skygen -packageName=myCompany -serviceName=GetWidgets -targetFullPath="/Users/bketelsen/skynetTest/"
+	 goinstall github.com/bketelsen/skynet/skygen
+	 goinstall github.com/bketelsen/skynet/skylib
+	 skygen -packageName=myCompany -serviceName=GetWidgets -targetFullPath="/Users/bketelsen/skynetTest/"
 
 The skygen command generates a source tree with a running sample application.  After running skygen, cd into your target directory and build each service.  We use the awesome [go-gb](https://github.com/skelterjohn/go-gb).  Using gb, you simply issue the command "gb" from the root directory.  Each service will be compiled, and the executable will be named the same as its containing folder.  If you're following along, you'll have:
 
@@ -28,20 +28,20 @@ The skygen command generates a source tree with a running sample application.  A
 Before you can run skynet you'll need to have at least one [doozer](https://github.com/ha/doozerd) process running.  
 Now start each service, on a different port:
 
-	$ bin/service -name=getwidgets -port=9200 &
-	$ bin/initiator -name=webinitiator -port=9300 &
-	$ bin/router -name=router -port=9100 &
- 	$ bin/reaper -name=reaper -port=9000 &
+	 bin/service -name=getwidgets -port=9200 &
+	 bin/initiator -name=webinitiator -port=9300 &
+	 bin/router -name=router -port=9100 &
+ 	 bin/reaper -name=reaper -port=9000 &
 
 If you don't specify a -logFileName parameter, they'll all default to using the same log file.  Now open a web browser and aim it at http://127.0.0.1:9300 
 Enter something in the form and hit enter.  You should get a "Hello World" response.  
 
 To really spice up your life, start up multiples of each process:
 
-	$ bin/service -name=getwidgets2 -port=9201 &
-	$ bin/initiator -name=webinitiator2 -port=9301 &
-	$ bin/router -name=router2 -port=9101 &
-	$ bin/reaper -name=reaper2 -port=9001 &
+	 bin/service -name=getwidgets2 -port=9201 &
+	 bin/initiator -name=webinitiator2 -port=9301 &
+	 bin/router -name=router2 -port=9101 &
+	 bin/reaper -name=reaper2 -port=9001 &
 	
 Connect to http://127.0.0.1:9300 or :9301 and see the same thing.  Kill the first router you started and submit a request... the second will handle the call.  Kill all of the services, skynet will return a pretty error message letting you know that there weren't any services available to handle the request.  
 
