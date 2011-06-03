@@ -156,7 +156,7 @@ func CreateInitialRoute() (r skylib.Route) {
 	if err != nil {
 		log.Panic(err.String())
 	}
-	_, err = skylib.DC.Set("/routes/RouteService.RouteGetACHDataRequest", rev, b)
+	_, err = skylib.DC.Set("/routes/RouteService.Route<%ServiceName%>Request", rev, b)
 	if err != nil {
 		log.Panic(err.String())
 	}
