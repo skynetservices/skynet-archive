@@ -3,7 +3,7 @@
 ##What is Skynet?
 SkyNet is a framework for a distributed system of processes.  Skynet was designed for serving API requests across a cluster of servers, either on the "cloud" or in your datacenter(s).
 
-##Why
+##Why?
 Skynet was designed with the assumption that services, processes and servers die, go away, become unreachable, crash, and generally don't work.  Search for the Chaos Monkey.  We wanted a system where each process was responsible for one thing, and any number of those processes could be started across any number of machines for recoverability, reliability and scalability.
 
 ##Shut up and tell me what to do!
@@ -63,7 +63,6 @@ SkyNet is built on the premise that there will be at least three distinct proces
 1. Routers - 	Routers are the "controller" of the system, they call services according to the stored route configuration that matches the request type.(Technically routers are optional, but if they're not used, Initiators will call Services directly.  This is an advanced configuration.)
 1. Services -Services are where the work gets done.  These are the processes that service the requests, process the API calls, get the external data, log the requests, authenticate the users, etc.
 1. (Optional) Watchers -Watchers are tasks that run and know about the system, but aren't responding to individual requests.  An example of a watcher would be a process that watches the other processes in the system and reports on statistics or availability.  The Reaper is a specialized watcher that checks each Skynet cluster member, culling dead processes from the configuration file.
-
 
 
 ##Dependencies
