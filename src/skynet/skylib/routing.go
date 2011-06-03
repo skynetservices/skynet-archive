@@ -1,8 +1,6 @@
 package skylib
 
 import (
-	"time"
-	"container/vector"
 	"json"
 	"log"
 	"os"
