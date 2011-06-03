@@ -1,14 +1,15 @@
 #Skynet
 
-##What is Skynet?
-SkyNet is a framework for a distributed system of processes.  Skynet was designed for serving API requests across a cluster of servers, either on the "cloud" or in your datacenter(s).
+##Introduction
+Skynet is a virtually–unkillable system for building massively distributed apps in Go.
 
-##Why?
-Skynet was designed with the assumption that services, processes and servers die, go away, become unreachable, crash, and generally don't work.  Search for the Chaos Monkey.  We wanted a system where each process was responsible for one thing, and any number of those processes could be started across any number of machines for recoverability, reliability and scalability.
+##Tell me more:
+Servers die, stop communicating, catch on fire, get killed by robots from the future, and should not be trusted. If your site won’t work with a Chaos Monkey, it isn’t safe. Enter Skynet. Each Skynet module is self–contained, self–aware, and self–replicating – if you have one server with an authentication module on it, and that server melts, Skynet will notice, kill it, and automatically create a new one.
+
+Skynet probably won’t die unless your data center gets hit by a comet.  We recommend at least 2 data centers in that scenario.
 
 ##Shut up and tell me what to do!
-
-	Install [Go](http://golang.org) and [doozer](https://github.com/ha/doozerd)
+Install [Go](http://golang.org) and [doozer](https://github.com/ha/doozerd)
 
 	$ goinstall github.com/bketelsen/skynet/skygen
 	$ goinstall github.com/bketelsen/skynet/skylib
@@ -54,13 +55,6 @@ Now, go to http://127.0.0.1:9100/debug/vars (if you haven't killed that router p
 	"RouteService.RouteGetACHDataRequest-errors": 2
 	}
 	
-##Customizing
-In skynetTest/myCompany there's a file with the input and output structs for your API service.  Add your input fields and output fields to these.  Don't forget to change the initiator code to accept these fields, too.  Now modify the skynetTest/service/service.go file to do something real - retrieve data from your systems - and you've built an API service in Go.
-
-##How?
-Each process in SkyNet receives its configuration from a centralized configuration repository (currently Doozer - possibly pluggable in the future).  Configuration changes are pushed to each process when new skynet services are started.  This means that starting a new service automatically
-advertises that service's availability to the rest of the members of the skynet cluster.
-
 ##What does it look like?
 SkyNet is built on the premise that there will be at least three distinct process types:
 
@@ -69,14 +63,19 @@ SkyNet is built on the premise that there will be at least three distinct proces
 1. Services -Services are where the work gets done.  These are the processes that service the requests, process the API calls, get the external data, log the requests, authenticate the users, etc.
 1. (Optional) Watchers -Watchers are tasks that run and know about the system, but aren't responding to individual requests.  An example of a watcher would be a process that watches the other processes in the system and reports on statistics or availability.  The Reaper is a specialized watcher that checks each Skynet cluster member, culling dead processes from the configuration file.
 
+##How?
+Each process in SkyNet receives its configuration from a centralized configuration repository (currently Doozer - possibly pluggable in the future).  Configuration changes are pushed to each process when new skynet services are started.  This means that starting a new service automatically
+advertises that service's availability to the rest of the members of the skynet cluster.
 
-##Dependencies
-SkyNet uses Doozer to store configuration data about the available services and routes.  Configuration changes are pushed to Doozer, causing connected clients to immediately become aware of changed configurations.  
-
-##Transaction Flow
 A typical transaction will come to an Initiator (via http for example) and be sent to a router that is providing the appropriate service to route that type of requests.  The Router checks its routes and calls the services listed in its route configuration for that Route type.  Routes also define whether a service can be called Asynchronously (fire and forget) or whether the router must wait for a response.  For each service listed in the route the Router calls the service passing in the request and response objects.  When all services are run, the router returns a response to the Initiator who is responsible for presenting the data to the remote client appropriately.  In our HTTP example, this could mean translating to data using an HTML template, or an XML/JSON template.
 
+SkyNet uses Doozer to store configuration data about the available services and routes.  Configuration changes are pushed to Doozer, causing connected clients to immediately become aware of changed configurations.  
+
+##Customizing
+In skynetTest/myCompany there's a file with the input and output structs for your API service.  Add your input fields and output fields to these.  Don't forget to change the initiator code to accept these fields, too.  Now modify the skynetTest/service/service.go file to do something real - retrieve data from your systems - and you've built an API service in Go.
+
 ##TODO:
+* Build a watcher that spawns new processes as an example app
 * Write a watcher that consolidates all of the json/expvars and puts them in a pretty graph/chart/widget that makes managers and sysadmins happy
 * The code is just plain ugly.  It needs clean up in every corner.  It is an extraction of a work in progress.
 * Routes should be viewable and editable using a pretty web interface
