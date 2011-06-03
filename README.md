@@ -73,11 +73,11 @@ SkyNet uses Doozer to store configuration data about the available services and 
 A typical transaction will come to an Initiator (via http for example) and be sent to a router that is providing the appropriate service to route that type of requests.  The Router checks its routes and calls the services listed in its route configuration for that Route type.  Routes also define whether a service can be called Asynchronously (fire and forget) or whether the router must wait for a response.  For each service listed in the route the Router calls the service passing in the request and response objects.  When all services are run, the router returns a response to the Initiator who is responsible for presenting the data to the remote client appropriately.  In our HTTP example, this could mean translating to data using an HTML template, or an XML/JSON template.
 
 ##TODO:
-*Write a watcher that consolidates all of the json/expvars and puts them in a pretty graph/chart/widget that makes managers and sysadmins happy
-*The code is just plain ugly.  It needs clean up in every corner.  It is an extraction of a work in progress.
-*Routes should be viewable and editable using a pretty web interface
-*Pluggable configuration - Redis?
-*Support JSON-RPC as a transport instead of Go's native RPC.  This would allow skynet cluster members written in other languages.
-*Cache or pool RPC connections between cluster members.
-*Examples
-*Video demo
+* Write a watcher that consolidates all of the json/expvars and puts them in a pretty graph/chart/widget that makes managers and sysadmins happy
+* The code is just plain ugly.  It needs clean up in every corner.  It is an extraction of a work in progress.
+* Routes should be viewable and editable using a pretty web interface
+* Pluggable configuration - Redis?
+* Support JSON-RPC as a transport instead of Go's native RPC.  This would allow skynet cluster members written in other languages.
+* Cache or pool RPC connections between cluster members.
+* Examples
+* Video demo
