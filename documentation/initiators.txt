@@ -1,0 +1,13 @@
+Initiators are the source of inbound requests.  On a web-centric system, they'd be running HTTP listeners and accept web based requests.  That isn't required, however.  We have initiators for flat files and TCP connections, too.  If you can get the bytes in using Go, it can be an initiator.
+
+Think of the initiators as Skynet's presentation layer, feeding data into the system and presenting it to the consumer of the data.
+
+Initiator ideas:
+
+Web - simple form post marshals variables to Skynet, response sent as html
+File system watcher - waits for arrival of CSV file, strips records out and submits them to skynet one at a time.  Results emailed somewhere, or logged to DB.
+Telnet - TCP listener takes commands from telnet session, returns textual responses
+REST - accept REST requests and translate them to skynet requests
+SOAP Proxy - create a soap proxy for skynet requests
+Comet
+

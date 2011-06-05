@@ -76,6 +76,7 @@ In skynetTest/myCompany there's a file with the input and output structs for you
 
 ##TODO:
 * Build a watcher that spawns new processes as an example app
+* Support Doozer's multiple server addressing scheme for HA
 * Write a watcher that consolidates all of the json/expvars and puts them in a pretty graph/chart/widget that makes managers and sysadmins happy
 * The code is just plain ugly.  It needs clean up in every corner.  It is an extraction of a work in progress.
 * Routes should be viewable and editable using a pretty web interface
@@ -84,3 +85,4 @@ In skynetTest/myCompany there's a file with the input and output structs for you
 * Cache or pool RPC connections between cluster members.
 * Examples
 * Video demo
+* Have each process pick a port to start on.  Only initiators need to know what ports they start on. Others can try a starting port, then increment on failure until they find an open port.

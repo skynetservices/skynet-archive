@@ -1,0 +1,12 @@
+Watchers are tasks that run and know about the system, but aren't responding to individual requests.  Watchers can't be in a route because they have no service method. 
+
+
+Example Watchers:
+
+Collect usage data from Services and aggregate for presentation
+Spawner - create a spawner on each physical server that watches for processes to die.  Use modifiable configuration to determine whether to spawn new process.
+Error notifier - when errors occur, notify someone
+Nagios collector - collect data from skynet and provide in nagios friendly format
+
+
+The Reaper is a specialized watcher that checks each Skynet cluster member, culling dead processes from the configuration on Doozer.

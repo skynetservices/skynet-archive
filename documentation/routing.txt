@@ -1,0 +1,21 @@
+Routing presents a named public method (not to be confused with a Skynet service, which is a unit of work) and lists the Skynet services that will be performed for that method.
+
+Example:
+
+	For a public method GetUser, the Initiator will look for a route called RouteService.RouteGetUserRequest.  That Route could contain a list of services like this:
+	
+		RpcCall{
+			Service: "LogService.Log",  // Name of the skynet service to call
+			Async: true,				// Can we call this and move on without waiting for the response
+			OkToRetry: true, 			// If it fails, can we try again?
+			ErrOnFail: false }			// If it fails, do we return an error to the caller
+		RpcCall{
+			Service: "GetUserService.GetUser",  // Name of the skynet service to call
+			Async: false,						// Can we call this and move on without waiting for the response
+			OkToRetry: false, 					// If it fails, can we try again?
+			ErrOnFail: true }					// If it fails, do we return an error to the caller
+		
+Services are executed in order.  An error at any stage of the route sets adds an entry in the Error array of the response object.
+	
+
+If you will NEVER need to call more than one service, you can wire the Initiator directly to the Service.  This isn't recommended, simply because the hot-pluggable routes allow you the freedom to insert any other process as needed in the future.  Today you may not need logging, but when your service becomes the next new internet hotness, you will want both logging and API Access throttling.  Routes allow you the flexibility to do that without recompiling your service.
