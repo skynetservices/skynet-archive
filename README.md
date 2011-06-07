@@ -62,6 +62,12 @@ Now, go to http://127.0.0.1:9100/debug/vars (if you haven't killed that router p
 	"RouteService.RouteGetACHDataRequest-errors": 2
 	}
 	
+##Do you have pretty diagrams?
+
+Yes.
+
+![logo](/bketelsen/skynet/raw/master/documentation/skynet.jpg)
+
 
 ##How?
 Each process in SkyNet receives its configuration from a centralized configuration repository (currently Doozer - possibly pluggable in the future).  Configuration changes are pushed to each process when new skynet services are started.  This means that starting a new service automatically
@@ -74,7 +80,12 @@ SkyNet uses Doozer to store configuration data about the available services and 
 ##Customizing
 In skynetTest/myCompany there's a file with the input and output structs for your API service.  Add your input fields and output fields to these.  Don't forget to change the initiator code to accept these fields, too.  Now modify the skynetTest/service/service.go file to do something real - retrieve data from your systems - and you've built an API service in Go.
 
+##Documentation
+There are more (still kind of sparse) documents in the documentation folder.
+
 ##TODO:
+* Create a function with a timer - insert execution time into response
+* Create a timeout mechanism by service.
 * Build a watcher that spawns new processes as an example app
 * Support Doozer's multiple server addressing scheme for HA
 * Write a watcher that consolidates all of the json/expvars and puts them in a pretty graph/chart/widget that makes managers and sysadmins happy
