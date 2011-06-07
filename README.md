@@ -68,6 +68,7 @@ Yes.
 
 ![logo](/bketelsen/skynet/raw/master/documentation/skynet.jpg)
 
+This rudimentary graph represents a service that is available externally via Web on two different ports, FTP, and TCP.  Each Initiator sends requests to the Router.  The Router looks up the route for this service and calls Logger asynchronously, then Authorization, then GetWidgets.  Adding a new step to the route is as simple as creating the code for the new step (maybe you want to send a notification email, or put some data on a queue, or cache the response) then updating the route.  The Initiators, Routers and other Services don't need to know or care about the new step added to your route.  It all just Works(tm)
 
 ##How?
 Each process in SkyNet receives its configuration from a centralized configuration repository (currently Doozer - possibly pluggable in the future).  Configuration changes are pushed to each process when new skynet services are started.  This means that starting a new service automatically
