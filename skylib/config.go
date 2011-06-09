@@ -80,7 +80,6 @@ func LoadConfig() {
 		log.Panic(err.String())
 	}
 	if len(data) > 0 {
-		log.Println("setting data ", string(data))
 		setConfig(data)
 		return
 	}
@@ -146,7 +145,7 @@ func (r *Service) AddToConfig() {
 	for _, v := range NS.Services {
 		if v != nil {
 			if v.Equal(r) {
-				log.Printf("Skipping adding %s because it alreday exists.", v.Name)
+				log.Printf("Skipping adding %s : alreday exists.", v.Name)
 				return // it's there so we don't need an update
 			}
 		}
