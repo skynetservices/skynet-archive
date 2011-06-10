@@ -214,6 +214,7 @@ func watchSignals(){
                 switch sig.(signal.UnixSignal) { 
                     case syscall.SIGHUP: 
 							*LogLevel = *LogLevel +1
+							log.Println("Loglevel changed to : ", *LogLevel)
                         return 
                 } 
         } 
