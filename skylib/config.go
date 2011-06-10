@@ -29,7 +29,7 @@ var DoozerServer *string = flag.String("doozerServer", "127.0.0.1:8046", "addr:p
 var Requests *expvar.Int
 var Errors *expvar.Int
 var Goroutines *expvar.Int
-var svc skylib.Service
+var svc *Service
 
 
 // This is simple today - it returns the first listed service that matches the request
@@ -215,13 +215,13 @@ func watchSignals(){
                 switch sig.(signal.UnixSignal) { 
                     case syscall.SIGUSR1: 
 							*LogLevel = *LogLevel + 1
-							log.Println("Loglevel changed to : ", *LogLevel)
+							LogError(1,"Loglevel changed to : ", *LogLevel)
                         return 
 	                    case syscall.SIGUSR2: 
 								if *LogLevel > 1 {
 									*LogLevel = *LogLevel - 1
 								}
-								log.Println("Loglevel changed to : ", *LogLevel)
+								LogError(1,"Loglevel changed to : ", *LogLevel)
 						case syscall.SIGINT:
 							gracefulShutdown()
                 } 
@@ -238,6 +238,15 @@ func gracefulShutdown(){
 	syscall.Sleep(10e9) // wait 10 seconds for requests to finish  #HACK
 	syscall.Exit(0)
 }
+
+func LogError(logLevel int, v ...interface{}){
+	
+	if logLevel <= *LogLevel {
+		log.Println(v)
+	}
+	
+}
+
 
 func Setup(name string) {
 	DoozerConnect()
