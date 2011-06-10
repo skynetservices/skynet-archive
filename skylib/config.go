@@ -212,7 +212,7 @@ func watchSignals(){
             case sig := <- signal.Incoming: 
                 switch sig.(signal.UnixSignal) { 
                     case syscall.SIGHUP: 
-							LogLevel = LogLevel +1
+							*LogLevel = *LogLevel +1
                         return 
                 } 
         } 
