@@ -29,6 +29,7 @@ var DoozerServer *string = flag.String("doozerServer", "127.0.0.1:8046", "addr:p
 var Requests *expvar.Int
 var Errors *expvar.Int
 var Goroutines *expvar.Int
+var svc skylib.Service
 
 
 // This is simple today - it returns the first listed service that matches the request
@@ -221,9 +222,21 @@ func watchSignals(){
 									*LogLevel = *LogLevel - 1
 								}
 								log.Println("Loglevel changed to : ", *LogLevel)
+						case syscall.SIGINT:
+							gracefulShutdown()
                 } 
         } 
     }
+}
+
+func gracefulShutdown(){
+	log.Println("Graceful Shutdown")
+	svc.RemoveFromConfig()
+	
+	//would prefer to unregister HTTP and RPC handlers
+	//need to figure out how to do that
+	syscall.Sleep(10e9) // wait 10 seconds for requests to finish  #HACK
+	syscall.Exit(0)
 }
 
 func Setup(name string) {
@@ -237,7 +250,7 @@ func Setup(name string) {
 
 	initDefaultExpVars(name)
 
-	svc := NewService(name)
+	svc = NewService(name)
 
 	svc.AddToConfig()
 
