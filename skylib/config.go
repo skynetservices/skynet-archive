@@ -10,6 +10,7 @@ import (
 	"rand"
 	"rpc"
 	"expvar"
+	"os/signal"
 )
 
 
@@ -22,6 +23,7 @@ var Port *int = flag.Int("port", 9999, "tcp port to listen")
 var Name *string = flag.String("name", "changeme", "name of this server")
 var BindIP *string = flag.String("bindaddress", "127.0.0.1", "address to bind")
 var LogFileName *string = flag.String("logFileName", "myservice.log", "name of logfile")
+var LogLevel *int = flag.Int("logLevel",1,"log level (1-5)")
 var DoozerServer *string = flag.String("doozerServer", "127.0.0.1:8046", "addr:port of doozer server")
 var Requests *expvar.Int
 var Errors *expvar.Int
@@ -203,12 +205,28 @@ func initDefaultExpVars(name string) {
 	Goroutines = expvar.NewInt(name + "-goroutines")
 }
 
+func watchSignals(){
+
+    for { 
+        select { 
+            case sig := <- signal.Incoming: 
+                switch sig.(signal.UnixSignal) { 
+                    case syscall.SIGHUP: 
+							LogLevel = LogLevel +1
+                        return 
+                } 
+        } 
+    }
+}
+
 func Setup(name string) {
 	DoozerConnect()
 	LoadConfig()
 	if x := recover(); x != nil {
 		log.Println("No Configuration File loaded.  Creating One.")
 	}
+	
+	go watchSignals()
 
 	initDefaultExpVars(name)
 
