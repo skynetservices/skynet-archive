@@ -221,7 +221,6 @@ func watchSignals(){
 									*LogLevel = *LogLevel - 1
 								}
 								log.Println("Loglevel changed to : ", *LogLevel)
-	                        return
                 } 
         } 
     }
