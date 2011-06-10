@@ -216,7 +216,7 @@ func watchSignals(){
                     case syscall.SIGUSR1: 
 							*LogLevel = *LogLevel + 1
 							LogError(1,"Loglevel changed to : ", *LogLevel)
-                        return 
+
 	                    case syscall.SIGUSR2: 
 								if *LogLevel > 1 {
 									*LogLevel = *LogLevel - 1
