@@ -10,6 +10,7 @@ import (
 	"rand"
 	"rpc"
 	"expvar"
+	"syscall"
 	"os/signal"
 )
 
