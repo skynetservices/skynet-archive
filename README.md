@@ -91,7 +91,7 @@ In skynetTest/myCompany there's a file with the input and output structs for you
 There are more (still kind of sparse) documents in the documentation folder.
 
 ##TODO:
-* implement signal trapping to change log level
+* DONE implement signal trapping to change log level
 * Create a function with a timer - insert execution time into response
 * Create a timeout mechanism by service.
 * Build a watcher that spawns new processes as an example app
@@ -102,6 +102,6 @@ There are more (still kind of sparse) documents in the documentation folder.
 * Pluggable configuration - Redis?
 * Support JSON-RPC as a transport instead of Go's native RPC.  This would allow skynet cluster members written in other languages.
 * Cache or pool RPC connections between cluster members.
-* Examples
+* Examples (more, one exists)
 * Video demo
 * Have each process pick a port to start on.  Only initiators need to know what ports they start on. Others can try a starting port, then increment on failure until they find an open port.
