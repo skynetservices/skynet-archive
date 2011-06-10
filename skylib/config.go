@@ -212,10 +212,16 @@ func watchSignals(){
         select { 
             case sig := <- signal.Incoming: 
                 switch sig.(signal.UnixSignal) { 
-                    case syscall.SIGHUP: 
-							*LogLevel = *LogLevel +1
+                    case syscall.SIGUSR1: 
+							*LogLevel = *LogLevel + 1
 							log.Println("Loglevel changed to : ", *LogLevel)
                         return 
+	                    case syscall.SIGUSR2: 
+								if *LogLevel > 1 {
+									*LogLevel = *LogLevel - 1
+								}
+								log.Println("Loglevel changed to : ", *LogLevel)
+	                        return
                 } 
         } 
     }
