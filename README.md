@@ -85,6 +85,7 @@ In skynetTest/myCompany there's a file with the input and output structs for you
 There are more (still kind of sparse) documents in the documentation folder.
 
 ##TODO:
+* implement signal trapping to change log level
 * Create a function with a timer - insert execution time into response
 * Create a timeout mechanism by service.
 * Build a watcher that spawns new processes as an example app
