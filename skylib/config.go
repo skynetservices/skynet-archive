@@ -56,7 +56,7 @@ func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
 		portString := fmt.Sprintf("%s:%d", s.IPAddress, s.Port)
 		newClient, err = rpc.DialHTTP("tcp", portString)
 		if err != nil {
-			log.Printf("Found %d Clients to service %s request.", len(providesList), provides)
+			LogError(WARN,fmt.Sprintf("Found %d Clients to service %s request.", len(providesList), provides))
 			return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
 		}
 
@@ -87,7 +87,7 @@ func LoadConfig() {
 		setConfig(data)
 		return
 	}
-	log.Println("Error, loading default config")
+	LogError(ERROR,"Error loading default config - no data found")
 	NS = &NetworkServers{}
 }
 
@@ -149,7 +149,7 @@ func (r *Service) AddToConfig() {
 	for _, v := range NS.Services {
 		if v != nil {
 			if v.Equal(r) {
-				log.Printf("Skipping adding %s : alreday exists.", v.Name)
+				LogError(INFO,fmt.Sprintf("Skipping adding %s : alreday exists.", v.Name))
 				return // it's there so we don't need an update
 			}
 		}
@@ -244,7 +244,7 @@ func Setup(name string) {
 	DoozerConnect()
 	LoadConfig()
 	if x := recover(); x != nil {
-		log.Println("No Configuration File loaded.  Creating One.")
+		LogError(WARN,"No Configuration File loaded.  Creating One.")
 	}
 	
 	go watchSignals()

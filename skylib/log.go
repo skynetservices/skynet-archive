@@ -12,6 +12,7 @@ const (
 )
 
 
+
 func LogError(logLevel int, v ...interface{}){
 	
 	if logLevel <= *LogLevel {
