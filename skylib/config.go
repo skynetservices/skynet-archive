@@ -215,13 +215,13 @@ func watchSignals(){
                 switch sig.(signal.UnixSignal) { 
                     case syscall.SIGUSR1: 
 							*LogLevel = *LogLevel + 1
-							LogError(1,"Loglevel changed to : ", *LogLevel)
+							LogError(ERROR,"Loglevel changed to : ", *LogLevel)
 
 	                    case syscall.SIGUSR2: 
 								if *LogLevel > 1 {
 									*LogLevel = *LogLevel - 1
 								}
-								LogError(1,"Loglevel changed to : ", *LogLevel)
+								LogError(ERROR,"Loglevel changed to : ", *LogLevel)
 						case syscall.SIGINT:
 							gracefulShutdown()
                 } 
@@ -237,14 +237,6 @@ func gracefulShutdown(){
 	//need to figure out how to do that
 	syscall.Sleep(10e9) // wait 10 seconds for requests to finish  #HACK
 	syscall.Exit(0)
-}
-
-func LogError(logLevel int, v ...interface{}){
-	
-	if logLevel <= *LogLevel {
-		log.Println(v)
-	}
-	
 }
 
 
