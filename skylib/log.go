@@ -4,12 +4,6 @@ import (
 	"log"
 )
 
-const (
-	ERROR = iota
-	WARN
-	INFO
-	DEBUG	
-)
 
 
 
