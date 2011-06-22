@@ -5,7 +5,7 @@ const (
 	ERROR = iota
 	WARN
 	INFO
-	DEBUG	
+	DEBUG
 )
 
 

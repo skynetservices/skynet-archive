@@ -24,7 +24,7 @@ var Port *int = flag.Int("port", 9999, "tcp port to listen")
 var Name *string = flag.String("name", "changeme", "name of this server")
 var BindIP *string = flag.String("bindaddress", "127.0.0.1", "address to bind")
 var LogFileName *string = flag.String("logFileName", "myservice.log", "name of logfile")
-var LogLevel *int = flag.Int("logLevel",1,"log level (1-5)")
+var LogLevel *int = flag.Int("logLevel", 1, "log level (1-5)")
 var DoozerServer *string = flag.String("doozerServer", "127.0.0.1:8046", "addr:port of doozer server")
 var Requests *expvar.Int
 var Errors *expvar.Int
@@ -56,7 +56,7 @@ func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
 		portString := fmt.Sprintf("%s:%d", s.IPAddress, s.Port)
 		newClient, err = rpc.DialHTTP("tcp", portString)
 		if err != nil {
-			LogError(WARN,fmt.Sprintf("Found %d Clients to service %s request.", len(providesList), provides))
+			LogError(WARN, fmt.Sprintf("Found %d Clients to service %s request.", len(providesList), provides))
 			return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
 		}
 
@@ -87,7 +87,7 @@ func LoadConfig() {
 		setConfig(data)
 		return
 	}
-	LogError(ERROR,"Error loading default config - no data found")
+	LogError(ERROR, "Error loading default config - no data found")
 	NS = &NetworkServers{}
 }
 
@@ -149,7 +149,7 @@ func (r *Service) AddToConfig() {
 	for _, v := range NS.Services {
 		if v != nil {
 			if v.Equal(r) {
-				LogError(INFO,fmt.Sprintf("Skipping adding %s : alreday exists.", v.Name))
+				LogError(INFO, fmt.Sprintf("Skipping adding %s : alreday exists.", v.Name))
 				return // it's there so we don't need an update
 			}
 		}
@@ -207,32 +207,32 @@ func initDefaultExpVars(name string) {
 	Goroutines = expvar.NewInt(name + "-goroutines")
 }
 
-func watchSignals(){
+func watchSignals() {
 
-    for { 
-        select { 
-            case sig := <- signal.Incoming: 
-                switch sig.(signal.UnixSignal) { 
-                    case syscall.SIGUSR1: 
-							*LogLevel = *LogLevel + 1
-							LogError(ERROR,"Loglevel changed to : ", *LogLevel)
+	for {
+		select {
+		case sig := <-signal.Incoming:
+			switch sig.(signal.UnixSignal) {
+			case syscall.SIGUSR1:
+				*LogLevel = *LogLevel + 1
+				LogError(ERROR, "Loglevel changed to : ", *LogLevel)
 
-	                    case syscall.SIGUSR2: 
-								if *LogLevel > 1 {
-									*LogLevel = *LogLevel - 1
-								}
-								LogError(ERROR,"Loglevel changed to : ", *LogLevel)
-						case syscall.SIGINT:
-							gracefulShutdown()
-                } 
-        } 
-    }
+			case syscall.SIGUSR2:
+				if *LogLevel > 1 {
+					*LogLevel = *LogLevel - 1
+				}
+				LogError(ERROR, "Loglevel changed to : ", *LogLevel)
+			case syscall.SIGINT:
+				gracefulShutdown()
+			}
+		}
+	}
 }
 
-func gracefulShutdown(){
+func gracefulShutdown() {
 	log.Println("Graceful Shutdown")
 	svc.RemoveFromConfig()
-	
+
 	//would prefer to unregister HTTP and RPC handlers
 	//need to figure out how to do that
 	syscall.Sleep(10e9) // wait 10 seconds for requests to finish  #HACK
@@ -244,9 +244,9 @@ func Setup(name string) {
 	DoozerConnect()
 	LoadConfig()
 	if x := recover(); x != nil {
-		LogError(WARN,"No Configuration File loaded.  Creating One.")
+		LogError(WARN, "No Configuration File loaded.  Creating One.")
 	}
-	
+
 	go watchSignals()
 
 	initDefaultExpVars(name)

@@ -13,13 +13,13 @@ func GetRoute(name string) (r *Route, err os.Error) {
 
 	data, _, err := DC.Get("/routes/"+name, nil)
 	if err != nil {
-		LogError(ERROR,err.String())
+		LogError(ERROR, err.String())
 		return r, err
 	}
 	if len(data) > 0 {
 		err := json.Unmarshal(data, &r)
 		if err != nil {
-			LogError(ERROR,err.String())
+			LogError(ERROR, err.String())
 			return r, err
 		}
 		return r, nil

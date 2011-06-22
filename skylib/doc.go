@@ -17,8 +17,8 @@ Initiators -
 	Initiators are the source of inbound requests.  On a web-centric system, they'd be running HTTP listeners and accept web based requests.
 
 Routers - 
-	Routers are the "controller" of the system, they call services according to the stored route configuration that matches the request type.
-	Technically routers are optional, but if they're not used, Initiators will call Services directly.
+	If Skynet was MVC, then Routers are the "controller" of the system, they call services according to the stored route configuration that matches the request type.
+	Technically routers are optional, but if they're not used, Initiators must call Services directly.  In this scenario you lose the capability of changing routes (adding or reordering services) in flight.
 
 Services -
 	Services are where the work gets done.  These are the processes that service the requests, process the API calls, get the external data, log the requests, authenticate the users, etc.

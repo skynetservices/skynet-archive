@@ -51,9 +51,10 @@ func submitHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := submit<%ServiceName%>Request(cr)
 	if err != nil {
-		log.Println(err.String())
+		skylib.LogError(skylib.ERROR,err.String())
 	}
-	log.Println(resp)
+	
+	go skylib.LogError(DEBUG,resp)
 
 	respTmpl.Execute(w, map[string]interface{}{
 		"resp": resp,

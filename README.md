@@ -80,9 +80,9 @@ SkyNet uses Doozer to store configuration data about the available services and 
 
 ##Running Processes
 
-Sending SIGUSR1 to a running process raises the log level one notch.
-Sending SIGUSR2 to a running process lowers the log level one notch.
-Sending SIGINT to a running process gracefully exits.
+* Sending SIGUSR1 to a running process raises the log level one notch.
+* Sending SIGUSR2 to a running process lowers the log level one notch.
+* Sending SIGINT to a running process gracefully exits.
 
 ##Customizing
 In skynetTest/myCompany there's a file with the input and output structs for your API service.  Add your input fields and output fields to these.  Don't forget to change the initiator code to accept these fields, too.  Now modify the skynetTest/service/service.go file to do something real - retrieve data from your systems - and you've built an API service in Go.
