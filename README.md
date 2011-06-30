@@ -1,4 +1,5 @@
 #Skynet
+![logo](/bketelsen/skynet/raw/master/documentation/SkyNetLogo.png)
 
 ##Introduction
 Skynet is a virtually–unkillable system for building massively distributed apps in Go.
