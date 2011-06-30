@@ -1,4 +1,3 @@
-#Skynet
 ![logo](/bketelsen/skynet/raw/master/documentation/SkyNetLogo.png)
 
 ##Introduction
