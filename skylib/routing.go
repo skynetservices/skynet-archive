@@ -2,7 +2,6 @@ package skylib
 
 import (
 	"json"
-	"log"
 	"os"
 )
 
