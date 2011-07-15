@@ -212,7 +212,7 @@ func watchSignals() {
 	for {
 		select {
 		case sig := <-signal.Incoming:
-			switch sig.(signal.UnixSignal) {
+			switch sig.(os.UnixSignal) {
 			case syscall.SIGUSR1:
 				*LogLevel = *LogLevel + 1
 				LogError(ERROR, "Loglevel changed to : ", *LogLevel)
