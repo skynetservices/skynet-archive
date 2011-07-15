@@ -12,7 +12,7 @@ import (
 	"github.com/bketelsen/skynet/skylib"
 	"fmt"
 	"time"
-	"syscall"
+
 )
 
 
@@ -24,7 +24,7 @@ func monitorServices() {
 				portString := fmt.Sprintf("%s:%d", v.IPAddress, v.Port)
 				x, err := rpc.DialHTTP("tcp", portString)
 				if err != nil {
-					skylib.LogError(ERROR,"BAD CON:", err)
+					skylib.LogError(skynet.ERROR,"BAD CON:", err)
 					v.RemoveFromConfig()
 					skylib.Errors.Add(1)
 					break
@@ -33,14 +33,14 @@ func monitorServices() {
 				hcr := skylib.HeartbeatResponse{}
 				err = x.Call("Service.Ping", hc, &hcr)
 				if err != nil {
-					skylib.LogError(ERROR,err.String())
+					skylib.LogError(skynet.ERROR,err.String())
 					skylib.Errors.Add(1)
 				}
 				x.Close()
 				skylib.Requests.Add(1)
 			}
 		}
-		syscall.Sleep(2000 * 1000000) // sleep then do it again!
+		time.Sleep(2000 * 1000000) // sleep then do it again!
 	}
 }
 

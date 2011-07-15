@@ -54,7 +54,7 @@ func submitHandler(w http.ResponseWriter, r *http.Request) {
 		skylib.LogError(skylib.ERROR,err.String())
 	}
 	
-	go skylib.LogError(DEBUG,resp)
+	go skylib.LogError(skylib.DEBUG,resp)
 
 	respTmpl.Execute(w, map[string]interface{}{
 		"resp": resp,

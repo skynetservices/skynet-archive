@@ -48,7 +48,7 @@ func callRpcService(name string, async bool, failOnErr bool, cr *<%PackageName%>
 	log.Println("Calling : " + name)
 	err = rpcClient.Call(name, cr, rep)
 	if err != nil {
-		skylib.LogError(ERROR,"RPC connection failed, retrying", err)
+		skylib.LogError(skynet.ERROR,"RPC connection failed, retrying", err)
 		// get another one and try again!
 		rpcClient, err := skylib.GetRandomClientByProvides(name)
 		err = rpcClient.Call(name, cr, rep)
