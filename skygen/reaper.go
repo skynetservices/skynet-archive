@@ -24,7 +24,7 @@ func monitorServices() {
 				portString := fmt.Sprintf("%s:%d", v.IPAddress, v.Port)
 				x, err := rpc.DialHTTP("tcp", portString)
 				if err != nil {
-					skylib.LogError(skynet.ERROR,"BAD CON:", err)
+					skylib.LogError(skylib.ERROR,"BAD CON:", err)
 					v.RemoveFromConfig()
 					skylib.Errors.Add(1)
 					break
