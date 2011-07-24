@@ -24,7 +24,7 @@ func monitorServices() {
 				portString := fmt.Sprintf("%s:%d", v.IPAddress, v.Port)
 				x, err := rpc.DialHTTP("tcp", portString)
 				if err != nil {
-					skylib.LogError(skylib.ERROR,"BAD CON:", err)
+					skylib.LogError("BAD CON:", err)
 					v.RemoveFromConfig()
 					skylib.Errors.Add(1)
 					break
@@ -33,7 +33,7 @@ func monitorServices() {
 				hcr := skylib.HeartbeatResponse{}
 				err = x.Call("Service.Ping", hc, &hcr)
 				if err != nil {
-					skylib.LogError(skynet.ERROR,err.String())
+					skylib.Log(skynet.ERROR,err.String())
 					skylib.Errors.Add(1)
 				}
 				x.Close()

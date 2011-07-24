@@ -42,13 +42,13 @@ func callRpcService(name string, async bool, failOnErr bool, cr *<%PackageName%>
 	}
 	if async {
 		go rpcClient.Call(name, cr, rep)
-		go skylib.LogError(INFO,"Called service async", name)
+		go skylib.LogInfo("Called service async", name)
 		return nil
 	}
 	log.Println("Calling : " + name)
 	err = rpcClient.Call(name, cr, rep)
 	if err != nil {
-		skylib.LogError(skylib.ERROR,"RPC connection failed, retrying", err)
+		skylib.LogError("RPC connection failed, retrying", err)
 		// get another one and try again!
 		rpcClient, err := skylib.GetRandomClientByProvides(name)
 		err = rpcClient.Call(name, cr, rep)
@@ -56,7 +56,7 @@ func callRpcService(name string, async bool, failOnErr bool, cr *<%PackageName%>
 			return skylib.NewError(err.String(), sName)
 		}
 	}
-	go skylib.LogError(INFO,"Called service sync", name)
+	go skylib.LogInfo("Called service sync", name)
 	return nil
 }
 
