@@ -1,0 +1,3 @@
+# Copy this into a git repo to avoid slow packing of binaries.
+*.jpg  binary -delta
+*.png  binary -delta
