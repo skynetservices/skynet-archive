@@ -25,7 +25,7 @@ var excludeReaper *bool = flag.Bool("excludeReaper", false, "don't generate a re
 // Configuration flags
 var PackageName *string = flag.String("packageName", "myCompany", "namespace of the Go package to generate")
 var ServiceName *string = flag.String("serviceName", "GetUsers", "API function to be provided by SkyNet")
-var TargetFullPath *string = flag.String("targetFullPath", "./myskynet", "Full path of target for skynet generation")
+var TargetFullPath *string = flag.String("targetFullPath", "./myskynet", "Full path of target for skynet generation; best if not in skynet working tree.")
 
 func printToDo() {
 	flag.VisitAll(func(f *flag.Flag) {

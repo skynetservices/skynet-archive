@@ -40,7 +40,7 @@ func monitorServices() {
 				hcr := skylib.HeartbeatResponse{}
 				err = x.Call("Service.Ping", hc, &hcr)
 				if err != nil {
-					skylib.Log(skynet.ERROR,err.String())
+					skylib.LogError(err.String())
 					skylib.Errors.Add(1)
 				}
 				x.Close()
