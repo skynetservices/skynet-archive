@@ -12,11 +12,11 @@ import "os"
 import "net"
 import "log"
 import "http"
-import "github.com/bketelsen/skynet/skylib"
 import "flag"
 import "time"
 import "fmt"
-import "myStartup"
+import "github.com/bketelsen/skynet/skylib"
+import "github.com/bketelsen/skynet/examples/GetWidgets/myStartup"
 
 const sName = "GetUserDataService.GetUserData"
 

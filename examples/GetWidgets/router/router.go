@@ -14,12 +14,12 @@ import (
 	"log"
 	"http"
 	"flag"
-	"github.com/bketelsen/skynet/skylib"
 	"time"
 	"container/vector"
 	"json"
 	"fmt"
-	"myStartup"
+	"github.com/bketelsen/skynet/skylib"
+	"github.com/bketelsen/skynet/examples/GetWidgets/myStartup"
 )
 
 

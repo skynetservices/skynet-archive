@@ -9,7 +9,7 @@ package main
 
 
 import "github.com/bketelsen/skynet/skylib"
-import "myStartup"
+import "github.com/bketelsen/skynet/examples/GetWidgets/myStartup"
 import "log"
 import "os"
 import "http"

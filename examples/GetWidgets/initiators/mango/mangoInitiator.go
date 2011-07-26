@@ -14,7 +14,7 @@ import (
 	"github.com/paulbellamy/mango"
 	"github.com/bketelsen/skynet/skylib"
 	"log"
-	"myStartup"
+	"github.com/bketelsen/skynet/examples/GetWidgets/myStartup"
 	"os"
 	"rpc"
 	"template"
