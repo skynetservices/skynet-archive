@@ -24,7 +24,7 @@ func monitorServices() {
 	for {
 		skylib.LoadConfig()
 		for _, v := range skylib.NS.Services {
-			fmt.Println(v) 
+			fmt.Println(v)
 			// Insert your code to do something for 
 			// each service here
 			// or get rid of this loop
@@ -50,7 +50,7 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	skylib.Setup("Watcher.Generic")  // Change this to be more descriptive
+	skylib.Setup("Watcher.Generic") // Change this to be more descriptive
 
 	rpc.HandleHTTP()
 

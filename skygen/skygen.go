@@ -217,7 +217,7 @@ func main() {
 	printToDo()
 
 	generateLibrary()
-	
+
 	if !*excludeInitiator {
 		generateInitiator()
 	}

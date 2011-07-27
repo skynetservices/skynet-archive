@@ -13,5 +13,5 @@ type GetUserDataRequest struct {
 
 type GetUserDataResponse struct {
 	YourOutputValue string
-	Errors               []string
+	Errors          []string
 }

@@ -34,31 +34,27 @@ func NewGetUserDataService() *GetUserDataService {
 }
 
 
-
-
 func (ls *GetUserDataService) GetUserData(cr *myStartup.GetUserDataRequest, lr *myStartup.GetUserDataResponse) (err os.Error) {
-	result := make (chan string)
+	result := make(chan string)
 	timeout := make(chan bool)
-	
+
 	//This function produces the actual result
 	go func() {
 		time.Sleep(1e8) // force the fail
 		result <- " was here"
 	}()
-	
-	go func(){
+
+	go func() {
 		time.Sleep(1e9)
 		timeout <- true
 	}()
-	
-	
+
 	select {
 	case retVal := <-result:
-			lr.YourOutputValue = cr.YourInputValue + retVal
-	case <- timeout:
+		lr.YourOutputValue = cr.YourInputValue + retVal
+	case <-timeout:
 		lr.Errors = append(lr.Errors, "Service Timeout")
 	}
-	
 
 	skylib.Requests.Add(1)
 	return nil
