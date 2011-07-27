@@ -143,27 +143,35 @@ func checkError(error *os.Error) {
 // and adds it too Doozer
 func CreateInitialRoute() {
 
+	// Create a basic Route object.
 	r := &skylib.Route{}
 	r.Name = sName
 	r.LastUpdated = time.Seconds()
 	r.Revision = 1
+	r.RouteList = new(vector.Vector)
 
+	// Define the chain of services.
 	rpcScore := &skylib.RpcCall{Service: "GetUserDataService.GetUserData", Async: false, OkToRetry: false, ErrOnFail: true}
 
-	rl := new(vector.Vector)
+	// Just one, for now.
+	r.RouteList.Push(rpcScore)
 
-	r.RouteList = rl
-	rl.Push(rpcScore)
-
+	// Marshal the route object into JSON.
 	b, err := json.Marshal(r)
 	if err != nil {
 		log.Panic(err.String())
 	}
+
+	// Get the current revision number of the doozer "store".
 	rev, err := skylib.DC.Rev()
 	if err != nil {
 		log.Panic(err.String())
 	}
-	_, err = skylib.DC.Set("/routes/RouteService.RouteGetUserDataRequest", rev, b)
+
+	// Set the contents of a file in the "store" to our JSON
+	// string, if the file has not been modified since rev.
+	filename := "/routes/" + sName
+	_, err = skylib.DC.Set(filename, rev, b)
 	if err != nil {
 		log.Panic(err.String())
 	}
