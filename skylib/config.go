@@ -40,23 +40,21 @@ var Goroutines *expvar.Int
 var svc *Service
 
 
+func GetServiceProviders(provides string) (providesList []*Service) {
+	for _, v := range NS.Services {
+		if v != nil && v.Provides == provides {
+			providesList = append(providesList, v)
+		}
+	}
+	return
+}
+
 // This is simple today - it returns the first listed service that matches the request
 // Load balancing needs to be applied here somewhere.
 func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
-	var providesList = make([]*Service, 0)
-
 	var newClient *rpc.Client
 	var err os.Error
-
-	for _, v := range NS.Services {
-		if v != nil {
-			if v.Provides == provides {
-				providesList = append(providesList, v)
-			}
-
-		}
-	}
-
+	providesList := GetServiceProviders(provides)
 	if len(providesList) > 0 {
 		random := rand.Int() % len(providesList)
 		s := providesList[random]
@@ -64,11 +62,13 @@ func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
 		portString := fmt.Sprintf("%s:%d", s.IPAddress, s.Port)
 		newClient, err = rpc.DialHTTP("tcp", portString)
 		if err != nil {
-			LogWarn(fmt.Sprintf("Found %d Clients to service %s request.", len(providesList), provides))
+			LogWarn(fmt.Sprintf("Found %d Clients to service %s request on %s.",
+				len(providesList), provides, portString))
 			return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
 		}
 
 	} else {
+		LogWarn(fmt.Sprintf("Found no Clients to service %s request.", provides))
 		return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
 	}
 	return newClient, nil
