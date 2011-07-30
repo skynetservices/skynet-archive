@@ -165,3 +165,16 @@ func NewError(msg string, service string) (err *Error) {
 	err = &Error{Msg: msg, Service: service}
 	return
 }
+
+// CheckError is a deferred function to turn a panic with type *Error into a plain error return.
+// Other panics are unexpected and so are re-enabled.
+func CheckError(error *os.Error) {
+    if v := recover(); v != nil {
+        if e, ok := v.(*Error); ok {
+            *error = e
+        } else {
+            // runtime errors should crash
+            panic(v)
+        }
+    }
+}

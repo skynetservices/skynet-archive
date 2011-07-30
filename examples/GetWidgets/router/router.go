@@ -34,7 +34,7 @@ type RouteService struct {
 
 
 func callRpcService(name string, async bool, failOnErr bool, cr *myStartup.GetUserDataRequest, rep *myStartup.GetUserDataResponse) (err os.Error) {
-	defer checkError(&err)
+	defer skylib.CheckError(&err)
 
 	rpcClient, err := skylib.GetRandomClientByProvides(name)
 	if err != nil {
@@ -67,7 +67,7 @@ func callRpcService(name string, async bool, failOnErr bool, cr *myStartup.GetUs
 
 
 func (rs *RouteService) RouteGetUserDataRequest(cr *myStartup.GetUserDataRequest, rep *myStartup.GetUserDataResponse) (err os.Error) {
-	defer checkError(&err)
+	defer skylib.CheckError(&err)
 	log.Println(route)
 	for i := 0; i < route.RouteList.Len(); i++ {
 		rpcCall := route.RouteList.At(i).(map[string]interface{})
@@ -126,18 +126,6 @@ func main() {
 
 }
 
-// checkError is a deferred function to turn a panic with type *Error into a plain error return.
-// Other panics are unexpected and so are re-enabled.
-func checkError(error *os.Error) {
-	if v := recover(); v != nil {
-		if e, ok := v.(*skylib.Error); ok {
-			*error = e
-		} else {
-			// runtime errors should crash
-			panic(v)
-		}
-	}
-}
 // Today this function creates a route in Doozer for the
 // RouteService.RouteCreditRequest method - which is CLARITY SPECIFIC
 // and adds it too Doozer
