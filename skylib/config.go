@@ -29,7 +29,7 @@ var RpcServices []*RpcService
 
 
 var Port *int = flag.Int("port", 9999, "tcp port to listen")
-var Name *string = flag.String("name", "changeme", "name of this server")
+var Name *string = flag.String("name", os.Args[0], "name of this server")
 var BindIP *string = flag.String("bindaddress", "127.0.0.1", "address to bind")
 var LogFileName *string = flag.String("logFileName", "myservice.log", "name of logfile")
 var LogLevel *int = flag.Int("logLevel", 1, "log level (1-5)")
