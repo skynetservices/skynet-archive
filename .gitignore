@@ -1,2 +1,10 @@
 
 .DS_Store
+bin/
+skylib/
+**/_dist_/
+*.6 
+
+skygen/skygen
+
+skygen/bin/skygen

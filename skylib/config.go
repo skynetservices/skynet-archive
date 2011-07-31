@@ -43,28 +43,27 @@ var svc *Service
 // This is simple today - it returns the first listed service that matches the request
 // Load balancing needs to be applied here somewhere.
 func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
-	var providesList = make([]*Service, 0)
+	var serviceList = make([]*Service, 0)
 
 	var newClient *rpc.Client
 	var err os.Error
 
-	for _, v := range NS.Services {
-		if v != nil {
-			if v.Provides == provides {
-				providesList = append(providesList, v)
+	for _, service := range NS.Services {
+		if service != nil {
+			if service.Provides == provides {
+				serviceList = append(serviceList, service)
 			}
-
 		}
 	}
 
-	if len(providesList) > 0 {
-		random := rand.Int() % len(providesList)
-		s := providesList[random]
+	if len(serviceList) > 0 {
+		chosen := rand.Int() % len(serviceList)
+		s := serviceList[chosen]
 
-		portString := fmt.Sprintf("%s:%d", s.IPAddress, s.Port)
-		newClient, err = rpc.DialHTTP("tcp", portString)
+		hostString := fmt.Sprintf("%s:%d", s.IPAddress, s.Port)
+		newClient, err = rpc.DialHTTP("tcp", hostString)
 		if err != nil {
-			LogWarn(fmt.Sprintf("Found %d Clients to service %s request.", len(providesList), provides))
+			LogWarn(fmt.Sprintf("Found %d Clients to service %s request.", len(serviceList), provides)) //is it the right error message?
 			return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
 		}
 
@@ -126,7 +125,7 @@ func RemoveServiceAt(i int) {
 
 }
 
-func (r *Service) RemoveFromConfig() {
+func RemoveFromConfig(r *Service) {
 
 	newServices := make([]*Service, 0)
 
@@ -153,7 +152,7 @@ func (r *Service) RemoveFromConfig() {
 	}
 }
 
-func (r *Service) AddToConfig() {
+func AddToConfig(r *Service) {
 	for _, v := range NS.Services {
 		if v != nil {
 			if v.Equal(r) {
@@ -193,8 +192,8 @@ func WatchConfig() {
 	if err != nil {
 		log.Panic(err.String())
 	}
-	for {
 
+	for {
 		// blocking wait call returns on a change
 		ev, err := DC.Wait("/servers/config/networkservers.conf", rev)
 		if err != nil {
@@ -239,7 +238,7 @@ func watchSignals() {
 
 func gracefulShutdown() {
 	log.Println("Graceful Shutdown")
-	svc.RemoveFromConfig()
+	RemoveFromConfig(svc)
 
 	//would prefer to unregister HTTP and RPC handlers
 	//need to figure out how to do that
@@ -247,7 +246,17 @@ func gracefulShutdown() {
 	syscall.Exit(0)
 }
 
+// Method to register the heartbeat of each skynet
+// client with the healthcheck exporter.
+func RegisterHeartbeat() {
+	r := NewService("Service.Ping")
+	rpc.Register(r)
+}
 
+
+//Connects to the global config repo and registers the
+//name Skynet Service. This function is also responsible for
+//registering the Heartbeat to healthcheck the service.
 func Setup(name string) {
 	DoozerConnect()
 	LoadConfig()
@@ -261,7 +270,7 @@ func Setup(name string) {
 
 	svc = NewService(name)
 
-	svc.AddToConfig()
+	AddToConfig(svc)
 
 	go WatchConfig()
 
