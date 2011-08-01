@@ -64,7 +64,7 @@ func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
 		newClient, err = rpc.DialHTTP("tcp", hostString)
 		if err != nil {
 			LogWarn(fmt.Sprintf("Found %d Services to service %s request on %s.",
-				len(serviceList), provides, portString))
+				len(serviceList), provides, hostString))
 			return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
 		}
 
