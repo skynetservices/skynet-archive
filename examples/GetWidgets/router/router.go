@@ -19,9 +19,8 @@ import (
 	"json"
 	"fmt"
 	"github.com/bketelsen/skynet/skylib"
-	"github.com/bketelsen/skynet/examples/GetWidgets/myStartup"
-)
 
+)
 
 var route *skylib.Route
 
@@ -33,7 +32,7 @@ type RouteService struct {
 }
 
 
-func callRpcService(name string, async bool, failOnErr bool, cr *myStartup.GetUserDataRequest, rep *myStartup.GetUserDataResponse) (err os.Error) {
+func callRpcService(name string, async bool, failOnErr bool, cr *skylib.SkynetRequest, rep *skylib.SkynetResponse) (err os.Error) {
 	defer skylib.CheckError(&err)
 
 	rpcClient, err := skylib.GetRandomClientByProvides(name)
@@ -66,7 +65,7 @@ func callRpcService(name string, async bool, failOnErr bool, cr *myStartup.GetUs
 }
 
 
-func (rs *RouteService) RouteGetUserDataRequest(cr *myStartup.GetUserDataRequest, rep *myStartup.GetUserDataResponse) (err os.Error) {
+func (rs *RouteService) RouteGetUserDataRequest(cr *skylib.SkynetRequest, rep *skylib.SkynetResponse) (err os.Error) {
 	defer skylib.CheckError(&err)
 	log.Println(route)
 	for i := 0; i < route.RouteList.Len(); i++ {

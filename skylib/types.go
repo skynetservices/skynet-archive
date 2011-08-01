@@ -14,6 +14,16 @@ import (
 )
 
 
+type SkynetRequest struct {
+	Params	map[string]interface{}
+}
+
+type SkynetResponse struct {
+	Result map[string]interface{}
+	Errors          []string
+}
+
+
 // RpcService is a struct that represents a remotly 
 // callable function.  It is intented to be part of 
 // an array or collection of RpcServices.  It contains
