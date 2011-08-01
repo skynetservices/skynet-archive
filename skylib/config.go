@@ -54,21 +54,22 @@ func GetServiceProviders(provides string) (providesList []*Service) {
 func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
 	var newClient *rpc.Client
 	var err os.Error
-	providesList := GetServiceProviders(provides)
-	if len(providesList) > 0 {
-		random := rand.Int() % len(providesList)
-		s := providesList[random]
+	serviceList := GetServiceProviders(provides)
 
-		portString := fmt.Sprintf("%s:%d", s.IPAddress, s.Port)
-		newClient, err = rpc.DialHTTP("tcp", portString)
+	if len(serviceList) > 0 {
+		chosen := rand.Int() % len(serviceList)
+		s := serviceList[chosen]
+
+		hostString := fmt.Sprintf("%s:%d", s.IPAddress, s.Port)
+		newClient, err = rpc.DialHTTP("tcp", hostString)
 		if err != nil {
-			LogWarn(fmt.Sprintf("Found %d Clients to service %s request on %s.",
-				len(providesList), provides, portString))
+			LogWarn(fmt.Sprintf("Found %d Services to service %s request on %s.",
+				len(serviceList), provides, portString))
 			return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
 		}
 
 	} else {
-		LogWarn(fmt.Sprintf("Found no Clients to service %s request.", provides))
+		LogWarn(fmt.Sprintf("Found no Service to service %s request.", provides))
 		return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
 	}
 	return newClient, nil
@@ -126,7 +127,7 @@ func RemoveServiceAt(i int) {
 
 }
 
-func (r *Service) RemoveFromConfig() {
+func RemoveFromConfig(r *Service) {
 
 	newServices := make([]*Service, 0)
 
@@ -153,7 +154,7 @@ func (r *Service) RemoveFromConfig() {
 	}
 }
 
-func (r *Service) AddToConfig() {
+func AddToConfig(r *Service) {
 	for _, v := range NS.Services {
 		if v != nil {
 			if v.Equal(r) {
@@ -193,8 +194,8 @@ func WatchConfig() {
 	if err != nil {
 		log.Panic(err.String())
 	}
-	for {
 
+	for {
 		// blocking wait call returns on a change
 		ev, err := DC.Wait("/servers/config/networkservers.conf", rev)
 		if err != nil {
@@ -239,7 +240,7 @@ func watchSignals() {
 
 func gracefulShutdown() {
 	log.Println("Graceful Shutdown")
-	svc.RemoveFromConfig()
+	RemoveFromConfig(svc)
 
 	//would prefer to unregister HTTP and RPC handlers
 	//need to figure out how to do that
@@ -247,7 +248,17 @@ func gracefulShutdown() {
 	syscall.Exit(0)
 }
 
+// Method to register the heartbeat of each skynet
+// client with the healthcheck exporter.
+func RegisterHeartbeat() {
+	r := NewService("Service.Ping")
+	rpc.Register(r)
+}
 
+
+//Connects to the global config repo and registers the
+//name Skynet Service. This function is also responsible for
+//registering the Heartbeat to healthcheck the service.
 func Setup(name string) {
 	DoozerConnect()
 	LoadConfig()
@@ -261,7 +272,7 @@ func Setup(name string) {
 
 	svc = NewService(name)
 
-	svc.AddToConfig()
+	AddToConfig(svc)
 
 	go WatchConfig()
 

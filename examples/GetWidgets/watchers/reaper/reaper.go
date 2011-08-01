@@ -30,7 +30,7 @@ func monitorServices() {
 				x, err := rpc.DialHTTP("tcp", portString)
 				if err != nil {
 					log.Println("BAD CON:", err)
-					v.RemoveFromConfig()
+					skylib.RemoveFromConfig(v)
 					skylib.Errors.Add(1)
 					break
 				}
