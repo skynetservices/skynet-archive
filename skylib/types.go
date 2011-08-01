@@ -8,11 +8,9 @@
 package skylib
 
 import (
-	"os"
-	"time"
 	"fmt"
-	"rpc"
 	"container/vector"
+	"os"
 )
 
 
@@ -29,15 +27,6 @@ type RpcService struct {
 
 func (r *RpcService) parseError(err string) {
 	panic(&Error{err, r.Provides})
-}
-
-
-// A Generic struct to represent any service in the SkyNet system.
-type Service struct {
-	IPAddress string
-	Name      string
-	Port      int
-	Provides  string
 }
 
 
@@ -97,63 +86,6 @@ type ServerConfig interface {
 	Equal(that interface{}) bool
 }
 
-// Exported RPC method for the health check
-func (hc *Service) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err os.Error) {
-
-	resp.Timestamp = time.Seconds()
-
-	return nil
-}
-
-// Exported RPC method for the advanced health check
-func (hc *Service) PingAdvanced(hr *HealthCheckRequest, resp *HealthCheckResponse) (err os.Error) {
-
-	resp.Timestamp = time.Seconds()
-	resp.Load = 0.1 //todo
-	return nil
-}
-
-// Method to register the heartbeat of each skynet
-// client with the healthcheck exporter.
-func RegisterHeartbeat() {
-	r := NewService("Service.Ping")
-	rpc.Register(r)
-}
-
-
-func (r *Service) Equal(that *Service) bool {
-	var b bool
-	b = false
-	if r.Name != that.Name {
-		return b
-	}
-	if r.IPAddress != that.IPAddress {
-		return b
-	}
-	if r.Port != that.Port {
-		return b
-	}
-	if r.Provides != that.Provides {
-		return b
-	}
-	b = true
-	return b
-}
-
-// Utility function to return a new Service struct
-// pre-populated with the data on the command line.
-func NewService(provides string) *Service {
-	r := &Service{
-		Name:      *Name,
-		Port:      *Port,
-		IPAddress: *BindIP,
-		Provides:  provides,
-	}
-
-	return r
-}
-
-
 type Error struct {
 	Msg     string
 	Service string
@@ -169,12 +101,12 @@ func NewError(msg string, service string) (err *Error) {
 // CheckError is a deferred function to turn a panic with type *Error into a plain error return.
 // Other panics are unexpected and so are re-enabled.
 func CheckError(error *os.Error) {
-    if v := recover(); v != nil {
-        if e, ok := v.(*Error); ok {
-            *error = e
-        } else {
-            // runtime errors should crash
-            panic(v)
-        }
-    }
+	if v := recover(); v != nil {
+		if e, ok := v.(*Error); ok {
+			*error = e
+		} else {
+			// runtime errors should crash
+			panic(v)
+		}
+	}
 }
