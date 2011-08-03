@@ -5,7 +5,7 @@ include $(GOROOT)/src/Make.inc
 
 TARG=generic
 GOFILES=\
-	generic.go\
+	main.go\
 
 # gb: this is the local install
 GBROOT=../..

@@ -7,28 +7,28 @@
 //THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package main
 
-import (
-	"bytes"
-	"flag"
-	"fmt"
-	"github.com/paulbellamy/mango"
-	"github.com/bketelsen/skynet/skylib"
-	"log"
-	"os"
-	"rpc"
-	"template"
-)
 
-const sName = "Initiator.Web"
+import "github.com/bketelsen/skynet/skylib"
+import "log"
+import "os"
+import "http"
+import "template"
+import "flag"
+import "fmt"
+import "rpc"
+
+//const sName = "Initiator.Web"
 
 const homeTemplate = `<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'><head></head><body id='body'><form action='/new' method='POST'><div>Your Input Value<input type='text' name='YourInputValue' value=''></input></div>	</form></body></html>`
-const responseTemplate = `<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'><head></head><body id='body'>{.repeated section resp.Errors} There were errors:<br/>{@}<br/>{.end}<div>Your Output Value: {resp.YourOutputValue}</div>	</body></html>	`
+const responseTemplate = `<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'><head></head><body id='body'>{.repeated section resp.Errors} There were errors:<br/>{@}<br/>{.end}<div>Your Output Value: {result.Output}</div>	</body></html>	`
+
 
 // Call the RPC service on the router to process the GetUserDataRequest.
 func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse, os.Error) {
 	var GetUserDataResponse *skylib.SkynetResponse
 
-	client, err := skylib.GetRandomClientByProvides("RouteService.RouteGetUserDataRequest")
+	provision := "RouteService"
+	client, err := skylib.GetRandomClientByProvides(provision)
 	if err != nil {
 		if GetUserDataResponse == nil {
 			GetUserDataResponse = &skylib.SkynetResponse{}
@@ -36,7 +36,7 @@ func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse,
 		GetUserDataResponse.Errors = append(GetUserDataResponse.Errors, err.String())
 		return GetUserDataResponse, err
 	}
-	err = client.Call("RouteService.RouteGetUserDataRequest", cr, &GetUserDataResponse)
+	err = client.Call(provision + ".RouteGetUserDataRequest", cr, &GetUserDataResponse)
 	if err != nil {
 		if GetUserDataResponse == nil {
 			GetUserDataResponse = &skylib.SkynetResponse{}
@@ -49,12 +49,13 @@ func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse,
 }
 
 // Handler function to accept the submitted form post with the SSN
-func submitHandler(env mango.Env) (mango.Status, mango.Headers, mango.Body) {
+func submitHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Submit GetUserData Request")
 	inputs := make(map[string]interface{})
-	inputs["YourInputValue"] = env.Request().FormValue("YourInputValue")
+	inputs["YourInputValue"] = r.FormValue("YourInputValue")
 	cr := &skylib.SkynetRequest{Params: inputs}
+
 
 	resp, err := submitGetUserDataRequest(cr)
 	if err != nil {
@@ -62,49 +63,44 @@ func submitHandler(env mango.Env) (mango.Status, mango.Headers, mango.Body) {
 	}
 	log.Println(resp)
 
-	buffer := &bytes.Buffer{}
-	respTmpl.Execute(buffer, map[string]interface{}{
+	respTmpl.Execute(w, map[string]interface{}{
 		"resp": resp,
+		"result": resp.Result,
 	})
-	return 200, mango.Headers{}, mango.Body(buffer.String())
 }
 
 
 // Handler function to display the social form
-func homeHandler(env mango.Env) (mango.Status, mango.Headers, mango.Body) {
-	buffer := &bytes.Buffer{}
-	homeTmpl.Execute(buffer, nil)
-	return 200, mango.Headers{}, mango.Body(buffer.String())
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	homeTmpl.Execute(w, nil)
+
 }
 
 var homeTmpl *template.Template
 var respTmpl *template.Template
 
 func main() {
+
+	var err os.Error
+
 	// Pull in command line options or defaults if none given
 	flag.Parse()
 
-	f, err := os.OpenFile(*skylib.LogFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-	if err == nil {
-		defer f.Close()
-		log.SetOutput(f)
-	}
-
-	skylib.Setup(sName)
+	node := skylib.NewNode()
+	node.Start()
 
 	homeTmpl = template.MustParse(homeTemplate, nil)
 	respTmpl = template.MustParse(responseTemplate, nil)
 
-	rpc.HandleHTTP()
+	http.HandleFunc("/", homeHandler)
+	http.HandleFunc("/new", submitHandler)
+
+	rpc.HandleHTTP() // I think we still need this here.
 
 	portString := fmt.Sprintf("%s:%d", *skylib.BindIP, *skylib.Port)
 
-	stack := new(mango.Stack)
-	stack.Address = portString
-
-	routes := make(map[string]mango.App)
-	routes["/"] = homeHandler
-	routes["/new"] = submitHandler
-	stack.Middleware(mango.Routing(routes))
-	stack.Run(nil)
+	err = http.ListenAndServe(portString, nil)
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err.String())
+	}
 }
