@@ -15,12 +15,12 @@ import (
 
 
 type SkynetRequest struct {
-	Params	map[string]interface{}
+	Params map[string]interface{}
 }
 
 type SkynetResponse struct {
 	Result map[string]interface{}
-	Errors          []string
+	Errors []string
 }
 
 

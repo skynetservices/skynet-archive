@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"rand"
 	"rpc"
+	"rpc/jsonrpc"
 	"expvar"
 	"syscall"
 	"os/signal"
@@ -32,7 +33,8 @@ var Port *int = flag.Int("port", 9999, "tcp port to listen")
 var Name *string = flag.String("name", os.Args[0], "name of this server")
 var BindIP *string = flag.String("bindaddress", "127.0.0.1", "address to bind")
 var LogFileName *string = flag.String("logFileName", "myservice.log", "name of logfile")
-var LogLevel *int = flag.Int("logLevel", 1, "log level (1-5)")
+var LogLevel *int = flag.Int("logLevel", 5, "log level (1-5)")
+var Protocol *string = flag.String("protocol", "http+gob", "RPC message transport protocol (default is http+gob; try json")
 var DoozerServer *string = flag.String("doozerServer", "127.0.0.1:8046", "addr:port of doozer server")
 var Requests *expvar.Int
 var Errors *expvar.Int
@@ -61,15 +63,22 @@ func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
 		s := serviceList[chosen]
 
 		hostString := fmt.Sprintf("%s:%d", s.IPAddress, s.Port)
-		newClient, err = rpc.DialHTTP("tcp", hostString)
+		protocol := s.Protocol
+		switch protocol {
+		default:
+			newClient, err = rpc.DialHTTP("tcp", hostString)
+		case "json":
+			newClient, err = jsonrpc.Dial("tcp", hostString)
+		}
+
 		if err != nil {
-			LogWarn(fmt.Sprintf("Found %d Services to service %s request on %s.",
+			LogWarn(fmt.Sprintf("Found %d nodes to provide service %s requested on %s, but failed to connect.",
 				len(serviceList), provides, hostString))
 			return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
 		}
 
 	} else {
-		LogWarn(fmt.Sprintf("Found no Service to service %s request.", provides))
+		LogWarn(fmt.Sprintf("Found no node to provide service %s.", provides))
 		return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
 	}
 	return newClient, nil
@@ -164,6 +173,7 @@ func AddToConfig(r *Service) {
 		}
 	}
 	NS.Services = append(NS.Services, r)
+	LogDebug("Added", r.Name, r.Provides, r.Protocol)
 	b, err := json.Marshal(NS)
 	if err != nil {
 		log.Panic(err.String())
@@ -260,6 +270,13 @@ func RegisterHeartbeat() {
 //name Skynet Service. This function is also responsible for
 //registering the Heartbeat to healthcheck the service.
 func Setup(name string) {
+	// TODO: Move this soon.
+	f, err := os.OpenFile(*LogFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+	if err == nil {
+		defer f.Close()
+		log.SetOutput(f)
+	}
+
 	DoozerConnect()
 	LoadConfig()
 	if x := recover(); x != nil {

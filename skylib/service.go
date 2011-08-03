@@ -18,6 +18,7 @@ type Service struct {
 	Name      string
 	Port      int
 	Provides  string
+	Protocol  string
 }
 
 // Exported RPC method for the health check
@@ -63,6 +64,7 @@ func NewService(provides string) *Service {
 		Port:      *Port,
 		IPAddress: *BindIP,
 		Provides:  provides,
+		Protocol:  *Protocol,
 	}
 
 	return r
