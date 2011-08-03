@@ -1,16 +1,16 @@
 package main
+
 import (
 	"github.com/bketelsen/skynet/skylib"
 	"os"
 	"flag"
-//	"log"
-	//"rpc"
 )
 
-type MyService struct {
+type MyRandomProvision struct {
+
 }
 
-func (*MyService) RandString(n int, response *string) (err os.Error) {
+func (*MyRandomProvision) RandString(n int, response *string) (err os.Error) {
 	word := skylib.RandWord(n)
 	skylib.LogError("RandString:", n, word)
 	*response = word
@@ -20,9 +20,7 @@ func (*MyService) RandString(n int, response *string) (err os.Error) {
 
 func main() {
 	flag.Parse()
-	skylib.Setup("MyService.RandString")
-	r := &MyService{}
-	//rpc.Register(r)
-	server := skylib.NewRpcServer(r)
-	server.Serve()
+	node := skylib.NewNode()
+	r := &MyRandomProvision{}
+	node.RegisterRpcServer(r).Start().Wait()
 }

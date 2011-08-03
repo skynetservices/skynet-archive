@@ -12,17 +12,12 @@ import (
 	"time"
 )
 
-// A Generic struct to represent any service in the SkyNet system.
-type Service struct {
-	IPAddress string
-	Name      string
-	Port      int
-	Provides  string
-	Protocol  string
+type CommonProvision struct {
+
 }
 
 // Exported RPC method for the health check
-func (hc *Service) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err os.Error) {
+func (hc *CommonProvision) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err os.Error) {
 
 	resp.Timestamp = time.Seconds()
 
@@ -30,42 +25,9 @@ func (hc *Service) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err os.E
 }
 
 // Exported RPC method for the advanced health check
-func (hc *Service) PingAdvanced(hr *HealthCheckRequest, resp *HealthCheckResponse) (err os.Error) {
+func (hc *CommonProvision) PingAdvanced(hr *HealthCheckRequest, resp *HealthCheckResponse) (err os.Error) {
 
 	resp.Timestamp = time.Seconds()
 	resp.Load = 0.1 //todo
 	return nil
-}
-
-func (r *Service) Equal(that *Service) bool {
-	var b bool
-	b = false
-	if r.Name != that.Name {
-		return b
-	}
-	if r.IPAddress != that.IPAddress {
-		return b
-	}
-	if r.Port != that.Port {
-		return b
-	}
-	if r.Provides != that.Provides {
-		return b
-	}
-	b = true
-	return b
-}
-
-// Utility function to return a new Service struct
-// pre-populated with the data on the command line.
-func NewService(provides string) *Service {
-	r := &Service{
-		Name:      *Name,
-		Port:      *Port,
-		IPAddress: *BindIP,
-		Provides:  provides,
-		Protocol:  *Protocol,
-	}
-
-	return r
 }

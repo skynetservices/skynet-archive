@@ -19,18 +19,16 @@ import (
 	"rpc"
 	"rpc/jsonrpc"
 	"expvar"
-	"syscall"
-	"os/signal"
 )
 
 
 var DC *doozer.Conn
 var NS *NetworkServers
-var RpcServices []*RpcService
+//var RpcServices []*RpcServer
 
 
 var Port *int = flag.Int("port", 9999, "tcp port to listen")
-var Name *string = flag.String("name", os.Args[0], "name of this server")
+var Name *string = flag.String("name", os.Args[0], "name of this Node")
 var BindIP *string = flag.String("bindaddress", "127.0.0.1", "address to bind")
 var LogFileName *string = flag.String("logFileName", "myservice.log", "name of logfile")
 var LogLevel *int = flag.Int("logLevel", 5, "log level (1-5)")
@@ -39,10 +37,10 @@ var DoozerServer *string = flag.String("doozerServer", "127.0.0.1:8046", "addr:p
 var Requests *expvar.Int
 var Errors *expvar.Int
 var Goroutines *expvar.Int
-var svc *Service
+//var svc *Service
 
 
-func GetServiceProviders(provides string) (providesList []*Service) {
+func GetServiceProviders(provides string) (providesList []*RpcServer) {
 	for _, v := range NS.Services {
 		if v != nil && v.Provides == provides {
 			providesList = append(providesList, v)
@@ -111,7 +109,7 @@ func LoadConfig() {
 
 func RemoveServiceAt(i int) {
 
-	newServices := make([]*Service, 0)
+	newServices := make([]*RpcServer, 0)
 
 	for k, v := range NS.Services {
 		if k != i {
@@ -136,9 +134,9 @@ func RemoveServiceAt(i int) {
 
 }
 
-func RemoveFromConfig(r *Service) {
+func RemoveFromConfig(r *RpcServer) {
 
-	newServices := make([]*Service, 0)
+	newServices := make([]*RpcServer, 0)
 
 	for _, v := range NS.Services {
 		if v != nil {
@@ -163,17 +161,17 @@ func RemoveFromConfig(r *Service) {
 	}
 }
 
-func AddToConfig(r *Service) {
+func AddToConfig(r *RpcServer) {
 	for _, v := range NS.Services {
 		if v != nil {
 			if v.Equal(r) {
-				LogInfo(fmt.Sprintf("Skipping adding %s : alreday exists.", v.Name))
+				LogInfo(fmt.Sprintf("Skipping adding %s : alreday exists.", v.Provides))
 				return // it's there so we don't need an update
 			}
 		}
 	}
 	NS.Services = append(NS.Services, r)
-	LogDebug("Added", r.Name, r.Provides, r.Protocol)
+	LogDebug("Added", r.Provides, r.Protocol)
 	b, err := json.Marshal(NS)
 	if err != nil {
 		log.Panic(err.String())
@@ -209,90 +207,12 @@ func WatchConfig() {
 		// blocking wait call returns on a change
 		ev, err := DC.Wait("/servers/config/networkservers.conf", rev)
 		if err != nil {
-			log.Panic(err.String())
+			log.Panic("Error waiting on doozer: " + err.String())
 		}
 		log.Println("Received new configuration.  Setting local config.")
 		setConfig(ev.Body)
 
 		rev = ev.Rev + 1
 	}
-
-}
-
-
-func initDefaultExpVars(name string) {
-	Requests = expvar.NewInt(name + "-processed")
-	Errors = expvar.NewInt(name + "-errors")
-	Goroutines = expvar.NewInt(name + "-goroutines")
-}
-
-func watchSignals() {
-
-	for {
-		select {
-		case sig := <-signal.Incoming:
-			switch sig.(os.UnixSignal) {
-			case syscall.SIGUSR1:
-				*LogLevel = *LogLevel + 1
-				LogError("Loglevel changed to : ", *LogLevel)
-
-			case syscall.SIGUSR2:
-				if *LogLevel > 1 {
-					*LogLevel = *LogLevel - 1
-				}
-				LogError("Loglevel changed to : ", *LogLevel)
-			case syscall.SIGINT:
-				gracefulShutdown()
-			}
-		}
-	}
-}
-
-func gracefulShutdown() {
-	log.Println("Graceful Shutdown")
-	RemoveFromConfig(svc)
-
-	//would prefer to unregister HTTP and RPC handlers
-	//need to figure out how to do that
-	syscall.Sleep(10e9) // wait 10 seconds for requests to finish  #HACK
-	syscall.Exit(0)
-}
-
-// Method to register the heartbeat of each skynet
-// client with the healthcheck exporter.
-func RegisterHeartbeat() {
-	r := NewService("Service.Ping")
-	rpc.Register(r)
-}
-
-
-//Connects to the global config repo and registers the
-//name Skynet Service. This function is also responsible for
-//registering the Heartbeat to healthcheck the service.
-func Setup(name string) {
-	// TODO: Move this soon.
-	f, err := os.OpenFile(*LogFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-	if err == nil {
-		defer f.Close()
-		log.SetOutput(f)
-	}
-
-	DoozerConnect()
-	LoadConfig()
-	if x := recover(); x != nil {
-		LogWarn("No Configuration File loaded.  Creating One.")
-	}
-
-	go watchSignals()
-
-	initDefaultExpVars(name)
-
-	svc = NewService(name)
-
-	AddToConfig(svc)
-
-	go WatchConfig()
-
-	RegisterHeartbeat()
 
 }
