@@ -29,19 +29,19 @@ type RouteService struct {
 }
 
 
-func callRpcService(provision string, method string, async bool, failOnErr bool, cr *skylib.SkynetRequest, rep *skylib.SkynetResponse) (err os.Error) {
+func callRpcService(model string, operation string, async bool, failOnErr bool, cr *skylib.SkynetRequest, rep *skylib.SkynetResponse) (err os.Error) {
 	defer skylib.CheckError(&err)
 
-	rpcClient, err := skylib.GetRandomClientByProvides(provision)
+	rpcClient, err := skylib.GetRandomClientByProvides(model)
 	if err != nil {
-		log.Println("No server provides", provision)
+		log.Println("No server provides", model)
 		if failOnErr {
 			return skylib.NewError(skylib.NO_CLIENT_PROVIDES_SERVICE, sName)
 		} else {
 			return nil
 		}
 	}
-	name := provision + method
+	name := model + operation
 	if async {
 		go rpcClient.Call(name, cr, rep)
 		log.Println("Called service async", name)
@@ -52,7 +52,7 @@ func callRpcService(provision string, method string, async bool, failOnErr bool,
 	if err != nil {
 		log.Println("failed connection, retrying", err)
 		// get another one and try again!
-		rpcClient, err := skylib.GetRandomClientByProvides(provision)
+		rpcClient, err := skylib.GetRandomClientByProvides(model)
 		err = rpcClient.Call(name, cr, rep)
 		if err != nil {
 			return skylib.NewError(err.String(), sName)
@@ -108,7 +108,7 @@ func main() {
 }
 
 // Today this function creates a route in Doozer for the
-// RouteService.RouteCreditRequest method - which is CLARITY SPECIFIC
+// RouteService.RouteCreditRequest operation - which is CLARITY SPECIFIC
 // and adds it too Doozer
 func CreateInitialRoute() {
 
