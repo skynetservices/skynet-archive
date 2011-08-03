@@ -5,7 +5,7 @@ include $(GOROOT)/src/Make.inc
 
 TARG=router
 GOFILES=\
-	router.go\
+	main.go\
 
 # gb: this is the local install
 GBROOT=..

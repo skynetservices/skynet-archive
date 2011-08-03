@@ -5,7 +5,7 @@ include $(GOROOT)/src/Make.inc
 
 TARG=mango
 GOFILES=\
-	mangoInitiator.go\
+	main.go\
 
 # gb: this is the local install
 GBROOT=../..

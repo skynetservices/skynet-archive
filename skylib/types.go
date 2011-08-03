@@ -15,16 +15,17 @@ import (
 
 
 type SkynetRequest struct {
-	Params	map[string]interface{}
+	Params map[string]interface{}
 }
 
 type SkynetResponse struct {
 	Result map[string]interface{}
-	Errors          []string
+	Errors []string
 }
 
 
-// RpcService is a struct that represents a remotly 
+/*
+// RpcService is a struct that represents a remotely 
 // callable function.  It is intented to be part of 
 // an array or collection of RpcServices.  It contains
 // a member "Provides" which is the name of the service the
@@ -38,6 +39,7 @@ type RpcService struct {
 func (r *RpcService) parseError(err string) {
 	panic(&Error{err, r.Provides})
 }
+*/
 
 
 // A HeartbeatRequest is the struct that is sent for ping checks.
@@ -81,7 +83,8 @@ type Route struct {
 // OkToRetry delineates whether it's ok to call this service
 // more than once.
 type RpcCall struct {
-	Service   string
+	Provision string
+	Method    string
 	Async     bool
 	OkToRetry bool
 	ErrOnFail bool
@@ -89,7 +92,7 @@ type RpcCall struct {
 
 // Parent struct for the configuration
 type NetworkServers struct {
-	Services []*Service
+	Services []*RpcServer
 }
 
 type ServerConfig interface {
