@@ -6,11 +6,11 @@ import (
 	"flag"
 )
 
-type MyRandomModel struct {
+type MyRandomService struct {
 
 }
 
-func (*MyRandomModel) RandString(n int, response *string) (err os.Error) {
+func (*MyRandomService) RandString(n int, response *string) (err os.Error) {
 	word := skylib.RandWord(n)
 	skylib.LogError("RandString:", n, word)
 	*response = word
@@ -21,6 +21,6 @@ func (*MyRandomModel) RandString(n int, response *string) (err os.Error) {
 func main() {
 	flag.Parse()
 	agent := skylib.NewAgent()
-	r := &MyRandomModel{}
-	agent.RegisterRpcServer(r).Start().Wait()
+	sig := &MyRandomService{}
+	agent.RegisterRpcServer(sig).Start().Wait()
 }

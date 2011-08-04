@@ -14,14 +14,14 @@ func init() {
 func main() {
 	flag.Parse()
 	skylib.NewAgent().Start()
-	prov := "MyRandomModel"
-	println("Seeking services of type ", prov)
-	client, err := skylib.GetRandomClientByProvides(prov)
+	sig := "MyRandomService"
+	println("Seeking services of type ", sig)
+	client, err := skylib.GetRandomClientByProvides(sig)
 	skylib.CheckError(&err)
 	request := rand.Intn(10) + 1
 	println("Request:", request)
 	var response string = "default" // to prove it has changed
-	err = client.Call(prov+".RandString", request, &response)
+	err = client.Call(sig+".RandString", request, &response)
 	skylib.CheckError(&err)
 	println("Reponse:", response)
 	println("Done.")
