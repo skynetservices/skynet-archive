@@ -5,32 +5,57 @@
 //The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 //THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-package skylib
+package main
 
 import (
-	"json"
-	"os"
+	"rpc"
+	"log"
+	"flag"
+	"github.com/bketelsen/skynet/skylib"
+	"fmt"
+	"time"
+	"syscall"
 )
 
 
-// Function to retrieve a route by name from Config.
-// Returns a route, or error.
-func GetRoute(name string) (r *Route, err os.Error) {
-
-	data, _, err := DC.Get("/routes/"+name, nil)
-	if err != nil {
-		LogError(err.String())
-		return r, err
-	}
-	if len(data) > 0 {
-		err := json.Unmarshal(data, &r)
-		if err != nil {
-			LogError(err.String())
-			return r, err
+func monitorServices() {
+	for {
+		skylib.LoadConfig()
+		for _, v := range skylib.NS.Services {
+			if (v.Port != *skylib.Port) || (v.IPAddress != *skylib.BindIP) {
+				portString := fmt.Sprintf("%s:%d", v.IPAddress, v.Port)
+				x, err := rpc.DialHTTP("tcp", portString)
+				if err != nil {
+					log.Println("BAD CON:", err)
+					skylib.RemoveFromConfig(v)
+					skylib.Errors.Add(1)
+					break
+				}
+				hc := skylib.HeartbeatRequest{Timestamp: time.Seconds()}
+				hcr := skylib.HeartbeatResponse{}
+				err = x.Call("Service.Ping", hc, &hcr)
+				if err != nil {
+					log.Println(err.String())
+					skylib.Errors.Add(1)
+				}
+				x.Close()
+				skylib.Requests.Add(1)
+			}
 		}
-		return r, nil
+		syscall.Sleep(2000 * 1000000) // sleep then do it again!
 	}
+}
 
-	return r, os.NewError("No route found")
 
+func main() {
+
+	// Pull in command line options or defaults if none given
+	flag.Parse()
+
+	agent := skylib.NewAgent()
+	agent.Start()
+
+	go monitorServices()
+
+	agent.Wait()
 }

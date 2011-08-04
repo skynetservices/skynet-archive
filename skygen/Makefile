@@ -10,8 +10,8 @@ GOFILES=\
 	reaper.go\
 	router.go\
 	service.go\
-	skygen.go\
 	watcher.go\
+	main.go\
 
 # gb: this is the local install
 GBROOT=..
