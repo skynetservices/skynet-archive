@@ -83,7 +83,7 @@ type Route struct {
 // OkToRetry delineates whether it's ok to call this service
 // more than once.
 type RpcCall struct {
-	Model string
+	Service string
 	Method    string
 	Async     bool
 	OkToRetry bool

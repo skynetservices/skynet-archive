@@ -12,12 +12,12 @@ import (
 	"time"
 )
 
-type CommonModel struct {
+type CommonService struct {
 
 }
 
 // Exported RPC method for the health check
-func (hc *CommonModel) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err os.Error) {
+func (hc *CommonService) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err os.Error) {
 
 	resp.Timestamp = time.Seconds()
 
@@ -25,7 +25,7 @@ func (hc *CommonModel) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err 
 }
 
 // Exported RPC method for the advanced health check
-func (hc *CommonModel) PingAdvanced(hr *HealthCheckRequest, resp *HealthCheckResponse) (err os.Error) {
+func (hc *CommonService) PingAdvanced(hr *HealthCheckRequest, resp *HealthCheckResponse) (err os.Error) {
 
 	resp.Timestamp = time.Seconds()
 	resp.Load = 0.1 //todo

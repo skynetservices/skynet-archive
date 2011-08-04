@@ -66,7 +66,7 @@ func gracefulShutdown() {
 // Method to register the heartbeat of each skynet
 // node with the healthcheck exporter.
 func RegisterHeartbeat() {
-	NewRpcServer("CommonModel")
+	NewRpcServer("CommonService")
 	// No AddToConfig()?
 }
 
@@ -103,10 +103,10 @@ func (self *Agent) Wait() {
 	self.chans = make([]chan bool, 0)
 }
 
-// Register the methods of the given model type for a
+// Register the methods of the given sig type for a
 // Skynet Server.
-func (self *Agent) RegisterRpcServer(model interface{}) *Agent {
-	server := NewRpcServer(model)
+func (self *Agent) RegisterRpcServer(sig interface{}) *Agent {
+	server := NewRpcServer(sig)
 	AddToConfig(server)
 	self.Servers = append(self.Servers, server)
 	return self

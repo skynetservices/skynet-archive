@@ -67,10 +67,10 @@ func (this *RpcServer) Equal(that *RpcServer) bool {
 	return b
 }
 
-func NewRpcServer(model interface{}) *RpcServer {
-	////star_name := reflect.TypeOf(model).String())
-	type_name := reflect.Indirect(reflect.ValueOf(model)).Type().Name()
-	rpc.Register(model)
+func NewRpcServer(sig interface{}) *RpcServer {
+	////star_name := reflect.TypeOf(sig).String())
+	type_name := reflect.Indirect(reflect.ValueOf(sig)).Type().Name()
+	rpc.Register(sig)
 	r := &RpcServer{
 		Port:      *Port,
 		IPAddress: *BindIP,

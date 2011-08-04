@@ -16,7 +16,7 @@ func main() {
 	skylib.NewAgent().Start()
 	sig := "MyRandomService"
 	println("Seeking services of type ", sig)
-	client, err := skylib.GetRandomClientByProvides(sig)
+	client, err := skylib.GetRandomClientBySignature(sig)
 	skylib.CheckError(&err)
 	request := rand.Intn(10) + 1
 	println("Request:", request)

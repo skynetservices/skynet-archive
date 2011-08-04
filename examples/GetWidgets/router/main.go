@@ -29,19 +29,19 @@ type RouteService struct {
 }
 
 
-func callRpcService(model string, operation string, async bool, failOnErr bool, cr *skylib.SkynetRequest, rep *skylib.SkynetResponse) (err os.Error) {
+func callRpcService(sig string, operation string, async bool, failOnErr bool, cr *skylib.SkynetRequest, rep *skylib.SkynetResponse) (err os.Error) {
 	defer skylib.CheckError(&err)
 
-	rpcClient, err := skylib.GetRandomClientByProvides(model)
+	rpcClient, err := skylib.GetRandomClientBySignature(sig)
 	if err != nil {
-		log.Println("No server provides", model)
+		log.Println("No server provides", sig)
 		if failOnErr {
 			return skylib.NewError(skylib.NO_CLIENT_PROVIDES_SERVICE, sName)
 		} else {
 			return nil
 		}
 	}
-	name := model + operation
+	name := sig + operation
 	if async {
 		go rpcClient.Call(name, cr, rep)
 		log.Println("Called service async", name)
@@ -52,7 +52,7 @@ func callRpcService(model string, operation string, async bool, failOnErr bool, 
 	if err != nil {
 		log.Println("failed connection, retrying", err)
 		// get another one and try again!
-		rpcClient, err := skylib.GetRandomClientByProvides(model)
+		rpcClient, err := skylib.GetRandomClientBySignature(sig)
 		err = rpcClient.Call(name, cr, rep)
 		if err != nil {
 			return skylib.NewError(err.String(), sName)

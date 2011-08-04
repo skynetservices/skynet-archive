@@ -49,7 +49,7 @@ func GetServiceProviders(provides string) (providesList []*RpcServer) {
 
 // This is simple today - it returns the first listed service that matches the request
 // Load balancing needs to be applied here somewhere.
-func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
+func GetRandomClientBySignature(provides string) (*rpc.Client, os.Error) {
 	var newClient *rpc.Client
 	var err os.Error
 	serviceList := GetServiceProviders(provides)

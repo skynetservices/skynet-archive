@@ -27,8 +27,8 @@ const responseTemplate = `<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitio
 func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse, os.Error) {
 	var GetUserDataResponse *skylib.SkynetResponse
 
-	model := "RouteService"
-	client, err := skylib.GetRandomClientByProvides(model)
+	sig := "RouteService"
+	client, err := skylib.GetRandomClientBySignature(sig)
 	if err != nil {
 		if GetUserDataResponse == nil {
 			GetUserDataResponse = &skylib.SkynetResponse{}
@@ -36,7 +36,7 @@ func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse,
 		GetUserDataResponse.Errors = append(GetUserDataResponse.Errors, err.String())
 		return GetUserDataResponse, err
 	}
-	err = client.Call(model + ".RouteGetUserDataRequest", cr, &GetUserDataResponse)
+	err = client.Call(sig + ".RouteGetUserDataRequest", cr, &GetUserDataResponse)
 	if err != nil {
 		if GetUserDataResponse == nil {
 			GetUserDataResponse = &skylib.SkynetResponse{}
