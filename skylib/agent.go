@@ -118,7 +118,7 @@ func NewAgent() *Agent {
 	initLogging()
 	initDefaultExpVars(name)
 
-	DoozerConnect()
+	ConfigConnect()
 	LoadConfig()
 	if x := recover(); x != nil {
 		LogWarn("No Configuration File loaded.  Creating One.")

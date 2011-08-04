@@ -13,7 +13,6 @@ import (
 	"json"
 	"flag"
 	"os"
-	"github.com/ha/doozer"
 	"fmt"
 	"rand"
 	"rpc"
@@ -23,7 +22,6 @@ import (
 )
 
 
-var DC *doozer.Conn
 var NS *NetworkServers
 //var RpcServices []*RpcServer
 
@@ -34,7 +32,6 @@ var BindIP *string = flag.String("bindaddress", "127.0.0.1", "address to bind")
 var LogFileName *string = flag.String("logFileName", "myservice.log", "name of logfile")
 var LogLevel *int = flag.Int("logLevel", 5, "log level (1-5)")
 var Protocol *string = flag.String("protocol", "http+gob", "RPC message transport protocol (default is http+gob; try json")
-var DoozerServer *string = flag.String("doozerServer", "127.0.0.1:8046", "addr:port of doozer server")
 var Requests *expvar.Int
 var Errors *expvar.Int
 var Goroutines *expvar.Int
@@ -83,14 +80,6 @@ func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
 	return newClient, nil
 }
 
-
-func DoozerConnect() {
-	var err os.Error
-	DC, err = doozer.Dial(*DoozerServer)
-	if err != nil {
-		log.Panic(err.String())
-	}
-}
 
 // on startup load the configuration file. 
 // After the config file is loaded, we set the global config file variable to the
@@ -208,7 +197,7 @@ func WatchConfig() {
 		// blocking wait call returns on a change
 		ev, err := DC.Wait("/servers/config/networkservers.conf", rev)
 		if err != nil {
-			log.Panic("Error waiting on doozer: " + err.String())
+			log.Panic("Error waiting on config: " + err.String())
 		}
 		log.Println("Received new configuration.  Setting local config.")
 		setConfig(ev.Body)
