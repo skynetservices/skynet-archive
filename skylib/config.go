@@ -48,6 +48,32 @@ func GetServiceProviders(classname string) (serverList []*RpcServer) {
 	return
 }
 
+func GetAllClientsByService(classname string) (clientList []*rpc.Client) {
+	var newClient *rpc.Client
+	var err os.Error
+	serviceList := GetServiceProviders(classname)
+
+	for i, s := range(serviceList) {
+		hostString := fmt.Sprintf("%s:%d", s.IPAddress, s.Port)
+		protocol := strings.ToLower(s.Protocol) // to be safe
+		switch protocol {
+		default:
+			newClient, err = rpc.DialHTTP("tcp", hostString)
+		case "json":
+			newClient, err = jsonrpc.Dial("tcp", hostString)
+		}
+
+		if err != nil {
+			LogWarn(fmt.Sprintf("Found %d nodes to provide service %s requested on %s, but failed to connect to #%d.",
+				len(serviceList), classname, hostString, i))
+			//NewError(NO_CLIENT_PROVIDES_SERVICE, classname)
+			continue
+		}
+		clientList = append(clientList, newClient)
+	}
+	return
+}
+
 // This is simple today - it returns the first listed service that matches the request
 // Load balancing needs to be applied here somewhere.
 func GetRandomClientByService(classname string) (*rpc.Client, os.Error) {

@@ -36,7 +36,7 @@ func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse,
 		GetUserDataResponse.Errors = append(GetUserDataResponse.Errors, err.String())
 		return GetUserDataResponse, err
 	}
-	err = client.Call(sig + ".RouteGetUserDataRequest", cr, &GetUserDataResponse)
+	err = client.Call(sig+".RouteGetUserDataRequest", cr, &GetUserDataResponse)
 	if err != nil {
 		if GetUserDataResponse == nil {
 			GetUserDataResponse = &skylib.SkynetResponse{}
@@ -56,7 +56,6 @@ func submitHandler(w http.ResponseWriter, r *http.Request) {
 	inputs["YourInputValue"] = r.FormValue("YourInputValue")
 	cr := &skylib.SkynetRequest{Params: inputs}
 
-
 	resp, err := submitGetUserDataRequest(cr)
 	if err != nil {
 		log.Println(err.String())
@@ -64,7 +63,7 @@ func submitHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(resp)
 
 	respTmpl.Execute(w, map[string]interface{}{
-		"resp": resp,
+		"resp":   resp,
 		"result": resp.Result,
 	})
 }

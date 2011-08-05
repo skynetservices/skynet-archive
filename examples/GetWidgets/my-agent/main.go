@@ -15,4 +15,3 @@ func main() {
 	agent.Register(sig)
 	agent.Start().Wait()
 }
-

@@ -37,7 +37,7 @@ func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse,
 		GetUserDataResponse.Errors = append(GetUserDataResponse.Errors, err.String())
 		return GetUserDataResponse, err
 	}
-	err = client.Call(sig + ".RouteGetUserDataRequest", cr, &GetUserDataResponse)
+	err = client.Call(sig+".RouteGetUserDataRequest", cr, &GetUserDataResponse)
 	if err != nil {
 		if GetUserDataResponse == nil {
 			GetUserDataResponse = &skylib.SkynetResponse{}

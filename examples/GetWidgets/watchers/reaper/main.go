@@ -19,28 +19,19 @@ import (
 
 
 func monitorServices() {
+	println("Fear the reaper...")
 	for {
 		skylib.LoadConfig()
-		for _, v := range skylib.NS.Services {
-			if (v.Port != *skylib.Port) || (v.IPAddress != *skylib.BindIP) {
-				portString := fmt.Sprintf("%s:%d", v.IPAddress, v.Port)
-				x, err := rpc.DialHTTP("tcp", portString)
-				if err != nil {
-					log.Println("BAD CON:", err)
-					skylib.RemoveFromConfig(v)
-					skylib.Errors.Add(1)
-					break
-				}
+		clients := skylib.GetAllClientsByService("CommonService")
+		println("#Agents:", len(clients))
+		for _, x := range(clients) {
 				hc := skylib.HeartbeatRequest{Timestamp: time.Seconds()}
 				hcr := skylib.HeartbeatResponse{}
-				err = x.Call("Service.Ping", hc, &hcr)
-				if err != nil {
-					log.Println(err.String())
-					skylib.Errors.Add(1)
-				}
+				err := x.Call("CommonService.Ping", hc, &hcr)
+				if err != nil {panic(err)}
+				fmt.Printf("hcr:%v\n", hcr)
 				x.Close()
-				skylib.Requests.Add(1)
-			}
+				skylib.Requests.Add(1) // Should be count Heartbeat requests?
 		}
 		syscall.Sleep(2000 * 1000000) // sleep then do it again!
 	}
@@ -55,7 +46,5 @@ func main() {
 	agent := skylib.NewAgent()
 	agent.Start()
 
-	go monitorServices()
-
-	agent.Wait()
+	monitorServices()
 }

@@ -65,9 +65,13 @@ func gracefulShutdown() {
 
 // Method to register the heartbeat of each skynet
 // node with the healthcheck exporter.
+// We call `go Serve()` here because we never want to `Wait()` on the Heartbeat.
+// TODO: Should Heartbeat be on a different port?
 func RegisterHeartbeat() {
-	NewRpcServer("CommonService")
-	// No AddToConfig()?
+	sig := &CommonService{}
+	server := NewRpcServer(sig)
+	go server.Serve(make(chan bool))
+	AddToConfig(server)
 }
 
 
