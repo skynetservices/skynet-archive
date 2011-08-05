@@ -30,7 +30,6 @@ type NameRepo struct {
 }
 
 func (self *NameRepo) find(index string) string {
-	println(index)
 	switch index {
 	case "0":
 		return self.first

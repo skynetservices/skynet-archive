@@ -21,6 +21,8 @@ type RpcServer struct {
 	Protocol  string // json, etc.
 }
 
+// At the moment, this can start more than one Server on the same
+// port, which could be a problem.
 func (self *RpcServer) Serve(done chan bool) {
 	portString := fmt.Sprintf("%s:%d", self.IPAddress, self.Port)
 	log.Println(portString)
@@ -47,7 +49,7 @@ func (self *RpcServer) Serve(done chan bool) {
 			jsonrpc.ServeConn(conn)
 		}
 	}
-	done <- true
+	done <- true // This may never occur.
 }
 
 func (this *RpcServer) Equal(that *RpcServer) bool {
