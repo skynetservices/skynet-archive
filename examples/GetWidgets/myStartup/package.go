@@ -19,6 +19,6 @@ type GetUserDataResponse struct {
 type MyRandomRequest []byte
 
 type MyRandomResponse struct {
-    Len int 
-    Val string
+	Len int
+	Val string
 }

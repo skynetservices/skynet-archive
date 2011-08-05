@@ -15,7 +15,6 @@ import (
 	"container/vector"
 	"json"
 	"github.com/bketelsen/skynet/skylib"
-
 )
 
 var route *skylib.Route
@@ -121,9 +120,9 @@ func CreateInitialRoute() {
 
 	// Define the chain of services.
 	rpcScore := &skylib.RpcCall{
-		Service: "GetUserDataService",
-		Method: ".GetUserData",
-		Async: false,
+		Service:   "GetUserDataService",
+		Method:    ".GetUserData",
+		Async:     false,
 		OkToRetry: false,
 		ErrOnFail: true,
 	}

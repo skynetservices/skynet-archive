@@ -67,7 +67,8 @@ func gracefulShutdown() {
 // node with the healthcheck exporter.
 func RegisterHeartbeat() {
 	NewRpcServer("CommonService")
-	// No AddToConfig()?
+	// No AddToConfig() // See 'ping' branch.
+	// Goroutines.Add(2)
 }
 
 
@@ -83,15 +84,20 @@ type Agent struct {
 // This function is also responsible for
 // registering the Heartbeat to healthcheck the service.
 func (self *Agent) Start() *Agent {
+	var ngo int64 = 0
 	go watchSignals()
+	ngo++
 	go WatchConfig()
+	ngo++
 	RegisterHeartbeat()
 
 	for _, server := range self.Servers {
 		done := make(chan bool)
 		self.chans = append(self.chans, done)
 		go server.Serve(done)
+		ngo++
 	}
+	Goroutines.Add(ngo)
 	return self
 }
 
