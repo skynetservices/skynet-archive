@@ -12,9 +12,10 @@ type MyRandomService struct {
 
 func (*MyRandomService) RandString(n int, response *string) (err os.Error) {
 	word := skylib.RandWord(n)
-	skylib.LogError("RandString:", n, word)
+	skylib.LogInfo("RandString:", n, word)
 	*response = word
-	skylib.LogError(*response)
+	skylib.LogInfo(*response)
+	skylib.Requests.Add(1)
 	return
 }
 
