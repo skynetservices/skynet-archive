@@ -19,16 +19,17 @@ import (
 	"template"
 )
 
-const sName = "Initiator.Web"
+//const sName = "Initiator.Web"
 
-const homeTemplate = `<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'><head></head><body id='body'><form action='/new' method='POST'><div>Your Input Value<input type='text' name='YourInputValue' value=''></input></div>	</form></body></html>`
+const homeTemplate = `<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'><head></head><body id='body'><form action='/new' operation='POST'><div>Your Input Value<input type='text' name='YourInputValue' value=''></input></div>	</form></body></html>`
 const responseTemplate = `<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'><head></head><body id='body'>{.repeated section resp.Errors} There were errors:<br/>{@}<br/>{.end}<div>Your Output Value: {resp.YourOutputValue}</div>	</body></html>	`
 
 // Call the RPC service on the router to process the GetUserDataRequest.
 func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse, os.Error) {
 	var GetUserDataResponse *skylib.SkynetResponse
 
-	client, err := skylib.GetRandomClientByProvides("RouteService.RouteGetUserDataRequest")
+	sig := "RouteService"
+	client, err := skylib.GetRandomClientByService(sig)
 	if err != nil {
 		if GetUserDataResponse == nil {
 			GetUserDataResponse = &skylib.SkynetResponse{}
@@ -36,7 +37,7 @@ func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse,
 		GetUserDataResponse.Errors = append(GetUserDataResponse.Errors, err.String())
 		return GetUserDataResponse, err
 	}
-	err = client.Call("RouteService.RouteGetUserDataRequest", cr, &GetUserDataResponse)
+	err = client.Call(sig + ".RouteGetUserDataRequest", cr, &GetUserDataResponse)
 	if err != nil {
 		if GetUserDataResponse == nil {
 			GetUserDataResponse = &skylib.SkynetResponse{}
@@ -84,13 +85,8 @@ func main() {
 	// Pull in command line options or defaults if none given
 	flag.Parse()
 
-	f, err := os.OpenFile(*skylib.LogFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-	if err == nil {
-		defer f.Close()
-		log.SetOutput(f)
-	}
-
-	skylib.Setup(sName)
+	agent := skylib.NewAgent()
+	agent.Start()
 
 	homeTmpl = template.MustParse(homeTemplate, nil)
 	respTmpl = template.MustParse(responseTemplate, nil)

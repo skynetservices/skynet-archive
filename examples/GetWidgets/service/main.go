@@ -7,17 +7,12 @@
 //THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package main
 
-import "rpc"
 import "os"
-import "net"
-import "log"
-import "http"
 import "flag"
 import "time"
-import "fmt"
 import "github.com/bketelsen/skynet/skylib"
 
-const sName = "GetUserDataService.GetUserData"
+//const sName = "GetUserDataService.GetUserData"
 
 type GetUserDataService struct {
 	Version int
@@ -67,28 +62,7 @@ func main() {
 	// Pull in command line options or defaults if none given
 	flag.Parse()
 
-	f, err := os.OpenFile(*skylib.LogFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-	if err == nil {
-		defer f.Close()
-		log.SetOutput(f)
-	}
-
-	skylib.Setup(sName)
-
 	r := NewGetUserDataService()
-
-	rpc.Register(r)
-
-	rpc.HandleHTTP()
-
-	portString := fmt.Sprintf("%s:%d", *skylib.BindIP, *skylib.Port)
-
-	l, e := net.Listen("tcp", portString)
-	if e != nil {
-		log.Fatal("listen error:", e)
-	}
-
-	log.Println("Starting server")
-	http.Serve(l, nil)
-
+	agent := skylib.NewAgent()
+	agent.Start().Register(r)
 }

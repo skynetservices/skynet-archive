@@ -13,7 +13,7 @@ import (
 )
 
 
-// Function to retrieve a route by name from Doozer
+// Function to retrieve a route by name from Config.
 // Returns a route, or error.
 func GetRoute(name string) (r *Route, err os.Error) {
 
