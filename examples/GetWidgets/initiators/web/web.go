@@ -9,6 +9,7 @@ package main
 
 
 import "github.com/bketelsen/skynet/skylib"
+import "github.com/bketelsen/skynet/examples/GetWidgets/myStartup"
 import "log"
 import "os"
 import "http"
@@ -20,17 +21,17 @@ import "rpc"
 const sName = "Initiator.Web"
 
 const homeTemplate = `<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'><head></head><body id='body'><form action='/new' method='POST'><div>Your Input Value<input type='text' name='YourInputValue' value=''></input></div>	</form></body></html>`
-const responseTemplate = `<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'><head></head><body id='body'>{.repeated section resp.Errors} There were errors:<br/>{@}<br/>{.end}<div>Your Output Value: {result.Output}</div>	</body></html>	`
+const responseTemplate = `<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'><head></head><body id='body'>{.repeated section resp.Errors} There were errors:<br/>{@}<br/>{.end}<div>Your Output Value: {resp.YourOutputValue}</div>	</body></html>	`
 
 
 // Call the RPC service on the router to process the GetUserDataRequest.
-func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse, os.Error) {
-	var GetUserDataResponse *skylib.SkynetResponse
+func submitGetUserDataRequest(cr *myStartup.GetUserDataRequest) (*myStartup.GetUserDataResponse, os.Error) {
+	var GetUserDataResponse *myStartup.GetUserDataResponse
 
 	client, err := skylib.GetRandomClientByProvides("RouteService.RouteGetUserDataRequest")
 	if err != nil {
 		if GetUserDataResponse == nil {
-			GetUserDataResponse = &skylib.SkynetResponse{}
+			GetUserDataResponse = &myStartup.GetUserDataResponse{}
 		}
 		GetUserDataResponse.Errors = append(GetUserDataResponse.Errors, err.String())
 		return GetUserDataResponse, err
@@ -38,7 +39,7 @@ func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse,
 	err = client.Call("RouteService.RouteGetUserDataRequest", cr, &GetUserDataResponse)
 	if err != nil {
 		if GetUserDataResponse == nil {
-			GetUserDataResponse = &skylib.SkynetResponse{}
+			GetUserDataResponse = &myStartup.GetUserDataResponse{}
 
 		}
 		GetUserDataResponse.Errors = append(GetUserDataResponse.Errors, err.String())
@@ -51,10 +52,7 @@ func submitGetUserDataRequest(cr *skylib.SkynetRequest) (*skylib.SkynetResponse,
 func submitHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Submit GetUserData Request")
-	inputs := make(map[string]interface{})
-	inputs["YourInputValue"] = r.FormValue("YourInputValue")
-	cr := &skylib.SkynetRequest{Params: inputs}
-
+	cr := &myStartup.GetUserDataRequest{YourInputValue: r.FormValue("YourInputValue")}
 
 	resp, err := submitGetUserDataRequest(cr)
 	if err != nil {
@@ -64,7 +62,6 @@ func submitHandler(w http.ResponseWriter, r *http.Request) {
 
 	respTmpl.Execute(w, map[string]interface{}{
 		"resp": resp,
-		"result": resp.Result,
 	})
 }
 

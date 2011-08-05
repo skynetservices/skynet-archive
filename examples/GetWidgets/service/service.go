@@ -16,6 +16,7 @@ import "flag"
 import "time"
 import "fmt"
 import "github.com/bketelsen/skynet/skylib"
+import "github.com/bketelsen/skynet/examples/GetWidgets/myStartup"
 
 const sName = "GetUserDataService.GetUserData"
 
@@ -33,11 +34,9 @@ func NewGetUserDataService() *GetUserDataService {
 }
 
 
-func (ls *GetUserDataService) GetUserData(cr *skylib.SkynetRequest, lr *skylib.SkynetResponse) (err os.Error) {
+func (ls *GetUserDataService) GetUserData(cr *myStartup.GetUserDataRequest, lr *myStartup.GetUserDataResponse) (err os.Error) {
 	result := make(chan string)
 	timeout := make(chan bool)
-
-	lr.Result = make(map[string]interface{})
 
 	//This function produces the actual result
 	go func() {
@@ -52,7 +51,7 @@ func (ls *GetUserDataService) GetUserData(cr *skylib.SkynetRequest, lr *skylib.S
 
 	select {
 	case retVal := <-result:
-		lr.Result["Output"] = cr.Params["YourInputValue"].(string) + retVal
+		lr.YourOutputValue = cr.YourInputValue + retVal
 	case <-timeout:
 		lr.Errors = append(lr.Errors, "Service Timeout")
 	}
