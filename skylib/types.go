@@ -14,22 +14,6 @@ import (
 )
 
 
-// RpcService is a struct that represents a remotly 
-// callable function.  It is intented to be part of 
-// an array or collection of RpcServices.  It contains
-// a member "Provides" which is the name of the service the
-// remote call provides, and a Client pointer which is a pointer
-// to an RPC client connected to this service.
-type RpcService struct {
-	Provides string
-}
-
-
-func (r *RpcService) parseError(err string) {
-	panic(&Error{err, r.Provides})
-}
-
-
 // A HeartbeatRequest is the struct that is sent for ping checks.
 type HeartbeatRequest struct {
 	Timestamp int64
