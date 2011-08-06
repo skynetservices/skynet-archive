@@ -56,6 +56,7 @@ type Route struct {
 // more than once.
 type RpcCall struct {
 	Service   string
+	Operation string
 	Async     bool
 	OkToRetry bool
 	ErrOnFail bool
