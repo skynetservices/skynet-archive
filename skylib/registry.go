@@ -37,7 +37,7 @@ func GetAllClientsByService(classname string) (clientList []*rpc.Client) {
 	var err os.Error
 	serviceList := GetAllServiceProviders(classname)
 
-	for i, s := range(serviceList) {
+	for i, s := range serviceList {
 		hostString := fmt.Sprintf("%s:%d", s.IPAddress, s.Port)
 		protocol := strings.ToLower(s.Protocol) // to be safe
 		switch protocol {

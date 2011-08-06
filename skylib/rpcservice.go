@@ -13,7 +13,7 @@ import (
 
 // Parent struct for the registry.
 type RegisteredNetworkServers struct {
-    Services []*RpcService
+	Services []*RpcService
 }
 
 type ServerRegistry interface {
@@ -32,7 +32,7 @@ type RpcService struct {
 }
 
 func (r *RpcService) parseError(err string) {
-    panic(&Error{err, r.Provides})
+	panic(&Error{err, r.Provides})
 }
 
 // At the moment, this can start more than one Server on the same
