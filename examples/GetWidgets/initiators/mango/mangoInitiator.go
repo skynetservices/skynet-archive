@@ -16,7 +16,6 @@ import (
 	"log"
 	"github.com/bketelsen/skynet/examples/GetWidgets/myStartup"
 	"os"
-	"rpc"
 	"template"
 )
 
@@ -29,7 +28,8 @@ const responseTemplate = `<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitio
 func submitGetUserDataRequest(cr *myStartup.GetUserDataRequest) (*myStartup.GetUserDataResponse, os.Error) {
 	var GetUserDataResponse *myStartup.GetUserDataResponse
 
-	client, err := skylib.GetRandomClientByProvides("RouteService.RouteGetUserDataRequest")
+	service := "RouteService"
+	client, err := skylib.GetRandomClientByService(service)
 	if err != nil {
 		if GetUserDataResponse == nil {
 			GetUserDataResponse = &myStartup.GetUserDataResponse{}
@@ -37,7 +37,7 @@ func submitGetUserDataRequest(cr *myStartup.GetUserDataRequest) (*myStartup.GetU
 		GetUserDataResponse.Errors = append(GetUserDataResponse.Errors, err.String())
 		return GetUserDataResponse, err
 	}
-	err = client.Call("RouteService.RouteGetUserDataRequest", cr, &GetUserDataResponse)
+	err = client.Call(service+".RouteGetUserDataRequest", cr, &GetUserDataResponse)
 	if err != nil {
 		if GetUserDataResponse == nil {
 			GetUserDataResponse = &myStartup.GetUserDataResponse{}
@@ -83,18 +83,10 @@ func main() {
 	// Pull in command line options or defaults if none given
 	flag.Parse()
 
-	f, err := os.OpenFile(*skylib.LogFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-	if err == nil {
-		defer f.Close()
-		log.SetOutput(f)
-	}
-
-	skylib.Setup(sName)
+	skylib.NewAgent().Start()
 
 	homeTmpl = template.MustParse(homeTemplate, nil)
 	respTmpl = template.MustParse(responseTemplate, nil)
-
-	rpc.HandleHTTP()
 
 	portString := fmt.Sprintf("%s:%d", *skylib.BindIP, *skylib.Port)
 

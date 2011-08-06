@@ -8,16 +8,12 @@
 package main
 
 import (
-	"rpc"
 	"os"
-	"net"
 	"log"
-	"http"
 	"flag"
 	"time"
 	"container/vector"
 	"json"
-	"fmt"
 	"github.com/bketelsen/skynet/skylib"
 	"github.com/bketelsen/skynet/examples/GetWidgets/myStartup"
 )
@@ -25,26 +21,22 @@ import (
 
 var route *skylib.Route
 
-const sName = "RouteService.RouteGetUserDataRequest"
-
-//Exporter struct for RPC
-type RouteService struct {
-	Name string
-}
+const sName = "RouteService"
 
 
-func callRpcService(name string, async bool, failOnErr bool, cr *myStartup.GetUserDataRequest, rep *myStartup.GetUserDataResponse) (err os.Error) {
+func callRpcService(service string, operation string, async bool, failOnErr bool, cr *myStartup.GetUserDataRequest, rep *myStartup.GetUserDataResponse) (err os.Error) {
 	defer skylib.CheckError(&err)
 
-	rpcClient, err := skylib.GetRandomClientByProvides(name)
+	rpcClient, err := skylib.GetRandomClientByService(service)
 	if err != nil {
-		log.Println("No service provides", name)
+		log.Println("No service provides", service)
 		if failOnErr {
-			return skylib.NewError(skylib.NO_CLIENT_PROVIDES_SERVICE, sName)
+			return skylib.NewError(skylib.NO_CLIENT_PROVIDES_SERVICE, service)
 		} else {
 			return nil
 		}
 	}
+	name := service + operation
 	if async {
 		go rpcClient.Call(name, cr, rep)
 		log.Println("Called service async", name)
@@ -55,24 +47,30 @@ func callRpcService(name string, async bool, failOnErr bool, cr *myStartup.GetUs
 	if err != nil {
 		log.Println("failed connection, retrying", err)
 		// get another one and try again!
-		rpcClient, err := skylib.GetRandomClientByProvides(name)
+		rpcClient, err := skylib.GetRandomClientByService(service)
 		err = rpcClient.Call(name, cr, rep)
 		if err != nil {
-			return skylib.NewError(err.String(), sName)
+			return skylib.NewError(err.String(), name)
 		}
 	}
-	log.Println("Called service sync", name)
+	log.Println("Called service operation sync", name)
 	return nil
 }
 
 
+//Exporter struct for RPC
+type RouteService struct {
+	Name string
+}
+
+// Service operation for RPC.
 func (rs *RouteService) RouteGetUserDataRequest(cr *myStartup.GetUserDataRequest, rep *myStartup.GetUserDataResponse) (err os.Error) {
 	defer skylib.CheckError(&err)
 	log.Println(route)
 	for i := 0; i < route.RouteList.Len(); i++ {
 		rpcCall := route.RouteList.At(i).(map[string]interface{})
 
-		err := callRpcService(rpcCall["Service"].(string), rpcCall["Async"].(bool), rpcCall["ErrOnFail"].(bool), cr, rep)
+		err := callRpcService(rpcCall["Service"].(string), rpcCall["Operation"].(string), rpcCall["Async"].(bool), rpcCall["ErrOnFail"].(bool), cr, rep)
 		if err != nil {
 			skylib.Errors.Add(1)
 			return err
@@ -95,13 +93,7 @@ func main() {
 	// Pull in command line options or defaults if none given
 	flag.Parse()
 
-	f, err := os.OpenFile(*skylib.LogFileName, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-	if err == nil {
-		defer f.Close()
-		log.SetOutput(f)
-	}
-
-	skylib.Setup(sName)
+	agent := skylib.NewAgent().Start()
 
 	CreateInitialRoute()
 
@@ -111,19 +103,7 @@ func main() {
 	}
 
 	r := &RouteService{Name: *skylib.Name}
-
-	rpc.Register(r)
-	rpc.HandleHTTP()
-
-	portString := fmt.Sprintf("%s:%d", *skylib.BindIP, *skylib.Port)
-
-	l, e := net.Listen("tcp", portString)
-	if e != nil {
-		log.Fatal("listen error:", e)
-	}
-	log.Println("Starting server")
-	http.Serve(l, nil)
-
+	agent.Register(r).Wait()
 }
 
 // Today this function creates a route in Doozer for the
@@ -139,7 +119,7 @@ func CreateInitialRoute() {
 	r.RouteList = new(vector.Vector)
 
 	// Define the chain of services.
-	rpcScore := &skylib.RpcCall{Service: "GetUserDataService.GetUserData", Async: false, OkToRetry: false, ErrOnFail: true}
+	rpcScore := &skylib.RpcCall{Service: "GetUserDataService", Operation: ".GetUserData", Async: false, OkToRetry: false, ErrOnFail: true}
 
 	// Just one, for now.
 	r.RouteList.Push(rpcScore)
