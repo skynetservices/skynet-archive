@@ -24,7 +24,7 @@ var NS *NetworkServers
 var RpcServices []*RpcService
 
 
-var Port *int = flag.Int("port", 9999, "tcp port to listen")
+var Port *int = flag.Int("port", 0, "tcp port to listen")
 var Name *string = flag.String("name", os.Args[0], "name of this server")
 var BindIP *string = flag.String("bindaddress", "127.0.0.1", "address to bind")
 var LogFileName *string = flag.String("logFileName", "myservice.log", "name of logfile")
@@ -222,7 +222,7 @@ func Setup(name string) {
 
 	svc = NewService(name)
 
-	AddToConfig(svc)
+
 
 	go WatchConfig()
 

@@ -29,6 +29,7 @@ type RpcService struct {
 	Port      int
 	Provides  string // Class name, not any specific method.
 	Protocol  string // json, etc.
+	l 		  net.Listener
 }
 
 func (r *RpcService) parseError(err string) {
@@ -38,25 +39,18 @@ func (r *RpcService) parseError(err string) {
 // At the moment, this can start more than one Server on the same
 // port, which could be a problem.
 func (self *RpcService) Serve(done chan bool) {
-	portString := fmt.Sprintf("%s:%d", self.IPAddress, self.Port)
-	log.Println(portString)
 
-	l, e := net.Listen("tcp", portString)
-	if e != nil {
-		log.Fatal("listen error:", e)
-	}
-	defer l.Close()
 
 	switch self.Protocol {
 	default:
 		rpc.HandleHTTP() // Seems safe to call multiple times, but must
 		// that precede net.Listen()?
 		log.Println("Starting http server")
-		http.Serve(l, nil)
+		http.Serve(self.l, nil)
 	case "json":
 		log.Println("Starting jsonrpc server")
 		for {
-			conn, err := l.Accept()
+			conn, err := self.l.Accept()
 			if err != nil {
 				panic(err.String())
 			}
@@ -95,5 +89,21 @@ func NewRpcService(sig interface{}) *RpcService {
 		Provides:  type_name,
 		Protocol:  strings.ToLower(*Protocol),
 	}
+
+	portString := fmt.Sprintf("%s:%d", r.IPAddress, r.Port)
+	log.Println(portString)
+
+	l, e := net.Listen("tcp", portString)
+	if e != nil {
+		log.Fatal("listen error:", e)
+	}
+	r.l = l
+	t, e := net.ResolveTCPAddr("tcp",l.Addr().String())
+	if e != nil {
+		log.Fatal("listen error:", e)
+	}
+	r.Port = t.Port
+
+
 	return r
 }
