@@ -24,6 +24,7 @@ type Service struct {
 func (hc *Service) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err os.Error) {
 
 	resp.Timestamp = time.Seconds()
+	resp.Ok = true
 
 	return nil
 }

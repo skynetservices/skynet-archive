@@ -22,7 +22,9 @@ func monitorServices() {
 		skylib.LoadConfig()
 		clients := skylib.GetAllClientsByService("CommonService")
 		println("#Agents:", len(clients))
+		fmt.Println(clients)
 		for _, x := range clients {
+			fmt.Println(x)
 			hc := skylib.HeartbeatRequest{Timestamp: time.Seconds()}
 			hcr := skylib.HeartbeatResponse{}
 			err := x.Call("CommonService.Ping", hc, &hcr)
