@@ -210,7 +210,7 @@ func RegisterHeartbeat() {
 //name Skynet Service. This function is also responsible for
 //registering the Heartbeat to healthcheck the service.
 func Setup(name string) {
-	DoozerConnect()
+	ConnectStore()
 	LoadConfig()
 	if x := recover(); x != nil {
 		LogWarn("No Configuration File loaded.  Creating One.")
