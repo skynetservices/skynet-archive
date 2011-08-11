@@ -9,6 +9,7 @@
 package skylib
 
 import (
+	"path"
 	"flag"
 	"os"
 	"expvar"
@@ -19,7 +20,7 @@ import (
 var Port *int = flag.Int("port", 0, "tcp port to listen")
 var Name *string = flag.String("name", os.Args[0], "name of this server")
 var BindIP *string = flag.String("bindaddress", "127.0.0.1", "address to bind")
-var LogFileName *string = flag.String("logFileName", "myservice.log", "name of logfile")
+var LogFileName *string = flag.String("logFileName", "myservice." + path.Base(os.Args[0]) + ".log", "name of logfile")
 var LogLevel *int = flag.Int("logLevel", 5, "log level (1-5)")
 var Protocol *string = flag.String("protocol", "http+gob", "RPC message transport protocol (default is http+gob; try json")
 var Requests *expvar.Int
