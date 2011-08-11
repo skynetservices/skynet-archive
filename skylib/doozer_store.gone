@@ -11,6 +11,7 @@ import (
 var DoozerServer *string = flag.String("doozerServer", "127.0.0.1:8046", "addr:port of doozer server")
 
 
+
 // This is a doozer adapter to our skylib.Store interface.
 // It's pretty trivial, as our API is doozer, but we
 // need this because the Event structs are technically
@@ -64,4 +65,16 @@ func (me *DoozerStore) Del(file string, rev int64) (err os.Error) {
 func (me *DoozerStore) Get(file string, prev *int64) (body []byte, rev int64, err os.Error) {
 	body, rev, err = me.DC.Get(file, prev)
 	return
+}
+
+
+
+
+var DC Store
+//  We *could* use this instead someday.
+// var DC *doozer.Conn
+
+// Any Store drop-in file would need to define this global function.
+func ConnectStore() {
+	DoozerConnect()
 }

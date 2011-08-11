@@ -65,7 +65,10 @@ func GetRandomClientByService(classname string) (*rpc.Client, os.Error) {
 	var err os.Error
 	serviceList := GetAllServiceProviders(classname)
 
-	if len(serviceList) > 0 {
+	println("len:", len(serviceList))
+	LogWarn("Test LogWarn")
+	LogError("Test LogError")
+	for len(serviceList) > 0 {
 		chosen := rand.Int() % len(serviceList)
 		s := serviceList[chosen]
 
@@ -79,16 +82,24 @@ func GetRandomClientByService(classname string) (*rpc.Client, os.Error) {
 		}
 
 		if err != nil {
+			println(fmt.Sprintf("Found %d nodes to provide service %s requested on %s, but failed to connect.",
+				len(serviceList), classname, hostString))
 			LogWarn(fmt.Sprintf("Found %d nodes to provide service %s requested on %s, but failed to connect.",
 				len(serviceList), classname, hostString))
-			return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, classname)
+			RemoveFromRegistry(s)
+			l := len(serviceList)
+			// We should just remove 'chosen', but for now:
+			serviceList = GetAllServiceProviders(classname)
+			if l == len(serviceList) {panic("WTF?")}
+			continue
+			//return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, classname)
 		}
-
-	} else {
-		LogWarn(fmt.Sprintf("Found no node to provide service %s.", classname))
-		return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, classname)
+		// We have connected.
+		return newClient, nil
 	}
-	return newClient, nil
+	println(fmt.Sprintf("Found no node to provide service %s.", classname))
+	LogWarn(fmt.Sprintf("Found no node to provide service %s.", classname))
+	return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, classname)
 }
 
 

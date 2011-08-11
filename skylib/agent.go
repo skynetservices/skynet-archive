@@ -123,7 +123,7 @@ func NewAgent() *Agent {
 	initLogging()
 	initDefaultExpVars(name)
 
-	DoozerConnect()
+	ConnectStore()
 	LoadRegistry()
 	if x := recover(); x != nil {
 		LogWarn("No Registryuration File loaded.  Creating One.")

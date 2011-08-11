@@ -5,7 +5,10 @@ import (
 	"os"
 	"syscall"
 	"path"
+	"flag"
 )
+
+var fsPath *string = flag.String("fsServer", "./fs", "path to FsStore directory")
 
 
 // FileSystem store for the Store interface.
@@ -13,6 +16,10 @@ import (
 type FsStore struct {
 	basedir  string
 	lockfile string
+}
+
+func FsConnect() {
+	DC = NewFsStore(*fsPath)
 }
 
 func NewFsStore(basedir string) *FsStore {
@@ -78,5 +85,12 @@ func (me *FsStore) Get(file string, ignorerev *int64) (body []byte, rev int64, e
 	return
 }
 
-var MyDC *FsStore
-//var DC *doozer.Conn
+
+var DC Store
+//  We *could* use this instead someday.
+// var DC *FsStore
+
+// Any Store drop-in file would need to define this global function.
+func ConnectStore() {
+	FsConnect()
+}

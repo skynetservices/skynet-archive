@@ -25,5 +25,3 @@ type Store interface {
 	//Getdir(dir string, rev int64, off, lim int) (names []string, err os.Error)
 	//Stat(path string, storeRev *int64) (len int, fileRev int64, err os.Error)
 }
-
-var DC Store

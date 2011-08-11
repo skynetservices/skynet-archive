@@ -57,3 +57,14 @@ func (me *MongoStore) Del(file string, rev int64) (err os.Error) {
 func (me *MongoStore) Get(file string, prev *int64) (body []byte, rev int64, err os.Error) {
 	return
 }
+
+
+
+var DC Store
+//  We *could* use this instead someday.
+// var DC *doozer.Conn
+
+// Any Store drop-in file would need to define this global function.
+func ConnectStore() {
+    MongoConnect()
+}
