@@ -1,0 +1,8 @@
+2011/11/13 23:08:23 dial tcp 127.0.0.1:8046: dial tcp 127.0.0.1:8046: connection refused
+2011/11/13 23:08:33 [[Error loading default config - no data found]]
+2011/11/13 23:08:33 method AddToConfig has wrong number of ins: 1
+2011/11/13 23:08:33 method Equal has wrong number of ins: 2
+2011/11/13 23:08:33 method RemoveFromConfig has wrong number of ins: 1
+2011/11/13 23:08:33 Starting server
+2011/11/13 23:08:33 Received new configuration.  Setting local config.
+2011/11/13 23:09:10 EOF

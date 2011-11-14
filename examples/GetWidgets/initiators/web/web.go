@@ -8,7 +8,7 @@
 package main
 
 
-import "github.com/bketelsen/skynet/skylib"
+import "skylib"
 import "myStartup"
 import "log"
 import "os"

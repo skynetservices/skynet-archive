@@ -14,7 +14,7 @@ import (
 	"log"
 	"http"
 	"flag"
-	"github.com/bketelsen/skynet/skylib"
+	"skylib"
 	"fmt"
 	"time"
 	"syscall"
