@@ -13,18 +13,9 @@ import (
 	"time"
 )
 
-// RpcService is a struct that represents a remotly 
-// callable function.  It is intented to be part of 
-// an array or collection of RpcServices.  It contains
-// a member "Provides" which is the name of the service the
-// remote call provides, and a Client pointer which is a pointer
-// to an RPC client connected to this service.
-type RpcService struct {
-	Provides string
-}
 
-func (r *RpcService) parseError(err string) {
-	panic(&Error{err, r.Provides})
+func (r *Service) parseError(err string) {
+	panic(&Error{err, r.Name})
 }
 
 // A Generic struct to represent any service in the SkyNet system.
@@ -32,7 +23,9 @@ type Service struct {
 	IPAddress string
 	Name      string
 	Port      int
-	Provides  string
+	Idempotent bool
+	Version	int
+
 }
 
 // A HeartbeatRequest is the struct that is sent for ping checks.
@@ -46,6 +39,20 @@ type HeartbeatResponse struct {
 	Ok        bool
 }
 
+
+type AdminRequest struct {
+	Command string
+}
+
+
+type AdminResponse struct {
+	Timestamp time.Time
+	Ok        bool
+}
+
+
+
+
 // HealthCheckRequest is the struct that is sent on a more advanced heartbeat request.
 type HealthCheckRequest struct {
 	Timestamp time.Time
@@ -57,26 +64,23 @@ type HealthCheckResponse struct {
 	Load      float64
 }
 
-// The struct that is stored in the Route
-// Async delineates whether it's ok to call this and not
-// care about the response.
-// OkToRetry delineates whether it's ok to call this service
-// more than once.
-type RpcCall struct {
-	Service   string
-	Async     bool
-	OkToRetry bool
-	ErrOnFail bool
-}
 
-// Parent struct for the configuration
-type NetworkServers struct {
-	Services []*Service
-}
 
 type ServerConfig interface {
 	Equal(that interface{}) bool
 }
+
+// Exported RPC method for the health check
+func (hc *Service) Admin(hr *AdminRequest, resp *AdminResponse) (err error) {
+
+	if hr.Command == "SHUTDOWN" {
+		gracefulShutdown()
+	}
+
+	return nil
+}
+
+
 
 // Exported RPC method for the health check
 func (hc *Service) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err error) {
@@ -97,7 +101,7 @@ func (hc *Service) PingAdvanced(hr *HealthCheckRequest, resp *HealthCheckRespons
 // Method to register the heartbeat of each skynet
 // client with the healthcheck exporter.
 func RegisterHeartbeat() {
-	r := NewService("Service.Ping")
+	r := NewService("Ping", false, 1)
 	rpc.Register(r)
 }
 
@@ -113,24 +117,20 @@ func (r *Service) Equal(that *Service) bool {
 	if r.Port != that.Port {
 		return b
 	}
-	if r.Provides != that.Provides {
-		return b
-	}
 	b = true
 	return b
 }
 
 // Utility function to return a new Service struct
 // pre-populated with the data on the command line.
-func NewService(provides string) *Service {
-	r := &Service{
-		Name:      *Name,
+func NewService(provides string, idempotent bool, version int) *Service {
+	return  &Service{
+		Name:      provides,
 		Port:      *Port,
 		IPAddress: *BindIP,
-		Provides:  provides,
+		Idempotent: idempotent,
+		Version: version,
 	}
-
-	return r
 }
 
 type Error struct {

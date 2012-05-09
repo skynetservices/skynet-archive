@@ -13,22 +13,20 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
-	"github.com/ha/doozer"
+	"github.com/4ad/doozer"
 	"log"
-	"math/rand"
-	"net/rpc"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+	"strconv"
 )
 
 var DC *doozer.Conn
-var NS *NetworkServers
-var RpcServices []*RpcService
+var Services []Service
+
 
 var Port *int = flag.Int("port", 9999, "tcp port to listen")
-var Name *string = flag.String("name", "changeme", "name of this server")
 var BindIP *string = flag.String("bindaddress", "127.0.0.1", "address to bind")
 var LogFileName *string = flag.String("logFileName", "myservice.log", "name of logfile")
 var LogLevel *int = flag.Int("logLevel", 1, "log level (1-5)")
@@ -38,39 +36,6 @@ var Errors *expvar.Int
 var Goroutines *expvar.Int
 var svc *Service
 
-// This is simple today - it returns the first listed service that matches the request
-// Load balancing needs to be applied here somewhere.
-func GetRandomClientByProvides(provides string) (*rpc.Client, error) {
-	var providesList = make([]*Service, 0)
-
-	var newClient *rpc.Client
-	var err error
-
-	for _, v := range NS.Services {
-		if v != nil {
-			if v.Provides == provides {
-				providesList = append(providesList, v)
-			}
-
-		}
-	}
-
-	if len(providesList) > 0 {
-		random := rand.Int() % len(providesList)
-		s := providesList[random]
-
-		portString := fmt.Sprintf("%s:%d", s.IPAddress, s.Port)
-		newClient, err = rpc.DialHTTP("tcp", portString)
-		if err != nil {
-			LogWarn(fmt.Sprintf("Found %d Clients to service %s request.", len(providesList), provides))
-			return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
-		}
-
-	} else {
-		return nil, NewError(NO_CLIENT_PROVIDES_SERVICE, provides)
-	}
-	return newClient, nil
-}
 
 func DoozerConnect() {
 	var err error
@@ -109,7 +74,7 @@ func (r *Service) RemoveFromConfig() {
 	if err != nil {
 		log.Panic(err.Error())
 	}
-	err = DC.Del("/services/"+r.Name, rev)
+	err = DC.Del("/services/"+r.Name+"/" +strconv.Itoa(r.Version) + "/"+*BindIP+"-"+strconv.Itoa(*Port), rev)
 	if err != nil {
 		log.Panic(err.Error())
 	}
@@ -134,7 +99,9 @@ func (r *Service) AddToConfig() {
 	if err != nil {
 		log.Panic(err.Error())
 	}
-	_, err = DC.Set("/services/"+r.Name, rev, b)
+	//TODO refactor to get key
+
+	_, err = DC.Set("/services/"+r.Name+"/" +strconv.Itoa(r.Version) + "/"+*BindIP+"-"+strconv.Itoa(*Port), rev, b)
 	if err != nil {
 		log.Panic(err.Error())
 	}
@@ -212,7 +179,7 @@ func gracefulShutdown() {
 	syscall.Exit(0)
 }
 
-func Setup(name string) {
+func Setup(name string, idempotent bool, version int) *Service {
 	DoozerConnect()
 	LoadConfig()
 	if x := recover(); x != nil {
@@ -225,12 +192,14 @@ func Setup(name string) {
 
 	initDefaultExpVars(name)
 
-	svc = NewService(name)
+	svc = NewService(name, idempotent, version)
 
 	svc.AddToConfig()
 
 	go WatchConfig()
 
 	RegisterHeartbeat()
+
+	return svc
 
 }

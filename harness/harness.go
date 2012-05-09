@@ -17,7 +17,7 @@ import "flag"
 import "time"
 import "fmt"
 
-const sName = "GetUserDataService.GetUserData"
+const sName = "GetUserData"
 
 type GetUserDataRequest struct {
 	YourInputValue string
@@ -77,7 +77,8 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	skylib.Setup(sName)
+	s := skylib.Setup(sName, false,1)
+	defer s.RemoveFromConfig()
 
 	r := NewGetUserDataService()
 
