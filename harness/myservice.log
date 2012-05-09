@@ -1,0 +1,63 @@
+2012/05/08 22:39:08 [[Error loading default config - no data found]]
+2012/05/08 22:39:08 method AddToConfig has wrong number of ins: 1
+2012/05/08 22:39:08 method Equal has wrong number of ins: 2
+2012/05/08 22:39:08 method RemoveFromConfig has wrong number of ins: 1
+2012/05/08 22:39:08 Starting server
+2012/05/08 22:39:08 Received new configuration.  Setting local config.
+2012/05/08 22:39:37 Graceful Shutdown
+2012/05/08 22:39:37 Received new configuration.  Setting local config.
+2012/05/08 22:42:45 method AddToConfig has wrong number of ins: 2
+2012/05/08 22:42:45 method Equal has wrong number of ins: 2
+2012/05/08 22:42:45 method RemoveFromConfig has wrong number of ins: 1
+2012/05/08 22:42:45 Starting server
+2012/05/08 22:42:58 Graceful Shutdown
+2012/05/08 22:42:58 Received new configuration.  Setting local config.
+2012/05/08 22:51:50 method AddToConfig has wrong number of ins: 2
+2012/05/08 22:51:50 method Equal has wrong number of ins: 2
+2012/05/08 22:51:50 method RemoveFromConfig has wrong number of ins: 1
+2012/05/08 22:51:50 Starting server
+2012/05/08 22:52:01 Graceful Shutdown
+2012/05/08 22:52:01 Received new configuration.  Setting local config.
+2012/05/08 22:55:07 method AddToConfig has wrong number of ins: 2
+2012/05/08 22:55:07 method Equal has wrong number of ins: 2
+2012/05/08 22:55:07 method RemoveFromConfig has wrong number of ins: 1
+2012/05/08 22:55:07 Starting server
+2012/05/08 22:55:07 OTHER: invalid glob pattern: /servers/
+2012/05/08 22:55:23 method AddToConfig has wrong number of ins: 2
+2012/05/08 22:55:23 method Equal has wrong number of ins: 2
+2012/05/08 22:55:23 method RemoveFromConfig has wrong number of ins: 1
+2012/05/08 22:55:23 Starting server
+2012/05/08 22:55:35 Graceful Shutdown
+2012/05/08 23:01:06 [[Error loading default config - no data found]]
+2012/05/08 23:01:06 method AddToConfig has wrong number of ins: 1
+2012/05/08 23:01:06 method Equal has wrong number of ins: 2
+2012/05/08 23:01:06 method RemoveFromConfig has wrong number of ins: 1
+2012/05/08 23:01:06 Starting server
+2012/05/08 23:01:24 Graceful Shutdown
+2012/05/08 23:01:24 Received new configuration.  Setting local config.
+2012/05/08 23:01:24 unexpected end of JSON input
+2012/05/08 23:03:01 [[Error loading default config - no data found]]
+2012/05/08 23:03:01 method AddToConfig has wrong number of ins: 1
+2012/05/08 23:03:01 method Equal has wrong number of ins: 2
+2012/05/08 23:03:01 method RemoveFromConfig has wrong number of ins: 1
+2012/05/08 23:03:01 Starting server
+2012/05/08 23:03:03 Graceful Shutdown
+2012/05/08 23:03:03 Received new configuration.  Setting local config.
+2012/05/08 23:03:03 unexpected end of JSON input
+2012/05/08 23:03:44 [[Error loading default config - no data found]]
+2012/05/08 23:03:44 method AddToConfig has wrong number of ins: 1
+2012/05/08 23:03:44 method Equal has wrong number of ins: 2
+2012/05/08 23:03:44 method RemoveFromConfig has wrong number of ins: 1
+2012/05/08 23:03:44 Starting server
+2012/05/08 23:03:47 Graceful Shutdown
+2012/05/08 23:04:06 [[Error loading default config - no data found]]
+2012/05/08 23:04:06 method AddToConfig has wrong number of ins: 1
+2012/05/08 23:04:06 method Equal has wrong number of ins: 2
+2012/05/08 23:04:06 method RemoveFromConfig has wrong number of ins: 1
+2012/05/08 23:04:06 Starting server
+2012/05/08 23:04:28 Graceful Shutdown
+2012/05/08 23:15:09 method AddToConfig has wrong number of ins: 1
+2012/05/08 23:15:09 method Equal has wrong number of ins: 2
+2012/05/08 23:15:09 method RemoveFromConfig has wrong number of ins: 1
+2012/05/08 23:15:09 Starting server
+2012/05/08 23:15:42 EOF

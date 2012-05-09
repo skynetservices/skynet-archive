@@ -9,24 +9,23 @@
 package skylib
 
 import (
-	"log"
-	"json"
-	"flag"
-	"os"
-	"github.com/ha/doozer"
-	"fmt"
-	"rand"
-	"rpc"
+	"encoding/json"
 	"expvar"
-	"syscall"
+	"flag"
+	"fmt"
+	"github.com/ha/doozer"
+	"log"
+	"math/rand"
+	"net/rpc"
+	"os"
 	"os/signal"
+	"syscall"
+	"time"
 )
-
 
 var DC *doozer.Conn
 var NS *NetworkServers
 var RpcServices []*RpcService
-
 
 var Port *int = flag.Int("port", 9999, "tcp port to listen")
 var Name *string = flag.String("name", "changeme", "name of this server")
@@ -39,14 +38,13 @@ var Errors *expvar.Int
 var Goroutines *expvar.Int
 var svc *Service
 
-
 // This is simple today - it returns the first listed service that matches the request
 // Load balancing needs to be applied here somewhere.
-func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
+func GetRandomClientByProvides(provides string) (*rpc.Client, error) {
 	var providesList = make([]*Service, 0)
 
 	var newClient *rpc.Client
-	var err os.Error
+	var err error
 
 	for _, v := range NS.Services {
 		if v != nil {
@@ -74,12 +72,11 @@ func GetRandomClientByProvides(provides string) (*rpc.Client, os.Error) {
 	return newClient, nil
 }
 
-
 func DoozerConnect() {
-	var err os.Error
+	var err error
 	DC, err = doozer.Dial(*DoozerServer)
 	if err != nil {
-		log.Panic(err.String())
+		log.Panic(err.Error())
 	}
 }
 
@@ -87,101 +84,69 @@ func DoozerConnect() {
 // After the config file is loaded, we set the global config file variable to the
 // unmarshaled data, making it useable for all other processes in this app.
 func LoadConfig() {
-	data, _, err := DC.Get("/servers/config/networkservers.conf", nil)
-	if err != nil {
-		log.Panic(err.String())
-	}
-	if len(data) > 0 {
-		setConfig(data)
-		return
-	}
-	LogError("Error loading default config - no data found")
-	NS = &NetworkServers{}
-}
-
-func RemoveServiceAt(i int) {
-
-	newServices := make([]*Service, 0)
-
-	for k, v := range NS.Services {
-		if k != i {
-			if v != nil {
-				newServices = append(newServices, v)
-			}
-		}
-	}
-	NS.Services = newServices
-	b, err := json.Marshal(NS)
-	if err != nil {
-		log.Panic(err.String())
-	}
 	rev, err := DC.Rev()
 	if err != nil {
-		log.Panic(err.String())
+		log.Panic(err.Error())
 	}
-	_, err = DC.Set("/servers/config/networkservers.conf", rev, b)
-	if err != nil {
-		log.Panic(err.String())
-	}
+	names, err := DC.Getdir("/services/", rev, 0, -1)
 
+	for _, name := range names {
+		data, _, err := DC.Get("/services/"+name, nil)
+		if err != nil {
+			log.Panic(err.Error())
+		}
+		if len(data) > 0 {
+			setConfig(data)
+			return
+		}
+
+	}
 }
 
 func (r *Service) RemoveFromConfig() {
 
-	newServices := make([]*Service, 0)
-
-	for _, v := range NS.Services {
-		if v != nil {
-			if !v.Equal(r) {
-				newServices = append(newServices, v)
-			}
-
-		}
-	}
-	NS.Services = newServices
-	b, err := json.Marshal(NS)
-	if err != nil {
-		log.Panic(err.String())
-	}
 	rev, err := DC.Rev()
 	if err != nil {
-		log.Panic(err.String())
+		log.Panic(err.Error())
 	}
-	_, err = DC.Set("/servers/config/networkservers.conf", rev, b)
+	err = DC.Del("/services/"+r.Name, rev)
 	if err != nil {
-		log.Panic(err.String())
+		log.Panic(err.Error())
 	}
 }
 
 func (r *Service) AddToConfig() {
-	for _, v := range NS.Services {
-		if v != nil {
-			if v.Equal(r) {
-				LogInfo(fmt.Sprintf("Skipping adding %s : alreday exists.", v.Name))
-				return // it's there so we don't need an update
+	/*	for _, v := range NS.Services {
+			if v != nil {
+				if v.Equal(r) {
+					LogInfo(fmt.Sprintf("Skipping adding %s : already exists.", v.Name))
+					return // it's there so we don't need an update
+				}
 			}
 		}
-	}
-	NS.Services = append(NS.Services, r)
-	b, err := json.Marshal(NS)
+		NS.Services = append(NS.Services, r)
+	*/
+	b, err := json.Marshal(r)
 	if err != nil {
-		log.Panic(err.String())
+		log.Panic(err.Error())
 	}
 	rev, err := DC.Rev()
 	if err != nil {
-		log.Panic(err.String())
+		log.Panic(err.Error())
 	}
-	_, err = DC.Set("/servers/config/networkservers.conf", rev, b)
+	_, err = DC.Set("/services/"+r.Name, rev, b)
 	if err != nil {
-		log.Panic(err.String())
+		log.Panic(err.Error())
 	}
 }
 
 // unmarshal data from remote store into global config variable
 func setConfig(data []byte) {
-	err := json.Unmarshal(data, &NS)
+	var svc Service
+	err := json.Unmarshal(data, &svc)
+	fmt.Println(svc)
 	if err != nil {
-		log.Panic(err.String())
+		log.Panic(err.Error())
 	}
 }
 
@@ -191,14 +156,14 @@ func setConfig(data []byte) {
 func WatchConfig() {
 	rev, err := DC.Rev()
 	if err != nil {
-		log.Panic(err.String())
+		log.Panic(err.Error())
 	}
 	for {
 
 		// blocking wait call returns on a change
-		ev, err := DC.Wait("/servers/config/networkservers.conf", rev)
+		ev, err := DC.Wait("/servers/*", rev)
 		if err != nil {
-			log.Panic(err.String())
+			log.Panic(err.Error())
 		}
 		log.Println("Received new configuration.  Setting local config.")
 		setConfig(ev.Body)
@@ -208,19 +173,18 @@ func WatchConfig() {
 
 }
 
-
 func initDefaultExpVars(name string) {
 	Requests = expvar.NewInt(name + "-processed")
 	Errors = expvar.NewInt(name + "-errors")
 	Goroutines = expvar.NewInt(name + "-goroutines")
 }
 
-func watchSignals() {
+func watchSignals(c chan os.Signal) {
 
 	for {
 		select {
-		case sig := <-signal.Incoming:
-			switch sig.(os.UnixSignal) {
+		case sig := <-c:
+			switch sig.(syscall.Signal) {
 			case syscall.SIGUSR1:
 				*LogLevel = *LogLevel + 1
 				LogError("Loglevel changed to : ", *LogLevel)
@@ -235,6 +199,7 @@ func watchSignals() {
 			}
 		}
 	}
+
 }
 
 func gracefulShutdown() {
@@ -243,10 +208,9 @@ func gracefulShutdown() {
 
 	//would prefer to unregister HTTP and RPC handlers
 	//need to figure out how to do that
-	syscall.Sleep(10e9) // wait 10 seconds for requests to finish  #HACK
+	time.Sleep(10e9) // wait 10 seconds for requests to finish  #HACK
 	syscall.Exit(0)
 }
-
 
 func Setup(name string) {
 	DoozerConnect()
@@ -255,7 +219,9 @@ func Setup(name string) {
 		LogWarn("No Configuration File loaded.  Creating One.")
 	}
 
-	go watchSignals()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGUSR1, syscall.SIGUSR2)
+	go watchSignals(c)
 
 	initDefaultExpVars(name)
 

@@ -11,14 +11,12 @@ import (
 	"log"
 )
 
-
 const (
-	error = iota
+	err = iota
 	warn
 	info
 	debug
 )
-
 
 func lg(logLevel int, v ...interface{}) {
 
@@ -29,7 +27,7 @@ func lg(logLevel int, v ...interface{}) {
 }
 
 func LogError(v ...interface{}) {
-	lg(error, v)
+	lg(err, v)
 }
 
 func LogWarn(v ...interface{}) {

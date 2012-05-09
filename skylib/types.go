@@ -8,13 +8,10 @@
 package skylib
 
 import (
-	"os"
-	"time"
 	"fmt"
-	"rpc"
-	"container/vector"
+	"net/rpc"
+	"time"
 )
-
 
 // RpcService is a struct that represents a remotly 
 // callable function.  It is intented to be part of 
@@ -26,11 +23,9 @@ type RpcService struct {
 	Provides string
 }
 
-
 func (r *RpcService) parseError(err string) {
 	panic(&Error{err, r.Provides})
 }
-
 
 // A Generic struct to represent any service in the SkyNet system.
 type Service struct {
@@ -40,7 +35,6 @@ type Service struct {
 	Provides  string
 }
 
-
 // A HeartbeatRequest is the struct that is sent for ping checks.
 type HeartbeatRequest struct {
 	Timestamp int64
@@ -48,32 +42,19 @@ type HeartbeatRequest struct {
 
 // HeartbeatResponse is the struct that is returned on a ping check.
 type HeartbeatResponse struct {
-	Timestamp int64
+	Timestamp time.Time
 	Ok        bool
 }
 
 // HealthCheckRequest is the struct that is sent on a more advanced heartbeat request.
 type HealthCheckRequest struct {
-	Timestamp int64
+	Timestamp time.Time
 }
-
 
 // HealthCheckResponse is the struct that is sent back to the HealthCheckRequest-er
 type HealthCheckResponse struct {
-	Timestamp int64
+	Timestamp time.Time
 	Load      float64
-}
-
-
-// A Route represents an ordered list of RPC calls that should be made for 
-// a request.  Routes are versioned and named.  Names should correspond to 
-// Service names- which makes me wonder if the route should be stored right there 
-// in the Service struct??
-type Route struct {
-	Name        string
-	RouteList   *vector.Vector
-	Revision    int64
-	LastUpdated int64
 }
 
 // The struct that is stored in the Route
@@ -98,17 +79,17 @@ type ServerConfig interface {
 }
 
 // Exported RPC method for the health check
-func (hc *Service) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err os.Error) {
+func (hc *Service) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err error) {
 
-	resp.Timestamp = time.Seconds()
+	resp.Timestamp = time.Now()
 
 	return nil
 }
 
 // Exported RPC method for the advanced health check
-func (hc *Service) PingAdvanced(hr *HealthCheckRequest, resp *HealthCheckResponse) (err os.Error) {
+func (hc *Service) PingAdvanced(hr *HealthCheckRequest, resp *HealthCheckResponse) (err error) {
 
-	resp.Timestamp = time.Seconds()
+	resp.Timestamp = time.Now()
 	resp.Load = 0.1 //todo
 	return nil
 }
@@ -119,7 +100,6 @@ func RegisterHeartbeat() {
 	r := NewService("Service.Ping")
 	rpc.Register(r)
 }
-
 
 func (r *Service) Equal(that *Service) bool {
 	var b bool
@@ -153,13 +133,12 @@ func NewService(provides string) *Service {
 	return r
 }
 
-
 type Error struct {
 	Msg     string
 	Service string
 }
 
-func (e *Error) String() string { return fmt.Sprintf("Service %s had error: %s", e.Service, e.Msg) }
+func (e *Error) Error() string { return fmt.Sprintf("Service %s had error: %s", e.Service, e.Msg) }
 
 func NewError(msg string, service string) (err *Error) {
 	err = &Error{Msg: msg, Service: service}
