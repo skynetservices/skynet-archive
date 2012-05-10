@@ -74,7 +74,7 @@ func (r *Service) RemoveFromConfig() {
 	if err != nil {
 		log.Panic(err.Error())
 	}
-	err = DC.Del("/services/"+r.Name+"/" +strconv.Itoa(r.Version) + "/"+*BindIP+"-"+strconv.Itoa(*Port), rev)
+	err = DC.Del(GetServicePath(&r.Name, &r.Version, BindIP, Port), rev)
 	if err != nil {
 		log.Panic(err.Error())
 	}
@@ -99,12 +99,15 @@ func (r *Service) AddToConfig() {
 	if err != nil {
 		log.Panic(err.Error())
 	}
-	//TODO refactor to get key
 
-	_, err = DC.Set("/services/"+r.Name+"/" +strconv.Itoa(r.Version) + "/"+*BindIP+"-"+strconv.Itoa(*Port), rev, b)
+	_, err = DC.Set(GetServicePath(&r.Name, &r.Version, BindIP, Port), rev, b)
 	if err != nil {
 		log.Panic(err.Error())
 	}
+}
+
+func GetServicePath(name *string, version *int, ip *string, port *int) (string){
+  return "/services/" + *name + "/" + strconv.Itoa(*version) + "/" + *ip + "." + strconv.Itoa(*port)
 }
 
 // unmarshal data from remote store into global config variable
