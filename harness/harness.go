@@ -29,13 +29,13 @@ type GetUserDataResponse struct {
 }
 
 type GetUserDataService struct {
-	Version int
+	Version string
 }
 
 func NewGetUserDataService() *GetUserDataService {
 
 	r := &GetUserDataService{
-		Version: 1,
+		Version: "1",
 	}
 	return r
 }
@@ -67,6 +67,7 @@ func (ls *GetUserDataService) GetUserData(cr *GetUserDataRequest, lr *GetUserDat
 }
 
 func main() {
+  // TODO: handle panic so that we still remove ourselces from the pool
 
 	// Pull in command line options or defaults if none given
 	flag.Parse()
@@ -77,7 +78,7 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	s := skylib.Setup(sName, false,1)
+	s := skylib.Setup("Chicago", sName, false, "abc")
 	defer s.RemoveFromConfig()
 
 	r := NewGetUserDataService()

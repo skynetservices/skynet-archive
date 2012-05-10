@@ -53,7 +53,7 @@ type ServerConfig interface {
 // Method to register the heartbeat of each skynet
 // client with the healthcheck exporter.
 func RegisterHeartbeat() {
-	r := NewService("Ping", false, 1)
+	r := NewService("", "Ping", false, "1")
 	rpc.Register(r)
 }
 
