@@ -7,6 +7,7 @@ type Service struct {
 	IPAddress string
 	Name      string
 	Port      int
+  Region    string
 	Idempotent bool
 	Version	int
 

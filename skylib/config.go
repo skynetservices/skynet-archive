@@ -28,6 +28,7 @@ var Services []Service
 
 var Port *int = flag.Int("port", 9999, "tcp port to listen")
 var BindIP *string = flag.String("bindaddress", "127.0.0.1", "address to bind")
+var Region *string = flag.String("region", "unknown", "region service is located in")
 var LogFileName *string = flag.String("logFileName", "myservice.log", "name of logfile")
 var LogLevel *int = flag.Int("logLevel", 1, "log level (1-5)")
 var DoozerServer *string = flag.String("doozerServer", "127.0.0.1:8046", "addr:port of doozer server")
@@ -74,7 +75,7 @@ func (r *Service) RemoveFromConfig() {
 	if err != nil {
 		log.Panic(err.Error())
 	}
-	err = DC.Del(GetServicePath(&r.Name, &r.Version, BindIP, Port), rev)
+	err = DC.Del(GetServicePath(&r.Name, &r.Version, BindIP, Port, Region), rev)
 	if err != nil {
 		log.Panic(err.Error())
 	}
@@ -100,14 +101,14 @@ func (r *Service) AddToConfig() {
 		log.Panic(err.Error())
 	}
 
-	_, err = DC.Set(GetServicePath(&r.Name, &r.Version, BindIP, Port), rev, b)
+	_, err = DC.Set(GetServicePath(&r.Name, &r.Version, BindIP, Port, Region), rev, b)
 	if err != nil {
 		log.Panic(err.Error())
 	}
 }
 
-func GetServicePath(name *string, version *int, ip *string, port *int) (string){
-  return "/services/" + *name + "/" + strconv.Itoa(*version) + "/" + *ip + "-" + strconv.Itoa(*port)
+func GetServicePath(name *string, version *int, ip *string, port *int, region *string) (string){
+  return "/services/" + *name + "/" + *region + "/" + strconv.Itoa(*version) + "/" + *ip + "-" + strconv.Itoa(*port)
 }
 
 // unmarshal data from remote store into global config variable
