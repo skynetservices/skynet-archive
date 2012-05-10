@@ -107,7 +107,7 @@ func (r *Service) AddToConfig() {
 }
 
 func GetServicePath(name *string, version *int, ip *string, port *int) (string){
-  return "/services/" + *name + "/" + strconv.Itoa(*version) + "/" + *ip + "." + strconv.Itoa(*port)
+  return "/services/" + *name + "/" + strconv.Itoa(*version) + "/" + *ip + "-" + strconv.Itoa(*port)
 }
 
 // unmarshal data from remote store into global config variable
