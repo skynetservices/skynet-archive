@@ -1,5 +1,7 @@
 ![logo](/bketelsen/skynet/raw/master/documentation/SkyNetLogo.png)
 
+###SKYNET is under construction right now - docs don't match reality - please be patient for a few days
+
 ##Introduction
 Skynet is a virtually–unkillable system for building massively distributed apps in Go.
 
