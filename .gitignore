@@ -1,2 +1,4 @@
-
+sky/sky
+harness/harness
+harness/*.log
 .DS_Store

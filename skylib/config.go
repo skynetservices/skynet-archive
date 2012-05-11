@@ -19,7 +19,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"strconv"
 )
 
 var DC *doozer.Conn
@@ -28,6 +27,7 @@ var Services []Service
 
 var Port *int = flag.Int("port", 9999, "tcp port to listen")
 var BindIP *string = flag.String("bindaddress", "127.0.0.1", "address to bind")
+var RegionName *string = flag.String("regionName", "unknown", "region service is located in")
 var LogFileName *string = flag.String("logFileName", "myservice.log", "name of logfile")
 var LogLevel *int = flag.Int("logLevel", 1, "log level (1-5)")
 var DoozerServer *string = flag.String("doozerServer", "127.0.0.1:8046", "addr:port of doozer server")
@@ -37,23 +37,31 @@ var Goroutines *expvar.Int
 var svc *Service
 
 
-func DoozerConnect() {
-	var err error
-	DC, err = doozer.Dial(*DoozerServer)
+func DoozerConnect() (*doozer.Conn) {
+  doozerConn, err := doozer.Dial(*DoozerServer)
 	if err != nil {
 		log.Panic(err.Error())
 	}
+
+  return doozerConn
+}
+
+func GetCurrentDoozerRevision() (int64){
+	revision, err := DC.Rev()
+
+	if err != nil {
+		log.Panic(err.Error())
+	}
+
+  return revision
 }
 
 // on startup load the configuration file. 
 // After the config file is loaded, we set the global config file variable to the
 // unmarshaled data, making it useable for all other processes in this app.
 func LoadConfig() {
-	rev, err := DC.Rev()
-	if err != nil {
-		log.Panic(err.Error())
-	}
-	names, err := DC.Getdir("/services/", rev, 0, -1)
+  rev := GetCurrentDoozerRevision()
+	names, _ := DC.Getdir("/services/", rev, 0, -1)
 
 	for _, name := range names {
 		data, _, err := DC.Get("/services/"+name, nil)
@@ -70,11 +78,8 @@ func LoadConfig() {
 
 func (r *Service) RemoveFromConfig() {
 
-	rev, err := DC.Rev()
-	if err != nil {
-		log.Panic(err.Error())
-	}
-	err = DC.Del("/services/"+r.Name+"/" +strconv.Itoa(r.Version) + "/"+*BindIP+"-"+strconv.Itoa(*Port), rev)
+  rev := GetCurrentDoozerRevision()
+  err := DC.Del(GetServicePath(&r.Name, &r.Version, BindIP, Port, RegionName), rev)
 	if err != nil {
 		log.Panic(err.Error())
 	}
@@ -95,13 +100,10 @@ func (r *Service) AddToConfig() {
 	if err != nil {
 		log.Panic(err.Error())
 	}
-	rev, err := DC.Rev()
-	if err != nil {
-		log.Panic(err.Error())
-	}
-	//TODO refactor to get key
 
-	_, err = DC.Set("/services/"+r.Name+"/" +strconv.Itoa(r.Version) + "/"+*BindIP+"-"+strconv.Itoa(*Port), rev, b)
+  rev := GetCurrentDoozerRevision()
+
+	_, err = DC.Set(GetServicePath(&r.Name, &r.Version, BindIP, Port, RegionName), rev, b)
 	if err != nil {
 		log.Panic(err.Error())
 	}
@@ -121,10 +123,8 @@ func setConfig(data []byte) {
 // reload our copy of the config file.
 // Meant to be run as a goroutine continuously.
 func WatchConfig() {
-	rev, err := DC.Rev()
-	if err != nil {
-		log.Panic(err.Error())
-	}
+  rev := GetCurrentDoozerRevision()
+
 	for {
 
 		// blocking wait call returns on a change
@@ -179,8 +179,8 @@ func gracefulShutdown() {
 	syscall.Exit(0)
 }
 
-func Setup(name string, idempotent bool, version int) *Service {
-	DoozerConnect()
+func Setup(region string, name string, idempotent bool, version string) *Service {
+	DC = DoozerConnect()
 	LoadConfig()
 	if x := recover(); x != nil {
 		LogWarn("No Configuration File loaded.  Creating One.")
@@ -192,7 +192,7 @@ func Setup(name string, idempotent bool, version int) *Service {
 
 	initDefaultExpVars(name)
 
-	svc = NewService(name, idempotent, version)
+	svc = NewService(region, name, idempotent, version)
 
 	svc.AddToConfig()
 
