@@ -30,14 +30,14 @@ type Service struct {
 	ServiceAddr BindAddr
 	AdminAddr   BindAddr
 
-	Name          string
-	Region        string
-	Version       string
-	ConfigServers []string
-  ConfigServerDiscovery bool
-	DoozerConn    *DoozerConnection
-	Registered    bool
-	doneChan      chan bool
+	Name                  string
+	Region                string
+	Version               string
+	ConfigServers         []string
+	ConfigServerDiscovery bool
+	DoozerConn            *DoozerConnection
+	Registered            bool
+	doneChan              chan bool
 
 	Log *log.Logger
 
@@ -76,6 +76,8 @@ func (s *Service) Start(register bool) {
 }
 
 func (s *Service) Register() {
+
+	// TODO: we need a different object to represent this, we don't need all these additional params being forwarded along
 	b, err := json.Marshal(s)
 	if err != nil {
 		s.Log.Panic(err.Error())
@@ -128,10 +130,10 @@ func CreateService(s ServiceInterface, c *Config) *Service {
 			IPAddress: c.IPAddress,
 			Port:      c.Port,
 		},
-		Delegate:      s,
-		Log:           c.Log,
-		ConfigServers: c.ConfigServers,
-    ConfigServerDiscovery: c.ConfigServerDiscovery,
+		Delegate:              s,
+		Log:                   c.Log,
+		ConfigServers:         c.ConfigServers,
+		ConfigServerDiscovery: c.ConfigServerDiscovery,
 	}
 
 	return service
@@ -207,9 +209,9 @@ func watchSignals(c chan os.Signal, s *Service) {
 func (s *Service) doozer() *DoozerConnection {
 	if s.DoozerConn == nil {
 		s.DoozerConn = &DoozerConnection{
-			Servers: s.ConfigServers,
-      Discover: s.ConfigServerDiscovery,
-			Log:     s.Log,
+			Servers:  s.ConfigServers,
+			Discover: s.ConfigServerDiscovery,
+			Log:      s.Log,
 		}
 
 		s.DoozerConn.Connect()

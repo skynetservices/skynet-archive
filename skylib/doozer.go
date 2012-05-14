@@ -1,12 +1,15 @@
 package skylib
 
 import (
+	"bytes"
 	"github.com/4ad/doozer"
 	"log"
-  "bytes"
 )
 
 type DoozerServer struct {
+	Key      string
+	Id       int
+	Addr     string
 }
 
 type DoozerConnection struct {
@@ -16,7 +19,7 @@ type DoozerConnection struct {
 	Discover   bool
 
 	// Internal use for discover
-	doozerInstances map[string]string
+	doozerInstances map[string]*DoozerServer
 }
 
 func (d *DoozerConnection) Connect() {
@@ -35,7 +38,7 @@ func (d *DoozerConnection) Connect() {
 	// Let's watch doozers internal config to check for new servers
 	if d.Discover == true {
 		d.getDoozerInstances()
-    go d.monitorCluster()
+		go d.monitorCluster()
 	}
 }
 
@@ -66,29 +69,72 @@ func (d *DoozerConnection) Rev() (int64, error) {
 }
 
 func (d *DoozerConnection) getDoozerInstances() {
-  d.doozerInstances = make(map[string]string)
+	d.doozerInstances = make(map[string]*DoozerServer)
 
 	rev := d.GetCurrentRevision()
 	instances, _ := d.Connection.Getdir("/ctl/cal", rev, 0, -1)
 
 	for _, i := range instances {
     rev := d.GetCurrentRevision()
-    data, _, err := d.Get("/ctl/cal/" + i, &rev)
+    data, _, err := d.Get("/ctl/cal/"+i, &rev)
     buf := bytes.NewBuffer(data)
 
     if err == nil {
-      data, _, err = d.Get("/ctl/node/" + buf.String() + "/addr", &rev)
-      addrbuf := bytes.NewBuffer(data)
+      d.doozerInstances[i] = d.getDoozerServer(buf.String())
+    }
+	}
+}
 
-      if err == nil {
-        // TODO: only add nodes that are writable
-        d.doozerInstances[buf.String()] = addrbuf.String()
+func (d *DoozerConnection) monitorCluster() {
+	// TODO: watch for changes to /ctl/cal and look for new nodes
+	// also recover from errors, if we already have a list of nodes connect to one of them and wait there instead
+
+	for {
+		// blocking wait call returns on a change
+		ev, err := d.Connection.Wait("/ctl/cal/*", d.GetCurrentRevision())
+		if err != nil {
+			d.Log.Panic(err.Error())
+		}
+
+		buf := bytes.NewBuffer(ev.Body)
+    id := basename(ev.Path)
+
+    if buf.String() == "" && d.doozerInstances[id] != nil {
+      // Server is down, remove from list
+      d.Log.Println("Doozer instance no longer available, removing from available list")
+      delete(d.doozerInstances, id)
+
+    } else if buf.String() != "" {
+      // Server changed, check to make sure it's different first
+      if d.doozerInstances[id] == nil || d.doozerInstances[id].Key != buf.String() {
+        d.Log.Println("New Doozer instance detected, adding to available list")
+
+				d.doozerInstances[id] = d.getDoozerServer(buf.String())
       }
     }
 	}
 }
 
-func (d *DoozerConnection) monitorCluster(){
-  // TODO: watch for changes to /ctl/cal and look for new nodes
-  // also recover from errors, if we already have a list of nodes connect to one of them and wait there instead
+func (d *DoozerConnection) getDoozerServer(key string) (*DoozerServer){
+  rev := d.GetCurrentRevision()
+  data, _, err := d.Get("/ctl/node/" + key + "/addr", &rev)
+  buf := bytes.NewBuffer(data)
+
+  if err == nil {
+    return &DoozerServer {
+      Addr: buf.String(),
+      Key:  key,
+    }
+  }
+
+  return nil
+}
+
+func basename(path string) string {
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == '/' {
+			return path[i+1:]
+		}
+	}
+	return path
 }
