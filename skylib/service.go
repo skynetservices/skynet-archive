@@ -1,50 +1,176 @@
 package skylib
 
 import (
-  "time"
-  "strconv"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"net/rpc"
+	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
 )
 
 // A Generic struct to represent any service in the SkyNet system.
+type BindAddr struct {
+	IPAddress string
+	Port      int
+}
+
+type ServiceInterface interface {
+	Started()
+	Stopped()
+	Registered()
+	UnRegistered()
+}
+
 type Service struct {
-	IPAddress  string
-	Name       string
-	Port       int
-  Region     string
-	Idempotent bool
-	Version	  string
+	ServiceAddr BindAddr
+	AdminAddr   BindAddr
 
+	Name          string
+	Region        string
+	Version       string
+	ConfigServers []string
+  ConfigServerDiscovery bool
+	DoozerConn    *DoozerConnection
+	Registered    bool
+	doneChan      chan bool
+
+	Log *log.Logger
+
+	Delegate ServiceInterface
 }
 
-func GetServicePath(name *string, version *string, ip *string, port *int, region *string) (string){
-  return "/services/" + *name + "/" + *version + "/" + *region + "/" + *ip + "/" + strconv.Itoa(*port)
-}
+func (s *Service) Start(register bool) {
+	rpc.Register(s.Delegate)
+	rpc.HandleHTTP()
 
-func (r *Service) parseError(err string) {
-	panic(&Error{err, r.Name})
-}
+	portString := fmt.Sprintf("%s:%d", s.ServiceAddr.IPAddress, s.ServiceAddr.Port)
 
-// Exported RPC method for the health check
-func (hc *Service) Admin(hr *AdminRequest, resp *AdminResponse) (err error) {
-	if hr.Command == "SHUTDOWN" {
-		gracefulShutdown()
+	l, e := net.Listen("tcp", portString)
+	if e != nil {
+		s.Log.Fatal("listen error:", e)
 	}
 
-	return nil
+	// Watch signals for shutdown
+	c := make(chan os.Signal, 1)
+	go watchSignals(c, s)
+
+	s.doneChan = make(chan bool, 1)
+	s.Log.Println("Starting server")
+	go http.Serve(l, nil)
+
+	go s.Delegate.Started() // Call user defined callback
+
+	if register == true {
+		s.Register()
+	}
+
+	// Endless loop to keep app from returning
+	select {
+	case _ = <-s.doneChan:
+	}
 }
 
-// Exported RPC method for the health check
-func (hc *Service) Ping(hr *HeartbeatRequest, resp *HeartbeatResponse) (err error) {
-	resp.Timestamp = time.Now()
+func (s *Service) Register() {
+	b, err := json.Marshal(s)
+	if err != nil {
+		s.Log.Panic(err.Error())
+	}
 
-	return nil
+	rev := s.doozer().GetCurrentRevision()
+
+	_, err = s.doozer().Set(s.GetConfigPath(), rev, b)
+	if err != nil {
+		s.Log.Panic(err.Error())
+	}
+
+	s.Registered = true
+
+	s.Delegate.Registered() // Call user defined callback
 }
 
-// Exported RPC method for the advanced health check
-func (hc *Service) PingAdvanced(hr *HealthCheckRequest, resp *HealthCheckResponse) (err error) {
-	resp.Timestamp = time.Now()
-	resp.Load = 0.1 //todo
-	return nil
+func (s *Service) UnRegister() {
+	if s.Registered == true {
+		rev := s.doozer().GetCurrentRevision()
+		path := s.GetConfigPath()
+		err := s.doozer().Del(path, rev)
+		if err != nil {
+			s.Log.Panic(err.Error())
+		}
+	}
+
+	s.Delegate.UnRegistered() // Call user defined callback
+}
+
+func (s *Service) Shutdown() {
+	// TODO: make this wait for requests to finish
+	s.UnRegister()
+	s.doneChan <- true
+	syscall.Exit(0)
+
+	s.Delegate.Stopped() // Call user defined callback
+}
+
+func CreateService(s ServiceInterface, c *Config) *Service {
+
+	// This will set defaults
+	initializeConfig(c)
+
+	service := &Service{
+		Name:    c.Name,
+		Version: c.Version,
+		Region:  c.Region,
+		ServiceAddr: BindAddr{
+			IPAddress: c.IPAddress,
+			Port:      c.Port,
+		},
+		Delegate:      s,
+		Log:           c.Log,
+		ConfigServers: c.ConfigServers,
+    ConfigServerDiscovery: c.ConfigServerDiscovery,
+	}
+
+	return service
+}
+
+func initializeConfig(c *Config) {
+	if c.Log == nil {
+		c.Log = log.New(os.Stderr, "", log.LstdFlags)
+	}
+
+	if c.Name == "" {
+		c.Name = "SkynetService"
+	}
+
+	if c.Version == "" {
+		c.Version = "1"
+	}
+
+	if c.Region == "" {
+		c.Region = "local"
+	}
+
+	if c.IPAddress == "" {
+		c.IPAddress = "127.0.0.1"
+	}
+
+	if c.Port == 0 {
+		c.Port = 9000
+	}
+
+	if c.ConfigServers == nil || len(c.ConfigServers) == 0 {
+		dzServers := make([]string, 0)
+		dzServers = append(dzServers, "127.0.0.1:8046")
+		c.ConfigServers = dzServers
+	}
+}
+
+func (s *Service) GetConfigPath() string {
+	return "/services/" + s.Name + "/" + s.Version + "/" + s.Region + "/" + s.ServiceAddr.IPAddress + "/" + strconv.Itoa(s.ServiceAddr.Port)
 }
 
 func (r *Service) Equal(that *Service) bool {
@@ -53,25 +179,41 @@ func (r *Service) Equal(that *Service) bool {
 	if r.Name != that.Name {
 		return b
 	}
-	if r.IPAddress != that.IPAddress {
+	if r.ServiceAddr.IPAddress != that.ServiceAddr.IPAddress {
 		return b
 	}
-	if r.Port != that.Port {
+	if r.ServiceAddr.Port != that.ServiceAddr.Port {
 		return b
 	}
 	b = true
 	return b
 }
 
-// Utility function to return a new Service struct
-// pre-populated with the data on the command line.
-func NewService(region string, provides string, idempotent bool, version string) *Service {
-	return  &Service{
-		Name:      provides,
-		Port:      *Port,
-		IPAddress: *BindIP,
-		Idempotent: idempotent,
-		Version: version,
-    Region: region,
+func watchSignals(c chan os.Signal, s *Service) {
+	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM)
+
+	for {
+		select {
+		case sig := <-c:
+			switch sig.(syscall.Signal) {
+			// Trap signals for clean shutdown
+			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
+				s.Shutdown()
+			}
+		}
 	}
+}
+
+func (s *Service) doozer() *DoozerConnection {
+	if s.DoozerConn == nil {
+		s.DoozerConn = &DoozerConnection{
+			Servers: s.ConfigServers,
+      Discover: s.ConfigServerDiscovery,
+			Log:     s.Log,
+		}
+
+		s.DoozerConn.Connect()
+	}
+
+	return s.DoozerConn
 }
