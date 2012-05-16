@@ -33,15 +33,15 @@ type Service struct {
 	Name                  string
 	Region                string
 	Version               string
-	ConfigServers         []string
-	ConfigServerDiscovery bool
-	DoozerConn            *DoozerConnection
-	Registered            bool
-	doneChan              chan bool
+	ConfigServers         []string          `json:"-"`
+	ConfigServerDiscovery bool              `json:"-"`
+	DoozerConn            *DoozerConnection `json:"-"`
+	Registered            bool              `json:"-"`
+	doneChan              chan bool         `json:"-"`
 
-	Log *log.Logger
+	Log *log.Logger                         `json:"-"`
 
-	Delegate ServiceInterface
+	Delegate ServiceInterface               `json:"-"`
 }
 
 func (s *Service) Start(register bool) {

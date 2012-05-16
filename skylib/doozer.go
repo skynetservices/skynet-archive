@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/4ad/doozer"
 	"log"
+  "sync"
 )
 
 type DoozerServer struct {
@@ -18,8 +19,11 @@ type DoozerConnection struct {
 	Log        *log.Logger
 	Discover   bool
 
+  connectionMutex sync.Mutex
+
 	// Internal use for discover
 	doozerInstances map[string]*DoozerServer
+  currentInstance string
 }
 
 func (d *DoozerConnection) Connect() {
@@ -27,13 +31,20 @@ func (d *DoozerConnection) Connect() {
 		d.Log.Panic("Must supply at least 1 Doozer server to connect to")
 	}
 
-	server := d.Servers[0]
-	var err error
+  var success = false
+  var err error = nil
 
-	d.Connection, err = doozer.Dial(server)
-	if err != nil {
-		d.Log.Panic("Failed to connect to Doozer: " + err.Error())
-	}
+  for _, server := range d.Servers {
+    success, err = d.dial(server)
+
+    if success == true {
+      break
+    }
+  }
+
+  if success == false {
+    d.Log.Panic("Failed to connect to any of the supplied Doozer Servers: " + err.Error())
+  }
 
 	// Let's watch doozers internal config to check for new servers
 	if d.Discover == true {
@@ -42,7 +53,29 @@ func (d *DoozerConnection) Connect() {
 	}
 }
 
-func (d *DoozerConnection) GetCurrentRevision() int64 {
+func (d *DoozerConnection) dial(server string)  (bool, error) {
+	var err error
+
+	d.Connection, err = doozer.Dial(server)
+	if err != nil {
+		return false, err
+	}
+
+  d.currentInstance = server
+  d.Log.Println("Connected to Doozer Instance: " + server)
+
+  return true, nil
+}
+
+func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
+	defer func() {
+		if err := recover(); err != nil {
+      d.recoverFromError(err)
+
+      rev = d.GetCurrentRevision()
+		}
+	}()
+
 	revision, err := d.Connection.Rev()
 
 	if err != nil {
@@ -52,19 +85,51 @@ func (d *DoozerConnection) GetCurrentRevision() int64 {
 	return revision
 }
 
-func (d *DoozerConnection) Set(file string, rev int64, body []byte) (int64, error) {
+func (d *DoozerConnection) Set(file string, rev int64, body []byte) (newRev int64, err error) {
+	defer func() {
+		if err := recover(); err != nil {
+      d.recoverFromError(err)
+
+      newRev, err = d.Set(file, rev, body)
+		}
+	}()
+
 	return d.Connection.Set(file, rev, body)
 }
 
-func (d *DoozerConnection) Del(path string, rev int64) error {
+func (d *DoozerConnection) Del(path string, rev int64) (err error) {
+	defer func() {
+		if err := recover(); err != nil {
+      d.recoverFromError(err)
+
+      err = d.Del(path, rev)
+		}
+	}()
+
 	return d.Connection.Del(path, rev)
 }
 
-func (d *DoozerConnection) Get(file string, rev *int64) ([]byte, int64, error) {
+func (d *DoozerConnection) Get(file string, rev *int64) (data []byte, revision int64, err error) {
+	defer func() {
+		if err := recover(); err != nil {
+      d.recoverFromError(err)
+
+      data, revision, err = d.Get(file, rev)
+		}
+	}()
+
 	return d.Connection.Get(file, rev)
 }
 
-func (d *DoozerConnection) Rev() (int64, error) {
+func (d *DoozerConnection) Rev() (rev int64, err error) {
+	defer func() {
+		if err := recover(); err != nil {
+      d.recoverFromError(err)
+
+      rev, err = d.Rev()
+		}
+	}()
+
 	return d.Connection.Rev()
 }
 
@@ -85,9 +150,51 @@ func (d *DoozerConnection) getDoozerInstances() {
 	}
 }
 
+func (d *DoozerConnection) recoverFromError(err interface{}){
+  if err == "EOF" {
+    d.Log.Println("Lost connection to Doozer: Reconnecting...")
+    d.connectionMutex.Lock()
+    defer d.connectionMutex.Unlock()
+
+
+    // Let's try to connect to the servers supplied in config
+    for _, server := range d.Servers {
+      success, _ := d.dial(server)
+
+      if success == true {
+        return
+      }
+    }
+
+    // If we didn't connect to one of the initially supplied servers and they enabled Auto Discovery
+    // Let's try to get a connection from one of the instances we know about
+    if len(d.doozerInstances) > 0 && d.Discover == true {
+      for _, server := range d.doozerInstances {
+        success, _ := d.dial(server.Addr)
+
+        if success == true {
+          return
+        }
+      }
+    }
+
+    // If we made it here we didn't find a server
+    d.Log.Panic("Unable to find a Doozer instance to connect to")
+
+  } else {
+    // Don't know how to handle, go ahead and panic
+    d.Log.Panic(err)
+  }
+}
+
 func (d *DoozerConnection) monitorCluster() {
-	// TODO: watch for changes to /ctl/cal and look for new nodes
-	// also recover from errors, if we already have a list of nodes connect to one of them and wait there instead
+	defer func() {
+		if err := recover(); err != nil {
+      d.recoverFromError(err)
+
+      d.monitorCluster()
+		}
+	}()
 
 	for {
 		// blocking wait call returns on a change
