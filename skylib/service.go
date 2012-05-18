@@ -147,9 +147,6 @@ func (s *Service) findRPCMethods(typ reflect.Type) {
 
 		s.methods[m.Name] = m.Func
 		s.Log.Println("Registered RPC Method: " + m.Name)
-
-		//fmt.Println(m.Type)
-		//fmt.Println(m.PkgPath)
 	}
 }
 
