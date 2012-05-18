@@ -42,8 +42,6 @@ func (dc *DoozerConfig) String() string {
 	return fmt.Sprint(*dc)
 }
 
-
-
 func GetConfigFromFlags() (*Config){
   var (
     bindPort    *int    = flag.Int("port", 9999, "tcp port to listen")

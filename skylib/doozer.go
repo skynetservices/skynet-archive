@@ -26,6 +26,7 @@ type DoozerConnection struct {
   currentInstance string
 }
 
+// TODO: Need to support booturi
 func (d *DoozerConnection) Connect() {
 	if len(d.Servers) < 1 {
 		d.Log.Panic("Must supply at least 1 Doozer server to connect to")
