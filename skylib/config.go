@@ -12,16 +12,19 @@ import (
 	"log"
 )
 
-type Config struct {
-	Log       *log.Logger
-	Name      string
-	Version   string
-	Region    string
+type BindAddr struct {
 	IPAddress string
 	Port      int
+}
 
-	AdminIPAddress        string
-	AdminPort             int
-	ConfigServers         []string
-	ConfigServerDiscovery bool
+type Config struct {
+	Log                   *log.Logger
+	Name                  string
+	Version               string
+	Region                string
+  ServiceAddr           *BindAddr
+  AdminAddr             *BindAddr
+
+	ConfigServers         []string  `json:"-"`
+	ConfigServerDiscovery bool      `json:"-"`
 }

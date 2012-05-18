@@ -68,7 +68,7 @@ func ListInstances(q *skylib.Query) {
 	results := q.FindInstances()
 
 	for _, instance := range *results {
-		fmt.Println(instance.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.ServiceAddr.Port) + " - " + instance.Name + " (" + instance.Version + ")")
+		fmt.Println(instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port) + " - " + instance.Config.Name + " (" + instance.Config.Version + ")")
 	}
 }
 
@@ -116,23 +116,23 @@ func PrintTopology(q *skylib.Query) {
 
 	// Build topology hash first
 	for _, instance := range *results {
-		if topology[instance.Region] == nil {
-			topology[instance.Region] = make(map[string]map[string]map[string][]*skylib.Service)
+		if topology[instance.Config.Region] == nil {
+			topology[instance.Config.Region] = make(map[string]map[string]map[string][]*skylib.Service)
 		}
 
-		if topology[instance.Region][instance.ServiceAddr.IPAddress] == nil {
-			topology[instance.Region][instance.ServiceAddr.IPAddress] = make(map[string]map[string][]*skylib.Service)
+		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] == nil {
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] = make(map[string]map[string][]*skylib.Service)
 		}
 
-		if topology[instance.Region][instance.ServiceAddr.IPAddress][instance.Name] == nil {
-			topology[instance.Region][instance.ServiceAddr.IPAddress][instance.Name] = make(map[string][]*skylib.Service)
+		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] == nil {
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] = make(map[string][]*skylib.Service)
 		}
 
-		if topology[instance.Region][instance.ServiceAddr.IPAddress][instance.Name][instance.Version] == nil {
-			topology[instance.Region][instance.ServiceAddr.IPAddress][instance.Name][instance.Version] = make([]*skylib.Service, 0)
+		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] == nil {
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = make([]*skylib.Service, 0)
 		}
 
-		topology[instance.Region][instance.ServiceAddr.IPAddress][instance.Name][instance.Version] = append(topology[instance.Region][instance.ServiceAddr.IPAddress][instance.Name][instance.Version], instance)
+		topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = append(topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version], instance)
 	}
 
 	// Now we can print the correct heirarchy
@@ -149,7 +149,7 @@ func PrintTopology(q *skylib.Query) {
 					fmt.Println("\t\t\tVersion: " + versionName)
 
 					for _, instance := range version {
-						fmt.Println("\t\t\t\t" + instance.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.ServiceAddr.Port) + " - " + instance.Name + " (" + instance.Version + ")")
+						fmt.Println("\t\t\t\t" + instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port) + " - " + instance.Config.Name + " (" + instance.Config.Version + ")")
 					}
 				}
 			}

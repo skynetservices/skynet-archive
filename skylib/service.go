@@ -14,11 +14,6 @@ import (
 )
 
 // A Generic struct to represent any service in the SkyNet system.
-type BindAddr struct {
-	IPAddress string
-	Port      int
-}
-
 type ServiceInterface interface {
 	Started()
 	Stopped()
@@ -27,14 +22,7 @@ type ServiceInterface interface {
 }
 
 type Service struct {
-	ServiceAddr BindAddr
-	AdminAddr   BindAddr
-
-	Name                  string
-	Region                string
-	Version               string
-	ConfigServers         []string          `json:"-"`
-	ConfigServerDiscovery bool              `json:"-"`
+  Config                *Config
 	DoozerConn            *DoozerConnection `json:"-"`
 	Registered            bool              `json:"-"`
 	doneChan              chan bool         `json:"-"`
@@ -48,7 +36,7 @@ func (s *Service) Start(register bool) {
 	rpc.Register(s.Delegate)
 	rpc.HandleHTTP()
 
-	portString := fmt.Sprintf("%s:%d", s.ServiceAddr.IPAddress, s.ServiceAddr.Port)
+	portString := fmt.Sprintf("%s:%d", s.Config.ServiceAddr.IPAddress, s.Config.ServiceAddr.Port)
 
 	l, e := net.Listen("tcp", portString)
 	if e != nil {
@@ -123,17 +111,8 @@ func CreateService(s ServiceInterface, c *Config) *Service {
 	initializeConfig(c)
 
 	service := &Service{
-		Name:    c.Name,
-		Version: c.Version,
-		Region:  c.Region,
-		ServiceAddr: BindAddr{
-			IPAddress: c.IPAddress,
-			Port:      c.Port,
-		},
-		Delegate:              s,
-		Log:                   c.Log,
-		ConfigServers:         c.ConfigServers,
-		ConfigServerDiscovery: c.ConfigServerDiscovery,
+		Config:    c,
+		Delegate:  s,
 	}
 
 	return service
@@ -156,12 +135,12 @@ func initializeConfig(c *Config) {
 		c.Region = "local"
 	}
 
-	if c.IPAddress == "" {
-		c.IPAddress = "127.0.0.1"
+	if c.ServiceAddr.IPAddress == "" {
+		c.ServiceAddr.IPAddress = "127.0.0.1"
 	}
 
-	if c.Port == 0 {
-		c.Port = 9000
+	if c.ServiceAddr.Port == 0 {
+		c.ServiceAddr.Port = 9000
 	}
 
 	if c.ConfigServers == nil || len(c.ConfigServers) == 0 {
@@ -172,19 +151,19 @@ func initializeConfig(c *Config) {
 }
 
 func (s *Service) GetConfigPath() string {
-	return "/services/" + s.Name + "/" + s.Version + "/" + s.Region + "/" + s.ServiceAddr.IPAddress + "/" + strconv.Itoa(s.ServiceAddr.Port)
+	return "/services/" + s.Config.Name + "/" + s.Config.Version + "/" + s.Config.Region + "/" + s.Config.ServiceAddr.IPAddress + "/" + strconv.Itoa(s.Config.ServiceAddr.Port)
 }
 
 func (r *Service) Equal(that *Service) bool {
 	var b bool
 	b = false
-	if r.Name != that.Name {
+	if r.Config.Name != that.Config.Name {
 		return b
 	}
-	if r.ServiceAddr.IPAddress != that.ServiceAddr.IPAddress {
+	if r.Config.ServiceAddr.IPAddress != that.Config.ServiceAddr.IPAddress {
 		return b
 	}
-	if r.ServiceAddr.Port != that.ServiceAddr.Port {
+	if r.Config.ServiceAddr.Port != that.Config.ServiceAddr.Port {
 		return b
 	}
 	b = true
@@ -209,8 +188,8 @@ func watchSignals(c chan os.Signal, s *Service) {
 func (s *Service) doozer() *DoozerConnection {
 	if s.DoozerConn == nil {
 		s.DoozerConn = &DoozerConnection{
-			Servers:  s.ConfigServers,
-			Discover: s.ConfigServerDiscovery,
+			Servers:  s.Config.ConfigServers,
+			Discover: s.Config.ConfigServerDiscovery,
 			Log:      s.Log,
 		}
 

@@ -100,8 +100,10 @@ func main() {
 		Name:                  "GetUserDataService",
 		Region:                "Chicago",
 		Version:               "1",
-		IPAddress:             *BindAddr,
-		Port:                  *BindPort,
+    ServiceAddr:           &skylib.BindAddr {
+      IPAddress:             *BindAddr,
+      Port:                  *BindPort,
+    },
 		ConfigServers:         dzServers,
 		ConfigServerDiscovery: true,
 	})
