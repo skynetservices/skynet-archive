@@ -10,6 +10,8 @@ package skylib
 
 import (
 	"log"
+	"flag"
+  "fmt"
 )
 
 type BindAddr struct {
@@ -27,4 +29,46 @@ type Config struct {
 
 	ConfigServers         []string  `json:"-"`
 	ConfigServerDiscovery bool      `json:"-"`
+}
+
+type DoozerConfig []string
+
+func (dc *DoozerConfig) Set(s string) error {
+	*dc = append(*dc, s)
+	return nil
+}
+
+func (dc *DoozerConfig) String() string {
+	return fmt.Sprint(*dc)
+}
+
+
+
+func GetConfigFromFlags() (*Config){
+  var (
+    bindPort    *int    = flag.Int("port", 9999, "tcp port to listen")
+    bindAddr    *string = flag.String("address", "127.0.0.1", "address to bind")
+    region      *string = flag.String("region", "unknown", "region service is located in")
+    doozerDiscover *bool = flag.Bool("autodiscover", true, "auto discover new doozer instances")
+    doozerAddrs         = DoozerConfig{}
+  )
+
+	flag.Var(&doozerAddrs, "doozer", "addr:port of doozer server") // trick to supply multiple -doozer flags
+
+	dzServers := make([]string, 0)
+	for _, dz := range doozerAddrs {
+		log.Println(dz)
+		dzServers = append(dzServers, dz)
+	}
+
+	flag.Parse()
+  return &Config{
+      Region: *region,
+      ServiceAddr:           &BindAddr {
+        IPAddress:             *bindAddr,
+        Port:                  *bindPort,
+      },
+      ConfigServers:         dzServers,
+      ConfigServerDiscovery: *doozerDiscover,
+    }
 }
