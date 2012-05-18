@@ -10,65 +10,34 @@ package main
 import (
 	"github.com/bketelsen/skynet/skylib"
 	"log"
-	"time"
+	"strings"
 )
 
-type GetUserDataService struct{}
+type TestService struct{}
 
-func (s *GetUserDataService) Registered()   {}
-func (s *GetUserDataService) UnRegistered() {}
-func (s *GetUserDataService) Started()      {}
-func (s *GetUserDataService) Stopped()      {}
+func (s *TestService) Registered(service *skylib.Service)   {}
+func (s *TestService) UnRegistered(service *skylib.Service) {}
+func (s *TestService) Started(service *skylib.Service)      {}
+func (s *TestService) Stopped(service *skylib.Service)      {}
 
-const sName = "GetUserData"
-
-type GetUserDataRequest struct {
-	YourInputValue string
-}
-
-type GetUserDataResponse struct {
-	YourOutputValue string
-	Errors          []string
-}
-
-func NewGetUserDataService() *GetUserDataService {
-	r := &GetUserDataService{}
+func NewTestService() *TestService {
+	r := &TestService{}
 	return r
 }
 
-func (ls *GetUserDataService) GetUserData(cr *GetUserDataRequest, lr *GetUserDataResponse) (err error) {
-	result := make(chan string)
-	timeout := make(chan bool)
-
-	//This function produces the actual result
-	go func() {
-		time.Sleep(1e8) // force the fail
-		result <- " was here"
-	}()
-
-	go func() {
-		time.Sleep(1e9)
-		timeout <- true
-	}()
-
-	select {
-	case retVal := <-result:
-		lr.YourOutputValue = cr.YourInputValue + retVal
-	case <-timeout:
-		lr.Errors = append(lr.Errors, "Service Timeout")
-	}
-
-	return nil
+func (s *TestService) Upcase(msg string) string {
+	return strings.ToUpper(msg)
 }
 
 func main() {
-	getDataService := NewGetUserDataService()
+	testService := NewTestService()
 
-  config := skylib.GetConfigFromFlags()
-  config.Name = "GetUserDataService"
-  config.Version = "1"
+	config := skylib.GetServiceConfigFromFlags()
+	config.Name = "TestService"
+	config.Version = "1"
+	config.Region = "Clearwater"
 
-	service := skylib.CreateService(getDataService, config)
+	service := skylib.CreateService(testService, config)
 
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
 	defer func() {

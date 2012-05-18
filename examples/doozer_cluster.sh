@@ -14,10 +14,16 @@ START_WEB_PORT=8080
 START_DZNS_PORT=10000
 START_DZNS_WEB_PORT=11000
 
-DZNS_INSTANCES=5
-CLUSTER_INSTANCES=5
+DZNS_INSTANCES=3
+CLUSTER_INSTANCES=3
 
-echo $DOOZERD_PATH
+if [ $# -lt 1 ] 
+then
+  echo "Usage: doozer_cluster.sh <start|stop> (<instances> <dzns_instances>)"
+  exit
+fi
+
+echo "Using Doozerd: $DOOZERD_PATH"
 
 if [ $1 = "start" ]; then
   if [ $# -gt 1 ]; then
@@ -44,7 +50,7 @@ if [ $1 = "start" ]; then
      echo "\c" | $DOOZER_PATH/cmd/doozer/doozer -a "doozer:?ca=$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dzns_count" >/dev/null &
     else
       $DOOZERD_PATH/doozerd -l "$BIND_IP:$dzns_port" -w ":$dzns_web_port" -c "dzns" 2>/dev/null &
-      sleep 2
+      sleep 1
     fi
 
     dzns_port=$(( $dzns_port + 1 ))
@@ -67,7 +73,7 @@ if [ $1 = "start" ]; then
       # this has to connect to master, it blows up with a REV_MISMATCH if we connect to anyone else
       echo "\c" | $DOOZER_PATH/cmd/doozer/doozer -a "doozer:?ca=$BIND_IP:$START_PORT" -b "doozer:?ca$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dz_count" >/dev/null &
     else
-      sleep 2
+      sleep 1
     fi
 
     dz_port=$(( $dz_port + 1 ))

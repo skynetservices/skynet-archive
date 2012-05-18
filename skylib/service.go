@@ -3,45 +3,47 @@ package skylib
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/erikstmartin/msgpack-rpc/go/rpc"
 	"log"
 	"net"
-	"net/http"
-	"net/rpc"
 	"os"
 	"os/signal"
+	"reflect"
 	"strconv"
 	"syscall"
 )
 
 // A Generic struct to represent any service in the SkyNet system.
 type ServiceInterface interface {
-	Started()
-	Stopped()
-	Registered()
-	UnRegistered()
+	Started(s *Service)
+	Stopped(s *Service)
+	Registered(s *Service)
+	UnRegistered(s *Service)
 }
 
 type Service struct {
-  Config                *Config
-	DoozerConn            *DoozerConnection `json:"-"`
-	Registered            bool              `json:"-"`
-	doneChan              chan bool         `json:"-"`
+	Config     *ServiceConfig
+	DoozerConn *DoozerConnection `json:"-"`
+	Registered bool              `json:"-"`
+	doneChan   chan bool         `json:"-"`
 
-	Log *log.Logger                         `json:"-"`
+	Log *log.Logger `json:"-"`
 
-	Delegate ServiceInterface               `json:"-"`
+	Delegate ServiceInterface         `json:"-"`
+	methods  map[string]reflect.Value `json:"-"`
+}
+
+func (s *Service) Resolve(name string, arguments []reflect.Value) (reflect.Value, error) {
+	return s.methods[name], nil
 }
 
 func (s *Service) Start(register bool) {
-	rpc.Register(s.Delegate)
-	rpc.HandleHTTP()
-
 	portString := fmt.Sprintf("%s:%d", s.Config.ServiceAddr.IPAddress, s.Config.ServiceAddr.Port)
 
-	l, e := net.Listen("tcp", portString)
-	if e != nil {
-		s.Log.Fatal("listen error:", e)
-	}
+	rpcServ := rpc.NewServer(s, true, nil)
+	l, _ := net.Listen("tcp", portString)
+
+	rpcServ.Listen(l)
 
 	// Watch signals for shutdown
 	c := make(chan os.Signal, 1)
@@ -49,9 +51,10 @@ func (s *Service) Start(register bool) {
 
 	s.doneChan = make(chan bool, 1)
 	s.Log.Println("Starting server")
-	go http.Serve(l, nil)
 
-	go s.Delegate.Started() // Call user defined callback
+	go rpcServ.Run()
+
+	go s.Delegate.Started(s) // Call user defined callback
 
 	if register == true {
 		s.Register()
@@ -80,7 +83,7 @@ func (s *Service) Register() {
 
 	s.Registered = true
 
-	s.Delegate.Registered() // Call user defined callback
+	s.Delegate.Registered(s) // Call user defined callback
 }
 
 func (s *Service) UnRegister() {
@@ -93,7 +96,7 @@ func (s *Service) UnRegister() {
 		}
 	}
 
-	s.Delegate.UnRegistered() // Call user defined callback
+	s.Delegate.UnRegistered(s) // Call user defined callback
 }
 
 func (s *Service) Shutdown() {
@@ -102,23 +105,55 @@ func (s *Service) Shutdown() {
 	s.doneChan <- true
 	syscall.Exit(0)
 
-	s.Delegate.Stopped() // Call user defined callback
+	s.Delegate.Stopped(s) // Call user defined callback
 }
 
-func CreateService(s ServiceInterface, c *Config) *Service {
+func CreateService(s ServiceInterface, c *ServiceConfig) *Service {
+	typ := reflect.TypeOf(s)
 
 	// This will set defaults
 	initializeConfig(c)
 
 	service := &Service{
-		Config:    c,
-		Delegate:  s,
+		Config:   c,
+		Delegate: s,
+		Log:      c.Log,
+		methods:  make(map[string]reflect.Value),
 	}
+
+	service.findRPCMethods(typ)
 
 	return service
 }
 
-func initializeConfig(c *Config) {
+func (s *Service) findRPCMethods(typ reflect.Type) {
+	for i := 0; i < typ.NumMethod(); i++ {
+		m := typ.Method(i)
+
+		// Don't register callbacks
+		if m.Name == "Started" || m.Name == "Stopped" || m.Name == "Registered" || m.Name == "UnRegistered" {
+			continue
+		}
+
+		// Only register exported methods
+		if m.PkgPath != "" {
+			continue
+		}
+
+		// TODO: Ensure method matches required signature
+		if m.Type.NumOut() != 1 && m.Type.NumOut() != 2 {
+			continue
+		}
+
+		s.methods[m.Name] = m.Func
+		s.Log.Println("Registered RPC Method: " + m.Name)
+
+		//fmt.Println(m.Type)
+		//fmt.Println(m.PkgPath)
+	}
+}
+
+func initializeConfig(c *ServiceConfig) {
 	if c.Log == nil {
 		c.Log = log.New(os.Stderr, "", log.LstdFlags)
 	}
@@ -143,11 +178,12 @@ func initializeConfig(c *Config) {
 		c.ServiceAddr.Port = 9000
 	}
 
-	if c.ConfigServers == nil || len(c.ConfigServers) == 0 {
-		dzServers := make([]string, 0)
-		dzServers = append(dzServers, "127.0.0.1:8046")
-		c.ConfigServers = dzServers
-	}
+  if c.DoozerConfig == nil {
+    c.DoozerConfig = &DoozerConfig {
+      Uri: "127.0.0.1:8046",
+      AutoDiscover: true,
+    }
+  }
 }
 
 func (s *Service) GetConfigPath() string {
@@ -187,10 +223,9 @@ func watchSignals(c chan os.Signal, s *Service) {
 
 func (s *Service) doozer() *DoozerConnection {
 	if s.DoozerConn == nil {
-		s.DoozerConn = &DoozerConnection{
-			Servers:  s.Config.ConfigServers,
-			Discover: s.Config.ConfigServerDiscovery,
-			Log:      s.Log,
+		s.DoozerConn = &DoozerConnection {
+			Config:  s.Config.DoozerConfig,
+      Log: s.Log,
 		}
 
 		s.DoozerConn.Connect()

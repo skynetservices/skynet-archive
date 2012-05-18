@@ -56,11 +56,11 @@ func Connect() {
 		}
 	}()
 
-	dzServers := make([]string, 0)
-	dzServers = append(dzServers, "127.0.0.1:8046")
-
+  // TODO: This needs to come from command line, or environment variable
 	DC = &skylib.DoozerConnection{
-		Servers: dzServers,
+		Config: &skylib.DoozerConfig {
+      Uri: "127.0.0.1:8046",
+    },
 	}
 }
 

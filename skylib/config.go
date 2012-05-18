@@ -9,9 +9,8 @@
 package skylib
 
 import (
-	"log"
 	"flag"
-  "fmt"
+	"log"
 )
 
 type BindAddr struct {
@@ -19,54 +18,43 @@ type BindAddr struct {
 	Port      int
 }
 
-type Config struct {
-	Log                   *log.Logger
-	Name                  string
-	Version               string
-	Region                string
-  ServiceAddr           *BindAddr
-  AdminAddr             *BindAddr
-
-	ConfigServers         []string  `json:"-"`
-	ConfigServerDiscovery bool      `json:"-"`
+type ServiceConfig struct {
+	Log         *log.Logger `json:"-"`
+	Name        string
+	Version     string
+	Region      string
+	ServiceAddr *BindAddr
+	AdminAddr   *BindAddr
+	DoozerConfig *DoozerConfig `json:"-"`
 }
 
-type DoozerConfig []string
-
-func (dc *DoozerConfig) Set(s string) error {
-	*dc = append(*dc, s)
-	return nil
+type ClientConfig struct {
+	Log         *log.Logger `json:"-"`
+	DoozerConfig *DoozerConfig `json:"-"`
 }
 
-func (dc *DoozerConfig) String() string {
-	return fmt.Sprint(*dc)
-}
-
-func GetConfigFromFlags() (*Config){
-  var (
-    bindPort    *int    = flag.Int("port", 9999, "tcp port to listen")
-    bindAddr    *string = flag.String("address", "127.0.0.1", "address to bind")
-    region      *string = flag.String("region", "unknown", "region service is located in")
-    doozerDiscover *bool = flag.Bool("autodiscover", true, "auto discover new doozer instances")
-    doozerAddrs         = DoozerConfig{}
-  )
-
-	flag.Var(&doozerAddrs, "doozer", "addr:port of doozer server") // trick to supply multiple -doozer flags
-
-	dzServers := make([]string, 0)
-	for _, dz := range doozerAddrs {
-		log.Println(dz)
-		dzServers = append(dzServers, dz)
-	}
+func GetServiceConfigFromFlags() *ServiceConfig {
+	var (
+		bindPort       *int    = flag.Int("port", 9999, "tcp port to listen")
+		bindAddr       *string = flag.String("address", "127.0.0.1", "address to bind")
+		region         *string = flag.String("region", "unknown", "region service is located in")
+		doozer         *string = flag.String("doozer", "127.0.0.1:8046", "initial doozer instance to connect to")
+		doozerBoot     *string = flag.String("doozerboot", "127.0.0.1:8046", "initial doozer instance to connect to")
+		doozerDiscover *bool   = flag.Bool("autodiscover", true, "auto discover new doozer instances")
+	)
 
 	flag.Parse()
-  return &Config{
-      Region: *region,
-      ServiceAddr:           &BindAddr {
-        IPAddress:             *bindAddr,
-        Port:                  *bindPort,
-      },
-      ConfigServers:         dzServers,
-      ConfigServerDiscovery: *doozerDiscover,
-    }
+
+	return &ServiceConfig{
+		Region: *region,
+		ServiceAddr: &BindAddr{
+			IPAddress: *bindAddr,
+			Port:      *bindPort,
+		},
+    DoozerConfig: &DoozerConfig {
+      Uri: *doozer,
+      BootUri: *doozerBoot,
+      AutoDiscover: *doozerDiscover,
+    },
+	}
 }

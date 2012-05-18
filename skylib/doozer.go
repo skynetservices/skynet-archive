@@ -4,57 +4,72 @@ import (
 	"bytes"
 	"github.com/4ad/doozer"
 	"log"
-  "sync"
+	"sync"
 )
 
 type DoozerServer struct {
-	Key      string
-	Id       int
-	Addr     string
+	Key  string
+	Id   int
+	Addr string
 }
 
 type DoozerConnection struct {
-	Servers    []string
+  Config     *DoozerConfig
 	Connection *doozer.Conn
 	Log        *log.Logger
-	Discover   bool
 
-  connectionMutex sync.Mutex
+	connectionMutex sync.Mutex
 
 	// Internal use for discover
 	doozerInstances map[string]*DoozerServer
-  currentInstance string
+	currentInstance string
+}
+
+type DoozerConfig struct {
+	Uri          string
+	BootUri      string
+	AutoDiscover bool
+}
+
+func NewDoozerConnection(uri string, boot string, discover bool) (*DoozerConnection){
+  return &DoozerConnection {
+    Config:  &DoozerConfig {
+      Uri: uri,
+      BootUri: boot,
+      AutoDiscover: discover,
+    },
+  }
 }
 
 // TODO: Need to support booturi
 func (d *DoozerConnection) Connect() {
-	if len(d.Servers) < 1 {
-		d.Log.Panic("Must supply at least 1 Doozer server to connect to")
+	if d.Config == nil || (d.Config.Uri == "" && d.Config.BootUri == ""){
+		d.Log.Panic("You must supply a doozer server or/and boot uri")
 	}
 
-  var success = false
-  var err error = nil
+	var success = false
+	var err error = nil
 
-  for _, server := range d.Servers {
-    success, err = d.dial(server)
-
-    if success == true {
-      break
-    }
+  if d.Config.Uri != "" && d.Config.BootUri != "" {
+    success, err = d.dial(d.Config.Uri, d.Config.BootUri)
+  } else if d.Config.BootUri != "" {
+    success, err = d.dial(d.Config.BootUri, "")
+  } else {
+    success, err = d.dial(d.Config.Uri, "")
   }
 
-  if success == false {
-    d.Log.Panic("Failed to connect to any of the supplied Doozer Servers: " + err.Error())
-  }
+	if success == false {
+		d.Log.Panic("Failed to connect to any of the supplied Doozer Servers: " + err.Error())
+	}
 
 	// Let's watch doozers internal config to check for new servers
-	if d.Discover == true {
+	if d.Config.AutoDiscover == true {
 		d.getDoozerInstances()
 		go d.monitorCluster()
 	}
 }
 
-func (d *DoozerConnection) dial(server string)  (bool, error) {
+func (d *DoozerConnection) dial(server string, boot string) (bool, error) {
 	var err error
 
 	d.Connection, err = doozer.Dial(server)
@@ -62,18 +77,18 @@ func (d *DoozerConnection) dial(server string)  (bool, error) {
 		return false, err
 	}
 
-  d.currentInstance = server
-  d.Log.Println("Connected to Doozer Instance: " + server)
+	d.currentInstance = server
+	d.Log.Println("Connected to Doozer Instance: " + server)
 
-  return true, nil
+	return true, nil
 }
 
 func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
 	defer func() {
 		if err := recover(); err != nil {
-      d.recoverFromError(err)
+			d.recoverFromError(err)
 
-      rev = d.GetCurrentRevision()
+			rev = d.GetCurrentRevision()
 		}
 	}()
 
@@ -89,9 +104,9 @@ func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
 func (d *DoozerConnection) Set(file string, rev int64, body []byte) (newRev int64, err error) {
 	defer func() {
 		if err := recover(); err != nil {
-      d.recoverFromError(err)
+			d.recoverFromError(err)
 
-      newRev, err = d.Set(file, rev, body)
+			newRev, err = d.Set(file, rev, body)
 		}
 	}()
 
@@ -101,9 +116,9 @@ func (d *DoozerConnection) Set(file string, rev int64, body []byte) (newRev int6
 func (d *DoozerConnection) Del(path string, rev int64) (err error) {
 	defer func() {
 		if err := recover(); err != nil {
-      d.recoverFromError(err)
+			d.recoverFromError(err)
 
-      err = d.Del(path, rev)
+			err = d.Del(path, rev)
 		}
 	}()
 
@@ -113,9 +128,9 @@ func (d *DoozerConnection) Del(path string, rev int64) (err error) {
 func (d *DoozerConnection) Get(file string, rev *int64) (data []byte, revision int64, err error) {
 	defer func() {
 		if err := recover(); err != nil {
-      d.recoverFromError(err)
+			d.recoverFromError(err)
 
-      data, revision, err = d.Get(file, rev)
+			data, revision, err = d.Get(file, rev)
 		}
 	}()
 
@@ -125,11 +140,12 @@ func (d *DoozerConnection) Get(file string, rev *int64) (data []byte, revision i
 func (d *DoozerConnection) Rev() (rev int64, err error) {
 	defer func() {
 		if err := recover(); err != nil {
-      d.recoverFromError(err)
+			d.recoverFromError(err)
 
-      rev, err = d.Rev()
+			rev, err = d.Rev()
 		}
 	}()
+
 
 	return d.Connection.Rev()
 }
@@ -141,59 +157,48 @@ func (d *DoozerConnection) getDoozerInstances() {
 	instances, _ := d.Connection.Getdir("/ctl/cal", rev, 0, -1)
 
 	for _, i := range instances {
-    rev := d.GetCurrentRevision()
-    data, _, err := d.Get("/ctl/cal/"+i, &rev)
-    buf := bytes.NewBuffer(data)
+		rev := d.GetCurrentRevision()
+		data, _, err := d.Get("/ctl/cal/"+i, &rev)
+		buf := bytes.NewBuffer(data)
 
-    if err == nil {
-      d.doozerInstances[i] = d.getDoozerServer(buf.String())
-    }
+		if err == nil {
+			d.doozerInstances[i] = d.getDoozerServer(buf.String())
+		}
 	}
 }
 
-func (d *DoozerConnection) recoverFromError(err interface{}){
-  if err == "EOF" {
-    d.Log.Println("Lost connection to Doozer: Reconnecting...")
-    d.connectionMutex.Lock()
-    defer d.connectionMutex.Unlock()
+func (d *DoozerConnection) recoverFromError(err interface{}) {
+	if err == "EOF" {
+		d.Log.Println("Lost connection to Doozer: Reconnecting...")
+		d.connectionMutex.Lock()
+		defer d.connectionMutex.Unlock()
 
+		// if they enabled Auto Discovery let's try to get a connection from one of the instances we know about
+		if len(d.doozerInstances) > 0 && d.Config.AutoDiscover == true {
+			for _, server := range d.doozerInstances {
+				success, _ := d.dial(server.Addr, "")
 
-    // Let's try to connect to the servers supplied in config
-    for _, server := range d.Servers {
-      success, _ := d.dial(server)
+				if success == true {
+					return
+				}
+			}
+		}
 
-      if success == true {
-        return
-      }
-    }
+		// If we made it here we didn't find a server
+		d.Log.Panic("Unable to find a Doozer instance to connect to")
 
-    // If we didn't connect to one of the initially supplied servers and they enabled Auto Discovery
-    // Let's try to get a connection from one of the instances we know about
-    if len(d.doozerInstances) > 0 && d.Discover == true {
-      for _, server := range d.doozerInstances {
-        success, _ := d.dial(server.Addr)
-
-        if success == true {
-          return
-        }
-      }
-    }
-
-    // If we made it here we didn't find a server
-    d.Log.Panic("Unable to find a Doozer instance to connect to")
-
-  } else {
-    // Don't know how to handle, go ahead and panic
-    d.Log.Panic(err)
-  }
+	} else {
+		// Don't know how to handle, go ahead and panic
+		d.Log.Panic(err)
+	}
 }
 
 func (d *DoozerConnection) monitorCluster() {
 	defer func() {
 		if err := recover(); err != nil {
-      d.recoverFromError(err)
+			d.recoverFromError(err)
 
-      d.monitorCluster()
+			d.monitorCluster()
 		}
 	}()
 
@@ -205,37 +210,37 @@ func (d *DoozerConnection) monitorCluster() {
 		}
 
 		buf := bytes.NewBuffer(ev.Body)
-    id := basename(ev.Path)
+		id := basename(ev.Path)
 
-    if buf.String() == "" && d.doozerInstances[id] != nil {
-      // Server is down, remove from list
-      d.Log.Println("Doozer instance no longer available, removing from available list")
-      delete(d.doozerInstances, id)
+		if buf.String() == "" && d.doozerInstances[id] != nil {
+			// Server is down, remove from list
+			d.Log.Println("Doozer instance no longer available, removing from available list")
+			delete(d.doozerInstances, id)
 
-    } else if buf.String() != "" {
-      // Server changed, check to make sure it's different first
-      if d.doozerInstances[id] == nil || d.doozerInstances[id].Key != buf.String() {
-        d.Log.Println("New Doozer instance detected, adding to available list")
+		} else if buf.String() != "" {
+			// Server changed, check to make sure it's different first
+			if d.doozerInstances[id] == nil || d.doozerInstances[id].Key != buf.String() {
+				d.Log.Println("New Doozer instance detected, adding to available list")
 
 				d.doozerInstances[id] = d.getDoozerServer(buf.String())
-      }
-    }
+			}
+		}
 	}
 }
 
-func (d *DoozerConnection) getDoozerServer(key string) (*DoozerServer){
-  rev := d.GetCurrentRevision()
-  data, _, err := d.Get("/ctl/node/" + key + "/addr", &rev)
-  buf := bytes.NewBuffer(data)
+func (d *DoozerConnection) getDoozerServer(key string) *DoozerServer {
+	rev := d.GetCurrentRevision()
+	data, _, err := d.Get("/ctl/node/"+key+"/addr", &rev)
+	buf := bytes.NewBuffer(data)
 
-  if err == nil {
-    return &DoozerServer {
-      Addr: buf.String(),
-      Key:  key,
-    }
-  }
+	if err == nil {
+		return &DoozerServer{
+			Addr: buf.String(),
+			Key:  key,
+		}
+	}
 
-  return nil
+	return nil
 }
 
 func basename(path string) string {
