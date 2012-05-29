@@ -67,7 +67,6 @@ func (s *Service) Start(register bool) {
 
 func (s *Service) Register() {
 
-	// TODO: we need a different object to represent this, we don't need all these additional params being forwarded along
 	b, err := json.Marshal(s)
 	if err != nil {
 		s.Log.Panic(err.Error())
@@ -139,7 +138,6 @@ func (s *Service) findRPCMethods(typ reflect.Type) {
 			continue
 		}
 
-		// TODO: Ensure method matches required signature
 		if m.Type.NumOut() != 1 && m.Type.NumOut() != 2 {
 			continue
 		}

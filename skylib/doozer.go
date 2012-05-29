@@ -41,7 +41,6 @@ func NewDoozerConnection(uri string, boot string, discover bool) (*DoozerConnect
   }
 }
 
-// TODO: Need to support booturi
 func (d *DoozerConnection) Connect() {
 	if d.Config == nil || (d.Config.Uri == "" && d.Config.BootUri == ""){
 		d.Log.Panic("You must supply a doozer server or/and boot uri")

@@ -158,9 +158,6 @@ func PrintTopology(q *skylib.Query) {
 }
 
 func Help() {
-	// TODO: check to see if a specific command is in the arguments List
-	// if so just desplay info for that
-
 	fmt.Println("Usage:\n\t sky -option1=value -option2=value command <arguments>")
 
 	fmt.Print(
