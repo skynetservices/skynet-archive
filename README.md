@@ -52,7 +52,7 @@ type ServiceInterface interface {
 	Started(s *Service)
 	Stopped(s *Service)
 	Registered(s *Service)
-	UnRegistered(s *Service)
+	Unregistered(s *Service)
 }
 </pre>
 

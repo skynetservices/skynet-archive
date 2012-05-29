@@ -17,7 +17,7 @@ type ServiceInterface interface {
 	Started(s *Service)
 	Stopped(s *Service)
 	Registered(s *Service)
-	UnRegistered(s *Service)
+	Unregistered(s *Service)
 }
 
 type Service struct {
@@ -84,7 +84,7 @@ func (s *Service) Register() {
 	s.Delegate.Registered(s) // Call user defined callback
 }
 
-func (s *Service) UnRegister() {
+func (s *Service) Unregister() {
 	if s.Registered == true {
 		rev := s.doozer().GetCurrentRevision()
 		path := s.GetConfigPath()
@@ -94,12 +94,12 @@ func (s *Service) UnRegister() {
 		}
 	}
 
-	s.Delegate.UnRegistered(s) // Call user defined callback
+	s.Delegate.Unregistered(s) // Call user defined callback
 }
 
 func (s *Service) Shutdown() {
 	// TODO: make this wait for requests to finish
-	s.UnRegister()
+	s.Unregister()
 	s.doneChan <- true
 	syscall.Exit(0)
 
@@ -129,7 +129,7 @@ func (s *Service) findRPCMethods(typ reflect.Type) {
 		m := typ.Method(i)
 
 		// Don't register callbacks
-		if m.Name == "Started" || m.Name == "Stopped" || m.Name == "Registered" || m.Name == "UnRegistered" {
+		if m.Name == "Started" || m.Name == "Stopped" || m.Name == "Registered" || m.Name == "Unregistered" {
 			continue
 		}
 

@@ -16,7 +16,7 @@ import (
 type TestService struct{}
 
 func (s *TestService) Registered(service *skylib.Service)   {}
-func (s *TestService) UnRegistered(service *skylib.Service) {}
+func (s *TestService) Unregistered(service *skylib.Service) {}
 func (s *TestService) Started(service *skylib.Service)      {}
 func (s *TestService) Stopped(service *skylib.Service)      {}
 
