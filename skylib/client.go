@@ -94,6 +94,7 @@ type ServiceClient struct {
 func (c *ServiceClient) Send(funcName string, arguments ...interface{}) (reflect.Value, error) {
   // TODO: do logging here, average response time, number of calls etc
   // TODO: timeout logic
-  return c.conn.Send(funcName, arguments)
+  
+  return c.conn.SendV(funcName, arguments)
 }
 

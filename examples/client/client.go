@@ -15,7 +15,7 @@ func main() {
 	client := skylib.NewClient(config)
   service := client.GetService("TestService", "", "", "") // any version, any region, any host
 
-  ret, _ := service.Send("Upcase", "foo")
+  ret, _ := service.Send("Upcase", "Upcase me!!")
 
   fmt.Println(ret)
 }

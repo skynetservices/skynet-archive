@@ -3,7 +3,6 @@ package skylib
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/erikstmartin/msgpack-rpc/go/rpc"
 	"log"
 	"net"
 	"os"
@@ -33,14 +32,14 @@ type Service struct {
 	methods  map[string]reflect.Value `json:"-"`
 }
 
-func (s *Service) Resolve(name string, arguments []reflect.Value) (reflect.Value, error) {
-	return s.methods[name], nil
+func (s *Service) Resolve(name string, arguments []reflect.Value) (interface{}, reflect.Value, error) {
+	return s.Delegate, s.methods[name], nil
 }
 
 func (s *Service) Start(register bool) {
 	portString := fmt.Sprintf("%s:%d", s.Config.ServiceAddr.IPAddress, s.Config.ServiceAddr.Port)
 
-	rpcServ := rpc.NewServer(s, true, nil)
+	rpcServ := NewRpcServer(s, true, nil)
 	l, _ := net.Listen("tcp", portString)
 
 	rpcServ.Listen(l)
