@@ -29,6 +29,8 @@ SkyNet uses Doozer to store configuration data about the available services.  Co
 ## Doozer
 Skynet makes heavy usage of Doozer. Both clients and services will take a DoozerConfig so that it knows how to communicate with doozer. In the examples directory there is a shell script to startup a cluster of doozer instances locally for testing.
 
+We recommend using at least 5 instances of doozer in your cluster, if you have 3, and loose 1, if an additonal doozer instance goes down the doozer cluster doesn't reject it.
+
 <pre>
 type DoozerConfig struct {
 	Uri          string
@@ -86,6 +88,9 @@ Checkout the examples/service directory for a full example, also a call to skyli
 ##Clients
 Clients are just as simple. They start with a ClientConfig:
 
+#####Smart Connection Pools
+ServiceClients's contain a pool of connections to a given service, up to a specified size to load balance requests across. Instances are removed from skynet when they crash, the pools are smart enough to remove any connections to any instances that are no longer available and replace them with connections to valid instances to maintain the pool.
+
 <pre>
 type ClientConfig struct {
 	Log         *log.Logger `json:"-"`
@@ -134,6 +139,7 @@ Commands:
 		-version - limit results to instances of the specified version of service
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
+    -registered - (true, false) limit results to instances that are registered (accepting requests)
 	regions: List all regions available that meet the specified criteria
 	services: List all services available that meet the specified criteria
 		-host - limit results to the specified host
@@ -163,11 +169,12 @@ type Query struct {
 	Version    string
 	Host       string
 	Region     string
+  Registered bool
 	DoozerConn *DoozerConnection
 }
 </pre>
 
-The only required field here is a pointer to a doozer connection. All other fields are optional, any field not supplied will be considered as any/all.
+The only required field here is a pointer to a doozer connection. All other fields are optional, any field not supplied will be considered as any/all. Keep in mind if you're going to make requests to an instance you'll want to ensure the Registered attribute is true, you don't want your code responsibile for sending requests to a server that's trying to shut down.
 
 From here you can use any of the following
 
@@ -196,9 +203,6 @@ query.ServiceVersions()
 </pre>
 
 ## Work In Progress
-#####Smart Connection Pools
-ServiceClients's will have a pool of connections to a given service, to load balance across. Instances are already removed from skynet when they crash, but local pools will be smart enough to remove any connections to any instances that are no longer available and replace them with connections to valid instances to maintain pool size.
-
 #####Process Monitoring / Restarting
 Services will restart themselves a specified number of times after crashing and add themselves back to the pool.
 

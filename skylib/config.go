@@ -11,6 +11,7 @@ package skylib
 import (
 	"flag"
 	"log"
+  "time"
 )
 
 type BindAddr struct {
@@ -31,6 +32,8 @@ type ServiceConfig struct {
 type ClientConfig struct {
 	Log         *log.Logger `json:"-"`
 	DoozerConfig *DoozerConfig `json:"-"`
+  ConnectionPoolSize int
+  IdleTimeout time.Duration
 }
 
 func GetServiceConfigFromFlags() *ServiceConfig {

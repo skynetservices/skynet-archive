@@ -5,6 +5,7 @@ import (
 	"github.com/4ad/doozer"
 	"log"
 	"sync"
+  "os"
 )
 
 type DoozerServer struct {
@@ -31,13 +32,19 @@ type DoozerConfig struct {
 	AutoDiscover bool
 }
 
-func NewDoozerConnection(uri string, boot string, discover bool) (*DoozerConnection){
+func NewDoozerConnection(uri string, boot string, discover bool, logger *log.Logger) (*DoozerConnection){
+	if logger == nil {
+		logger = log.New(os.Stderr, "", log.LstdFlags)
+	}
+
   return &DoozerConnection {
     Config:  &DoozerConfig {
       Uri: uri,
       BootUri: boot,
       AutoDiscover: discover,
     },
+
+    Log: logger,
   }
 }
 
@@ -174,12 +181,16 @@ func (d *DoozerConnection) recoverFromError(err interface{}) {
 
 		// if they enabled Auto Discovery let's try to get a connection from one of the instances we know about
 		if len(d.doozerInstances) > 0 && d.Config.AutoDiscover == true {
-			for _, server := range d.doozerInstances {
+			for key, server := range d.doozerInstances {
 				success, _ := d.dial(server.Addr, "")
 
 				if success == true {
 					return
-				}
+				} else {
+          // Remove failed doozer instance from map
+          delete(d.doozerInstances, key)
+
+        }
 			}
 		}
 
@@ -192,6 +203,8 @@ func (d *DoozerConnection) recoverFromError(err interface{}) {
 	}
 }
 
+// TODO: Need to track last known revision, so when we are monitor for changes to the doozer cluster
+// we can replay changes that took place while we were looking for a new connection instead of using the latest GetCurrentRevision()
 func (d *DoozerConnection) monitorCluster() {
 	defer func() {
 		if err := recover(); err != nil {
@@ -201,15 +214,18 @@ func (d *DoozerConnection) monitorCluster() {
 		}
 	}()
 
+  rev := d.GetCurrentRevision()
+
 	for {
 		// blocking wait call returns on a change
-		ev, err := d.Connection.Wait("/ctl/cal/*", d.GetCurrentRevision())
+		ev, err := d.Wait("/ctl/cal/*", rev + 1)
 		if err != nil {
 			d.Log.Panic(err.Error())
 		}
 
 		buf := bytes.NewBuffer(ev.Body)
 		id := basename(ev.Path)
+    rev = ev.Rev
 
 		if buf.String() == "" && d.doozerInstances[id] != nil {
 			// Server is down, remove from list
@@ -225,6 +241,20 @@ func (d *DoozerConnection) monitorCluster() {
 			}
 		}
 	}
+}
+
+func (d *DoozerConnection) Wait(glob string, rev int64) (ev doozer.Event, err error) {
+  defer func() {
+		if err := recover(); err != nil {
+			d.recoverFromError(err)
+
+      ev, err = d.Wait(glob, rev)
+		}
+	}()
+
+  ev, err = d.Connection.Wait(glob, rev)
+
+  return ev, err
 }
 
 func (d *DoozerConnection) getDoozerServer(key string) *DoozerServer {

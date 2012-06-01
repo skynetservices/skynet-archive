@@ -14,8 +14,8 @@ START_WEB_PORT=8080
 START_DZNS_PORT=10000
 START_DZNS_WEB_PORT=11000
 
-DZNS_INSTANCES=3
-CLUSTER_INSTANCES=3
+DZNS_INSTANCES=5
+CLUSTER_INSTANCES=5
 
 if [ $# -lt 1 ] 
 then
@@ -25,7 +25,7 @@ fi
 
 echo "Using Doozerd: $DOOZERD_PATH"
 
-if [ $1 = "start" ]; then
+function start {
   if [ $# -gt 1 ]; then
     CLUSTER_INSTANCES=$3
   fi
@@ -80,7 +80,17 @@ if [ $1 = "start" ]; then
     dz_web_port=$(( $dz_web_port + 1 ))
     dz_count=$(( $dz_count + 1 ))
   done
+}
 
-elif [ $1 = "stop" ]; then
+function stop {
   killall doozerd
+}
+
+if [ $1 = "start" ]; then
+  start
+elif [ $1 = "stop" ]; then
+  stop
+elif [ $1 = "restart" ]; then
+  stop
+  start
 fi

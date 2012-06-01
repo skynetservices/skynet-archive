@@ -12,6 +12,7 @@ type Query struct {
 	Version    string
 	Host       string
 	Region     string
+  Registered *bool
 	DoozerConn *DoozerConnection
 	DoozerRev  int64
 
@@ -130,6 +131,11 @@ func (q *Query) FindInstances() *[]*Service {
 		if q.Host != "" && q.Host != service.Config.ServiceAddr.IPAddress {
 			continue
 		}
+
+
+    if q.Registered != nil && *q.Registered != service.Registered {
+      continue
+    }
 
 		results = append(results, &service)
 	}

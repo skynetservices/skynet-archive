@@ -12,6 +12,8 @@ import (
 	"syscall"
 )
 
+// TODO: Better error handling, should gracefully fail to startup if it can't connect to doozer
+
 // A Generic struct to represent any service in the SkyNet system.
 type ServiceInterface interface {
 	Started(s *Service)
@@ -23,7 +25,7 @@ type ServiceInterface interface {
 type Service struct {
 	Config     *ServiceConfig
 	DoozerConn *DoozerConnection `json:"-"`
-	Registered bool              `json:"-"`
+	Registered bool
 	doneChan   chan bool         `json:"-"`
 
 	Log *log.Logger `json:"-"`
@@ -54,6 +56,8 @@ func (s *Service) Start(register bool) {
 	go rpcServ.Run()
 
 	go s.Delegate.Started(s) // Call user defined callback
+  
+  s.UpdateCluster()
 
 	if register == true {
 		s.Register()
@@ -62,11 +66,11 @@ func (s *Service) Start(register bool) {
 	// Endless loop to keep app from returning
 	select {
 	case _ = <-s.doneChan:
+    syscall.Exit(0)
 	}
 }
 
-func (s *Service) Register() {
-
+func (s *Service) UpdateCluster() {
 	b, err := json.Marshal(s)
 	if err != nil {
 		s.Log.Panic(err.Error())
@@ -78,30 +82,37 @@ func (s *Service) Register() {
 	if err != nil {
 		s.Log.Panic(err.Error())
 	}
+}
 
-	s.Registered = true
+func (s *Service) RemoveFromCluster() {
+  rev := s.doozer().GetCurrentRevision()
+  path := s.GetConfigPath()
+  err := s.doozer().Del(path, rev)
+  if err != nil {
+    s.Log.Panic(err.Error())
+  }
+}
+
+func (s *Service) Register() {
+  s.Registered = true
+  s.UpdateCluster()
 
 	s.Delegate.Registered(s) // Call user defined callback
 }
 
 func (s *Service) Unregister() {
-	if s.Registered == true {
-		rev := s.doozer().GetCurrentRevision()
-		path := s.GetConfigPath()
-		err := s.doozer().Del(path, rev)
-		if err != nil {
-			s.Log.Panic(err.Error())
-		}
-	}
+  s.Registered = false
+  s.UpdateCluster()
 
 	s.Delegate.Unregistered(s) // Call user defined callback
 }
 
 func (s *Service) Shutdown() {
-	// TODO: make this wait for requests to finish
 	s.Unregister()
+
+	// TODO: make this wait for requests to finish
+  s.RemoveFromCluster()
 	s.doneChan <- true
-	syscall.Exit(0)
 
 	s.Delegate.Stopped(s) // Call user defined callback
 }

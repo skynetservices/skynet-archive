@@ -12,15 +12,15 @@ var VersionFlag *string = flag.String("version", "", "service version")
 var ServiceNameFlag *string = flag.String("service", "", "service name")
 var HostFlag *string = flag.String("host", "", "host")
 var RegionFlag *string = flag.String("region", "", "region")
+var RegisteredFlag *string = flag.String("registered", "", "registered")
 
 var DC *skylib.DoozerConnection
 
 func main() {
 	flag.Parse()
-	Connect()
 
 	query := &skylib.Query{
-		DoozerConn: DC,
+		DoozerConn: Connect(),
 		Service:    *ServiceNameFlag,
 		Version:    *VersionFlag,
 		Host:       *HostFlag,
@@ -48,7 +48,7 @@ func main() {
 	}
 }
 
-func Connect() {
+func Connect() (*skylib.DoozerConnection) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Failed to connect to Doozer")
@@ -57,18 +57,35 @@ func Connect() {
 	}()
 
   // TODO: This needs to come from command line, or environment variable
-	DC = &skylib.DoozerConnection{
-		Config: &skylib.DoozerConfig {
-      Uri: "127.0.0.1:8046",
-    },
-	}
+  conn := skylib.NewDoozerConnection("127.0.0.1:8046", "", false, nil) // nil as the last param will default to a Stdout logger
+  conn.Connect()
+
+  return conn
 }
 
 func ListInstances(q *skylib.Query) {
+  var regFlag *bool
+
+  if *RegisteredFlag == "true" {
+    b := true
+    regFlag = &b
+  } else if *RegisteredFlag == "false" {
+    b := false
+    regFlag = &b
+  }
+
+  q.Registered = regFlag
+
 	results := q.FindInstances()
 
 	for _, instance := range *results {
-		fmt.Println(instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port) + " - " + instance.Config.Name + " (" + instance.Config.Version + ")")
+    registered := ""
+
+    if(instance.Registered){
+      registered = " [Registered]"
+    }
+
+		fmt.Println(instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port) + " - " + instance.Config.Name + " " + instance.Config.Version + registered)
 	}
 }
 
@@ -149,7 +166,13 @@ func PrintTopology(q *skylib.Query) {
 					fmt.Println("\t\t\tVersion: " + versionName)
 
 					for _, instance := range version {
-						fmt.Println("\t\t\t\t" + instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port) + " - " + instance.Config.Name + " (" + instance.Config.Version + ")")
+            registered := ""
+
+            if(instance.Registered){
+              registered = " [Registered]"
+            }
+
+						fmt.Println("\t\t\t\t" + instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port) + registered)
 					}
 				}
 			}
@@ -172,6 +195,7 @@ func Help() {
 			"\n\t\t-version - limit results to instances of the specified version of service" +
 			"\n\t\t-region - limit results to instances in the specified region" +
 			"\n\t\t-host - limit results to instances on the specified host" +
+			"\n\t\t-registered - (true, false) limit results to instances that are registered (accepting requests)" +
 
 			"\n\tregions: List all regions available that meet the specified criteria" +
 

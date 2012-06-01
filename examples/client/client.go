@@ -2,20 +2,52 @@ package main
 
 import (
 	"github.com/bketelsen/skynet/skylib"
+  "os"
+	"os/signal"
+  "syscall"
   "fmt"
 )
 
 func main() {
+	c := make(chan os.Signal, 1)
+
   config := &skylib.ClientConfig {
     DoozerConfig: &skylib.DoozerConfig {
       Uri: "127.0.0.1:8046",
+      AutoDiscover: true,
     },
   }
 
 	client := skylib.NewClient(config)
+
+  // This will not fail if no services currently exist, as connections are created on demand
+  // this saves from chicken and egg issues with dependencies between services
   service := client.GetService("TestService", "", "", "") // any version, any region, any host
 
-  ret, _ := service.Send("Upcase", "Upcase me!!")
+  // This on the other hand will fail if it can't find a service to connect to
+  ret, err := service.Send("Upcase", "Upcase me!!")
+
+  if err != nil {
+    fmt.Println(err)
+    return
+  }
 
   fmt.Println(ret)
+
+  watchSignals(c)
+}
+
+func watchSignals(c chan os.Signal) {
+	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM)
+
+	for {
+		select {
+		case sig := <-c:
+			switch sig.(syscall.Signal) {
+			// Trap signals for clean shutdown
+			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
+        syscall.Exit(0)
+			}
+		}
+	}
 }
