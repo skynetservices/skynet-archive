@@ -211,7 +211,10 @@ func (c *ServiceClient) getConnection(lvl int) (ServiceResource, error) {
 
   if err != nil || c.isClosed(conn.(ServiceResource)) {
     if conn != nil {
-      c.connectionPool.Put(conn)
+      s := conn.(ServiceResource)
+
+      s.closed = true
+      c.connectionPool.Put(s)
     }
 
     return c.getConnection(lvl + 1)
