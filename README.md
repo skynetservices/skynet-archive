@@ -29,7 +29,7 @@ SkyNet uses Doozer to store configuration data about the available services.  Co
 ## Doozer
 Skynet makes heavy usage of Doozer. Both clients and services will take a DoozerConfig so that it knows how to communicate with doozer. In the examples directory there is a shell script to startup a cluster of doozer instances locally for testing.
 
-We recommend using at least 5 instances of doozer in your cluster, if you have 3, and loose 1, if an additonal doozer instance goes down the doozer cluster doesn't reject it.
+We recommend using at least 5 instances of doozer in your cluster, if you have 3, and lose 1, if an additonal doozer instance goes down the doozer cluster doesn't reject it.
 
 <pre>
 type DoozerConfig struct {
