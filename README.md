@@ -1,7 +1,7 @@
 ![logo](/bketelsen/skynet/raw/master/documentation/SkyNetLogo.png)
 
 ##Introduction
-Skynet is a system for building massively distributed apps in Go.
+Skynet is a communication protocol for building massively distributed apps in Go.  It is not constrained to Go, so it will lend itself nicely to polyglot environments.
 
 ##Tell me more:
 Servers die, stop communicating, catch on fire, get killed by robots from the future, and should not be trusted. If your site won’t work with a Chaos Monkey, it isn’t safe. Enter Skynet. Each Skynet module is self–contained, self–aware, and self–replicating – if you have one server with an authentication module on it, and that server melts, Skynet will notice, kill it, and automatically create a new one. (if you let it)
@@ -29,7 +29,7 @@ SkyNet uses Doozer to store configuration data about the available services.  Co
 ## Doozer
 Skynet makes heavy usage of Doozer. Both clients and services will take a DoozerConfig so that it knows how to communicate with doozer. In the examples directory there is a shell script to startup a cluster of doozer instances locally for testing.
 
-We recommend using at least 5 instances of doozer in your cluster, if you have 3, and loose 1, if an additonal doozer instance goes down the doozer cluster doesn't reject it.
+We recommend using at least 5 instances of doozer in your cluster, if you have 3, and lose 1, if an additonal doozer instance goes down the doozer cluster doesn't reject it.
 
 <pre>
 type DoozerConfig struct {
