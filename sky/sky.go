@@ -6,6 +6,9 @@ import (
 	"github.com/bketelsen/skynet/skylib"
 	"os"
 	"strconv"
+  "bufio"
+  "syscall"
+  "strings"
 )
 
 var VersionFlag *string = flag.String("version", "", "service version")
@@ -20,7 +23,7 @@ func main() {
 	flag.Parse()
 
 	query := &skylib.Query{
-		DoozerConn: Connect(),
+		DoozerConn: Doozer(),
 		Service:    *ServiceNameFlag,
 		Version:    *VersionFlag,
 		Host:       *HostFlag,
@@ -29,7 +32,7 @@ func main() {
 
 	switch flag.Arg(0) {
 	case "help", "h":
-		Help()
+		CommandLineHelp()
 	case "services":
 		ListServices(query)
 	case "hosts":
@@ -42,10 +45,20 @@ func main() {
 		ListServiceVersions(query)
 	case "topology":
 		PrintTopology(query)
+  case "cli":
+    InteractiveShell()
 
 	default:
-		Help()
+		CommandLineHelp()
 	}
+}
+
+func Doozer() (*skylib.DoozerConnection) {
+  if DC == nil {
+    DC = Connect()
+  }
+
+  return DC
 }
 
 func Connect() (*skylib.DoozerConnection) {
@@ -116,7 +129,7 @@ func ListServices(q *skylib.Query) {
 func ListServiceVersions(q *skylib.Query) {
 	if *ServiceNameFlag == "" {
 		fmt.Println("Service name is required")
-		os.Exit(1)
+    return
 	}
 
 	results := q.FindServiceVersions()
@@ -180,11 +193,12 @@ func PrintTopology(q *skylib.Query) {
 	}
 }
 
-func Help() {
+func CommandLineHelp() {
 	fmt.Println("Usage:\n\t sky -option1=value -option2=value command <arguments>")
 
 	fmt.Print(
 		"\nCommands:\n" +
+			"\n\tcli: Interactive shell for executing commands against skynet cluster" +
 			"\n\thosts: List all hosts available that meet the specified criteria" +
 			"\n\t\t-service - limit results to hosts running the specified service" +
 			"\n\t\t-version - limit results to hosts running the specified version of the service (-service required)" +
@@ -203,7 +217,7 @@ func Help() {
 			"\n\t\t-host - limit results to the specified host" +
 			"\n\t\t-region - limit results to hosts in the specified region" +
 
-			"\n\n\tservice-versions: List all services available that meet the specified criteria" +
+			"\n\n\tversions: List all services available that meet the specified criteria" +
 			"\n\t\t-service - service name (required)" +
 			"\n\t\t-host - limit results to the specified host" +
 			"\n\t\t-region - limit results to hosts in the specified region" +
@@ -215,4 +229,155 @@ func Help() {
 			"\n\t\t-host - limit results to instances on the specified host" +
 
 			"\n\n\n")
+}
+
+
+/*
+ * CLI Logic
+ */
+
+func InteractiveShell(){
+	lineReader := bufio.NewReader(os.Stdin)
+  doozer := Doozer()
+
+  fmt.Println("Skynet Interactive Shell")
+  prompt()
+
+  query := &skylib.Query{
+    DoozerConn: doozer,
+  }
+
+	for {
+		l, _, e := lineReader.ReadLine()
+		if e != nil { break }
+
+		s := string(l)
+    parts := strings.Split(s, " ")
+
+    switch(parts[0]) {
+    case "exit":
+      syscall.Exit(0)
+    case "help", "h":
+      InteractiveShellHelp()
+    case "services":
+      ListServices(query)
+    case "hosts":
+      ListHosts(query)
+    case "regions":
+      ListRegions(query)
+    case "instances":
+      ListInstances(query)
+    case "versions":
+      ListServiceVersions(query)
+    case "topology":
+      PrintTopology(query)
+
+    case "service":
+      if len(parts) >= 2 {
+        query.Service = parts[1]
+      }
+      
+      fmt.Printf("Service: %v\n", query.Service)
+
+    case "host":
+      if len(parts) >= 2 {
+        query.Host = parts[1]
+      }
+      
+      fmt.Printf("Host: %v\n", query.Host)
+
+    case "version":
+      if len(parts) >= 2 {
+        query.Version = parts[1]
+      }
+      
+      fmt.Printf("Version: %v\n", query.Version)
+
+    case "region":
+      if len(parts) >= 2 {
+        query.Region = parts[1]
+      }
+      
+      fmt.Printf("Region: %v\n", query.Region)
+
+    case "registered":
+      if len(parts) >= 2 {
+        var reg bool
+
+        if(parts[1] == "true"){
+          reg = true
+        } else {
+          reg = false
+        }
+
+        query.Registered = &reg
+      }
+
+      registered := ""
+      if query.Registered != nil {
+        registered = strconv.FormatBool(*query.Registered)
+      }
+      
+      fmt.Printf("Registered: %v\n", registered)
+
+
+    case "reset":
+      if len(parts) == 1 || parts[1] == "service" {
+        query.Service = ""
+      }
+
+      if len(parts) == 1 || parts[1] == "version" {
+        query.Version = ""
+      }
+
+      if len(parts) == 1 || parts[1] == "host" {
+        query.Host = ""
+      }
+
+      if len(parts) == 1 || parts[1] == "region" {
+        query.Region = ""
+      }
+
+      if len(parts) == 1 || parts[1] == "registered" {
+        query.Registered = nil
+      }
+    case "filters":
+      registered := ""
+      if query.Registered != nil {
+        registered = strconv.FormatBool(*query.Registered)
+      }
+
+      fmt.Printf("Region: %v\nHost: %v\nService:%v\nVersion: %v\nRegistered: %v\n", query.Region, query.Host, query.Service, query.Version, registered)
+    default:
+      fmt.Println("Unknown Command - type 'help' for a list of commands")
+    }
+
+    prompt()
+	}
+}
+
+func InteractiveShellHelp(){
+	fmt.Print(
+		"\nCommands:" +
+			"\n\thosts: List all hosts available that meet the specified criteria" +
+			"\n\tinstances: List all instances available that meet the specified criteria" +
+			"\n\tregions: List all regions available that meet the specified criteria" +
+			"\n\tservices: List all services available that meet the specified criteria" +
+			"\n\tversions: List all services available that meet the specified criteria" +
+
+			"\n\ttopology: Print detailed heirarchy of regions/hosts/services/versions/instances" +
+
+      "\n\nFilters:" +
+      "\n\tfilters - list current filters" +
+      "\n\treset <filter> - reset all filters or specified filter" +
+      "\n\tregion <region> - Set region filter, all commands will be scoped to this region until reset" +
+      "\n\tservice <service> - Set service filter, all commands will be scoped to this service until reset" +
+      "\n\tversion <version> - Set version filter, all commands will be scoped to this version until reset" +
+      "\n\thost <host> - Set host filter, all commands will be scoped to this host until reset" +
+
+			"\n\n")
+}
+
+func prompt(){
+  fmt.Printf("> ")
 }

@@ -130,6 +130,7 @@ Usage:
 
 Commands:
 
+	cli: Interactive shell for executing commands against skynet cluster
 	hosts: List all hosts available that meet the specified criteria
 		-service - limit results to hosts running the specified service
 		-version - limit results to hosts running the specified version of the service (-service required)
@@ -139,13 +140,13 @@ Commands:
 		-version - limit results to instances of the specified version of service
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
-    -registered - (true, false) limit results to instances that are registered (accepting requests)
+		-registered - (true, false) limit results to instances that are registered (accepting requests)
 	regions: List all regions available that meet the specified criteria
 	services: List all services available that meet the specified criteria
 		-host - limit results to the specified host
 		-region - limit results to hosts in the specified region
 
-	service-versions: List all services available that meet the specified criteria
+	versions: List all services available that meet the specified criteria
 		-service - service name (required)
 		-host - limit results to the specified host
 		-region - limit results to hosts in the specified region
@@ -155,6 +156,29 @@ Commands:
 		-version - limit results to instances of the specified version of service
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
+</pre>
+
+####Interactive Shell
+Another option is to use the interactive shell "<b>sky cli</b>". Which will open a shell you can interact with. Setting filters will allow any future commands to only apply to resources that meet those conditions.
+<pre>
+Skynet Interactive Shell
+> help
+
+Commands:
+	hosts: List all hosts available that meet the specified criteria
+	instances: List all instances available that meet the specified criteria
+	regions: List all regions available that meet the specified criteria
+	services: List all services available that meet the specified criteria
+	versions: List all services available that meet the specified criteria
+	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
+
+Filters:
+	filters - list current filters
+	reset &lt;filter&gt; - reset all filters or specified filter
+	region &lt;region&gt; - Set region filter, all commands will be scoped to this region until reset
+	service &lt;service&gt; - Set service filter, all commands will be scoped to this service until reset
+	version &lt;version&gt; - Set version filter, all commands will be scoped to this version until reset
+	host &lt;host&gt; - Set host filter, all commands will be scoped to this host until reset
 </pre>
 
 ##Internals
