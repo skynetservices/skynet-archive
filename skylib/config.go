@@ -12,6 +12,7 @@ import (
 	"flag"
 	"log"
   "time"
+  "os"
 )
 
 type BindAddr struct {
@@ -37,16 +38,18 @@ type ClientConfig struct {
 }
 
 func GetServiceConfigFromFlags() *ServiceConfig {
+  flagset := flag.NewFlagSet("config", flag.ContinueOnError)
+
 	var (
-		bindPort       *int    = flag.Int("port", 9999, "tcp port to listen")
-		bindAddr       *string = flag.String("address", "127.0.0.1", "address to bind")
-		region         *string = flag.String("region", "unknown", "region service is located in")
-		doozer         *string = flag.String("doozer", "127.0.0.1:8046", "initial doozer instance to connect to")
-		doozerBoot     *string = flag.String("doozerboot", "127.0.0.1:8046", "initial doozer instance to connect to")
-		doozerDiscover *bool   = flag.Bool("autodiscover", true, "auto discover new doozer instances")
+		bindPort       *int    = flagset.Int("port", 9999, "tcp port to listen")
+		bindAddr       *string = flagset.String("address", "127.0.0.1", "address to bind")
+		region         *string = flagset.String("region", "unknown", "region service is located in")
+		doozer         *string = flagset.String("doozer", "127.0.0.1:8046", "initial doozer instance to connect to")
+		doozerBoot     *string = flagset.String("doozerboot", "127.0.0.1:8046", "initial doozer instance to connect to")
+		doozerDiscover *bool   = flagset.Bool("autodiscover", true, "auto discover new doozer instances")
 	)
 
-	flag.Parse()
+  flagset.Parse(os.Args[1:])
 
 	return &ServiceConfig{
 		Region: *region,
