@@ -24,7 +24,7 @@ type ServiceInterface interface {
 
 type Service struct {
 	Config     *ServiceConfig
-	DoozerConn *DoozerConnection `json:"-"`
+	DoozerConn DoozerConnection `json:"-"`
 	Registered bool
 	doneChan   chan bool         `json:"-"`
 
@@ -226,12 +226,9 @@ func watchSignals(c chan os.Signal, s *Service) {
 	}
 }
 
-func (s *Service) doozer() *DoozerConnection {
+func (s *Service) doozer() DoozerConnection {
 	if s.DoozerConn == nil {
-		s.DoozerConn = &DoozerConnection {
-			Config:  s.Config.DoozerConfig,
-      Log: s.Log,
-		}
+		s.DoozerConn = NewDoozerConnectionFromConfig(*s.Config.DoozerConfig, s.Log)
 
 		s.DoozerConn.Connect()
 	}

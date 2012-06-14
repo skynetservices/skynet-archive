@@ -17,7 +17,7 @@ var HostFlag *string = flag.String("host", "", "host")
 var RegionFlag *string = flag.String("region", "", "region")
 var RegisteredFlag *string = flag.String("registered", "", "registered")
 
-var DC *skylib.DoozerConnection
+var DC skylib.DoozerConnection
 
 func main() {
 	flag.Parse()
@@ -53,7 +53,7 @@ func main() {
 	}
 }
 
-func Doozer() (*skylib.DoozerConnection) {
+func Doozer() (skylib.DoozerConnection) {
   if DC == nil {
     DC = Connect()
   }
@@ -61,7 +61,7 @@ func Doozer() (*skylib.DoozerConnection) {
   return DC
 }
 
-func Connect() (*skylib.DoozerConnection) {
+func Connect() (skylib.DoozerConnection) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Failed to connect to Doozer")

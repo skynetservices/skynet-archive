@@ -13,7 +13,7 @@ type Query struct {
 	Host       string
 	Region     string
   Registered *bool
-	DoozerConn *DoozerConnection
+	DoozerConn DoozerConnection
 	DoozerRev  int64
 
 	// Internal use only
@@ -68,7 +68,7 @@ func (q *Query) search() {
 		}
 	}
 
-	doozer.Walk(q.DoozerConn.Connection, q.DoozerRev, path, q, nil)
+	q.DoozerConn.Walk(q.DoozerRev, path, q, nil)
 }
 
 func (q *Query) FindHosts() *[]string {
@@ -109,7 +109,7 @@ func (q *Query) FindInstances() *[]*Service {
 	for path, _ := range q.files {
 		var service Service
 
-		data, _, err := q.DoozerConn.Get(path, &q.DoozerRev)
+		data, _, err := q.DoozerConn.Get(path, q.DoozerRev)
 		if err != nil {
 			log.Panic(err.Error())
 		}

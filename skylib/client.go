@@ -16,7 +16,7 @@ import (
 )
 
 type Client struct {
-	DoozerConn *DoozerConnection
+	DoozerConn DoozerConnection
 
   Config *ClientConfig
 	Log *log.Logger `json:"-"`
@@ -37,11 +37,9 @@ func (s ServiceResource) IsClosed() bool {
   return s.closed
 }
 
-func (c *Client) doozer() *DoozerConnection {
+func (c *Client) doozer() DoozerConnection {
 	if c.DoozerConn == nil {
-		c.DoozerConn = &DoozerConnection {
-			Config:  c.Config.DoozerConfig,
-		}
+		c.DoozerConn = NewDoozerConnectionFromConfig(*c.Config.DoozerConfig, c.Config.Log)
 
 		c.DoozerConn.Connect()
 	}
@@ -60,10 +58,7 @@ func NewClient(config *ClientConfig) *Client {
 
   client := &Client {
     Config: config,
-    DoozerConn: &DoozerConnection {
-      Config:  config.DoozerConfig,
-      Log: config.Log,
-    },
+    DoozerConn: NewDoozerConnectionFromConfig(*config.DoozerConfig, config.Log),
     Log: config.Log,
   }
 
