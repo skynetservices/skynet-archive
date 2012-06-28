@@ -1,10 +1,14 @@
 ![logo](/bketelsen/skynet/raw/master/documentation/SkyNetLogo.png)
 
 ##Introduction
-Skynet is a communication protocol for building massively distributed apps in Go.  It is not constrained to Go, so it will lend itself nicely to polyglot environments.
+Skynet is a communication protocol for building massively distributed apps in Go.  
+It is not constrained to Go, so it will lend itself nicely to polyglot environments.  
+The first planned language addition is Ruby.
 
 ##Tell me more:
-Servers die, stop communicating, catch on fire, get killed by robots from the future, and should not be trusted. If your site won’t work with a Chaos Monkey, it isn’t safe. Enter Skynet. Each Skynet module is self–contained, self–aware, and self–replicating – if you have one server with an authentication module on it, and that server melts, Skynet will notice, kill it, and automatically create a new one. (if you let it)
+Servers die, stop communicating, catch on fire, get killed by robots from the future, and should not be trusted. 
+If your site won’t work with a Chaos Monkey, it isn’t safe. 
+Enter Skynet. Each Skynet module is self–contained and self–aware – if you have one server with an authentication module on it, and that server melts, Skynet will notice, kill it, and automatically create a new one. (if you let it)
 
 Skynet probably won’t die unless your data center gets hit by a comet.  We recommend at least 2 data centers in that scenario.
 
@@ -14,10 +18,9 @@ Skynet Services are where the work gets done.  These are the processes that serv
 Before you can run skynet you'll need to have at least one [doozer](https://github.com/ha/doozerd) process running.  
 
 ##How?
-Each process in SkyNet receives its configuration from a centralized configuration repository (currently Doozer - possibly pluggable in the future).  Configuration changes are pushed to each process when new skynet services are started.  This means that starting a new service automatically
-advertises that service's availability to the rest of the members of the skynet cluster.
-
-SkyNet uses Doozer to store configuration data about the available services.  Configuration changes are pushed to Doozer, causing connected clients to immediately become aware of changed configurations.  
+Each process in SkyNet receives its configuration from a centralized configuration repository (currently Doozer - possibly pluggable in the future).  
+Configuration changes are pushed to each process when new skynet services are started.  
+This means that starting a new service automatically advertises that service's availability to the rest of the members of the skynet cluster.
 
 ##Running Processes
 * Sending SIGINT to a running process gracefully exits.
@@ -29,7 +32,7 @@ SkyNet uses Doozer to store configuration data about the available services.  Co
 ## Doozer
 Skynet makes heavy usage of Doozer. Both clients and services will take a DoozerConfig so that it knows how to communicate with doozer. In the examples directory there is a shell script to startup a cluster of doozer instances locally for testing.
 
-We recommend using at least 5 instances of doozer in your cluster, if you have 3, and lose 1, if an additonal doozer instance goes down the doozer cluster doesn't reject it.
+We recommend using at least 5 instances of doozer in your cluster.
 
 <pre>
 type DoozerConfig struct {
@@ -47,7 +50,7 @@ type DoozerConfig struct {
 Services are the heart of your skynet clusters, they will accept requests via msgpack rpc requests. Keep in mind that a Service may also be a client. In the case of a Composite style application, a request could be made to one service that makes requests either synchronously or asynchronously to additional skynet services.
 
 #####Sweet! How do I create a service?
-Provided you have a doozer instance setup. It's pretty simple. Just create your service, with any methods you want exposed via rpc, and make sure it implements skylib.ServiceInterface
+Provided you have a doozer instance setup, it's pretty simple. Just create your service, with any methods you want exposed via rpc, and make sure it implements skylib.ServiceInterface
 
 <pre>
 type ServiceInterface interface {
@@ -122,7 +125,7 @@ serviceClient.Send("echo", "I'm connected!!")
 Checkout the examples/client. directory for a full example.
 
 ##Management
-The "sky" command is your management gateway into the skynet cluster. It will allow you to probe the network and look for services/versions, hosts, regions etc in your cluster. As well as run administration commands to operate on instances that match the criteria (*admin commands are on the way, search functionality is here)
+The "sky" command is a management gateway into the skynet cluster. It will allow you to probe the network and look for services/versions, hosts, regions etc in your cluster, as well as run administration commands to operate on instances that match the criteria (*admin commands are on the way, search functionality is here)
 
 <pre>
 Usage:
