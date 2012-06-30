@@ -10,8 +10,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
-	"template"
+	// "os"
+	// "template"
 )
 
 // Configuration flags
