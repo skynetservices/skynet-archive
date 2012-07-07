@@ -8,14 +8,14 @@ package skylib
  */
 
 import (
+	"errors"
 	"fmt"
+	msgpack "github.com/msgpack/msgpack-go"
 	"io"
 	"log"
-	msgpack "github.com/msgpack/msgpack-go"
 	"net"
 	"os"
 	"reflect"
-	"errors"
 )
 
 const (
@@ -74,9 +74,8 @@ func (self *RpcServer) Run() *RpcServer {
 							continue NextRequest
 						}
 
-            
 						funcType := f.Type()
-						if funcType.NumIn() - 1 != len(_arguments) {
+						if funcType.NumIn()-1 != len(_arguments) {
 							msg := fmt.Sprintf("The number of the given arguments (%d) doesn't match the arity (%d)", len(_arguments), funcType.NumIn())
 							self.log.Println(msg)
 							SendErrorResponseMessage(conn, msgId, msg)
@@ -90,10 +89,10 @@ func (self *RpcServer) Run() *RpcServer {
 						}
 
 						arguments := make([]reflect.Value, funcType.NumIn())
-            arguments[0] = reflect.ValueOf(service)
+						arguments[0] = reflect.ValueOf(service)
 
 						for i, v := range _arguments {
-              key := i + 1
+							key := i + 1
 
 							ft := funcType.In(key)
 							vt := v.Type()
@@ -103,7 +102,7 @@ func (self *RpcServer) Run() *RpcServer {
 							} else if pv, ok := integerPromote(ft, v); ok {
 								arguments[key] = pv
 							} else if self.autoCoercing && ft != nil && ft.Kind() == reflect.String && (v.Type().Kind() == reflect.Array || v.Type().Kind() == reflect.Slice) && (v.Type().Elem().Kind() == reflect.Uint8) {
-                  arguments[key] = reflect.ValueOf(string(v.Interface().([]byte)))
+								arguments[key] = reflect.ValueOf(string(v.Interface().([]byte)))
 							} else {
 								msg := fmt.Sprintf("The type of argument #%d doesn't match (%s expected, got %s)", i, ft.String(), vt.String())
 								self.log.Println(msg)
@@ -237,35 +236,35 @@ func NewRpcServer(resolver FunctionResolver, autoCoercing bool, _log *log.Logger
 // This is a low-level function that is not supposed to be called directly
 // by the user.  Change this if the MessagePack protocol is updated.
 func HandleRPCRequest(req reflect.Value) (uint, string, []reflect.Value, error) {
-	for{
+	for {
 		_req, ok := req.Interface().([]reflect.Value)
 		if !ok {
-			break;
+			break
 		}
 		if len(_req) != 4 {
-			break;
+			break
 		}
 		msgType := _req[0]
 		typeOk := msgType.Kind() == reflect.Int || msgType.Kind() == reflect.Int8 || msgType.Kind() == reflect.Int16 || msgType.Kind() == reflect.Int32 || msgType.Kind() == reflect.Int64
 		if !typeOk {
-			break;
+			break
 		}
 		msgId := _req[1]
 		idOk := msgId.Kind() == reflect.Int || msgId.Kind() == reflect.Int8 || msgId.Kind() == reflect.Int16 || msgId.Kind() == reflect.Int32 || msgId.Kind() == reflect.Int64 || msgId.Kind() == reflect.Uint8 || msgId.Kind() == reflect.Uint16 || msgId.Kind() == reflect.Uint32 || msgId.Kind() == reflect.Uint64
 		if !idOk {
-			break;
+			break
 		}
 		_funcName := _req[2]
 		funcOk := _funcName.Kind() == reflect.Array || _funcName.Kind() == reflect.Slice
 		if !funcOk {
-			break;
+			break
 		}
 		funcName, ok := _funcName.Interface().([]uint8)
 		if !ok {
-			break;
+			break
 		}
 		if msgType.Int() != REQUEST {
-			break;
+			break
 		}
 		_arguments := _req[3]
 		var arguments []reflect.Value
@@ -282,16 +281,14 @@ func HandleRPCRequest(req reflect.Value) (uint, string, []reflect.Value, error) 
 			arguments = []reflect.Value{_req[3]}
 		}
 
-
-    // Message Id could be an int or a uint (always > 0 though so we can cast it to uint)
-    var id uint = 0
+		// Message Id could be an int or a uint (always > 0 though so we can cast it to uint)
+		var id uint = 0
 
 		if msgId.Kind() == reflect.Int || msgId.Kind() == reflect.Int8 || msgId.Kind() == reflect.Int16 || msgId.Kind() == reflect.Int32 || msgId.Kind() == reflect.Int64 {
-      id = uint(msgId.Int())
-    } else if msgId.Kind() == reflect.Uint8 || msgId.Kind() == reflect.Uint16 || msgId.Kind() == reflect.Uint32 || msgId.Kind() == reflect.Uint64 {
-      id = uint(msgId.Uint())
-    }
-
+			id = uint(msgId.Int())
+		} else if msgId.Kind() == reflect.Uint8 || msgId.Kind() == reflect.Uint16 || msgId.Kind() == reflect.Uint32 || msgId.Kind() == reflect.Uint64 {
+			id = uint(msgId.Uint())
+		}
 
 		return id, string(funcName), arguments, nil
 	}

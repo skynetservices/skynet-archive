@@ -44,12 +44,14 @@ function start {
 
     if [ $dzns_port != $START_DZNS_PORT ]
     then
-      $DOOZERD_PATH/doozerd -timeout 5 -l "$BIND_IP:$dzns_port" -w ":$dzns_web_port" -c "dzns" -a "$BIND_IP:$START_DZNS_PORT" 2>/dev/null &
+      echo doozerd -timeout 5 -l "$BIND_IP:$dzns_port" -w ":$dzns_web_port" -c "dzns" -a "$BIND_IP:$START_DZNS_PORT"
+      doozerd -timeout 5 -l "$BIND_IP:$dzns_port" -w ":$dzns_web_port" -c "dzns" -a "$BIND_IP:$START_DZNS_PORT" 2>/dev/null &
 
       # add to DzNS cluster
-     echo "\c" | $DOOZER_PATH/cmd/doozer/doozer -a "doozer:?ca=$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dzns_count" >/dev/null &
+     echo "\c" | doozer -a "doozer:?ca=$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dzns_count" >/dev/null &
     else
-      $DOOZERD_PATH/doozerd -l "$BIND_IP:$dzns_port" -w ":$dzns_web_port" -c "dzns" 2>/dev/null &
+      echo doozerd -l "$BIND_IP:$dzns_port" -w ":$dzns_web_port" -c "dzns"
+      doozerd -l "$BIND_IP:$dzns_port" -w ":$dzns_web_port" -c "dzns" 2>/dev/null &
       sleep 1
     fi
 
@@ -65,13 +67,14 @@ function start {
 
   until [ $dz_count -eq $CLUSTER_INSTANCES ]
   do
-    $DOOZERD_PATH/doozerd -timeout 5 -l "$BIND_IP:$dz_port" -w ":$dz_web_port" -c "skynet" -b "doozer:?ca=$BIND_IP:$START_DZNS_PORT" 2>/dev/null &
+    echo doozerd -timeout 5 -l "$BIND_IP:$dz_port" -w ":$dz_web_port" -c "skynet" -b "doozer:?ca=$BIND_IP:$START_DZNS_PORT"
+    doozerd -timeout 5 -l "$BIND_IP:$dz_port" -w ":$dz_web_port" -c "skynet" -b "doozer:?ca=$BIND_IP:$START_DZNS_PORT" 2>/dev/null &
 
     if [ $dz_port != $START_PORT ]
     then
       # add to cluster
       # this has to connect to master, it blows up with a REV_MISMATCH if we connect to anyone else
-      echo "\c" | $DOOZER_PATH/cmd/doozer/doozer -a "doozer:?ca=$BIND_IP:$START_PORT" -b "doozer:?ca$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dz_count" >/dev/null &
+      echo "\c" | doozer -a "doozer:?ca=$BIND_IP:$START_PORT" -b "doozer:?ca$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dz_count" >/dev/null &
     else
       sleep 1
     fi

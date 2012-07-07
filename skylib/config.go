@@ -10,9 +10,8 @@ package skylib
 
 import (
 	"flag"
-	"log"
-  "time"
-  "os"
+	"os"
+	"time"
 )
 
 type BindAddr struct {
@@ -21,24 +20,24 @@ type BindAddr struct {
 }
 
 type ServiceConfig struct {
-	Log         *log.Logger `json:"-"`
-	Name        string
-	Version     string
-	Region      string
-	ServiceAddr *BindAddr
-	AdminAddr   *BindAddr
+	Log          Logger `json:"-"`
+	Name         string
+	Version      string
+	Region       string
+	ServiceAddr  *BindAddr
+	AdminAddr    *BindAddr
 	DoozerConfig *DoozerConfig `json:"-"`
 }
 
 type ClientConfig struct {
-	Log         *log.Logger `json:"-"`
-	DoozerConfig *DoozerConfig `json:"-"`
-  ConnectionPoolSize int
-  IdleTimeout time.Duration
+	Log                Logger        `json:"-"`
+	DoozerConfig       *DoozerConfig `json:"-"`
+	ConnectionPoolSize int
+	IdleTimeout        time.Duration
 }
 
 func GetServiceConfigFromFlags() *ServiceConfig {
-  flagset := flag.NewFlagSet("config", flag.ContinueOnError)
+	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
 
 	var (
 		bindPort       *int    = flagset.Int("port", 9999, "tcp port to listen")
@@ -49,7 +48,7 @@ func GetServiceConfigFromFlags() *ServiceConfig {
 		doozerDiscover *bool   = flagset.Bool("autodiscover", true, "auto discover new doozer instances")
 	)
 
-  flagset.Parse(os.Args[1:])
+	flagset.Parse(os.Args[1:])
 
 	return &ServiceConfig{
 		Region: *region,
@@ -57,10 +56,10 @@ func GetServiceConfigFromFlags() *ServiceConfig {
 			IPAddress: *bindAddr,
 			Port:      *bindPort,
 		},
-    DoozerConfig: &DoozerConfig {
-      Uri: *doozer,
-      BootUri: *doozerBoot,
-      AutoDiscover: *doozerDiscover,
-    },
+		DoozerConfig: &DoozerConfig{
+			Uri:          *doozer,
+			BootUri:      *doozerBoot,
+			AutoDiscover: *doozerDiscover,
+		},
 	}
 }

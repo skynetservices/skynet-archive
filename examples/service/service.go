@@ -11,6 +11,7 @@ import (
 	"github.com/bketelsen/skynet/skylib"
 	"log"
 	"strings"
+	"os"
 )
 
 type TestService struct{}
@@ -36,7 +37,12 @@ func main() {
 	config.Name = "TestService"
 	config.Version = "1"
 	config.Region = "Clearwater"
-
+	var err error
+	config.Log, err = skylib.NewMongoLogger("localhost", "skynet", "log")
+	if err != nil {
+		config.Log = skylib.NewConsoleLogger(os.Stderr)
+		config.Log.Item("Could not connect to mongo db for logging")
+	}
 	service := skylib.CreateService(testService, config)
 
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure

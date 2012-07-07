@@ -3,7 +3,6 @@ package skylib
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -26,9 +25,9 @@ type Service struct {
 	Config     *ServiceConfig
 	DoozerConn DoozerConnection `json:"-"`
 	Registered bool
-	doneChan   chan bool         `json:"-"`
+	doneChan   chan bool `json:"-"`
 
-	Log *log.Logger `json:"-"`
+	Log Logger `json:"-"`
 
 	Delegate ServiceInterface         `json:"-"`
 	methods  map[string]reflect.Value `json:"-"`
@@ -51,13 +50,13 @@ func (s *Service) Start(register bool) {
 	go watchSignals(c, s)
 
 	s.doneChan = make(chan bool, 1)
-	s.Log.Println("Starting server")
+	s.Log.Item("Starting server")
 
 	go rpcServ.Run()
 
 	go s.Delegate.Started(s) // Call user defined callback
-  
-  s.UpdateCluster()
+
+	s.UpdateCluster()
 
 	if register == true {
 		s.Register()
@@ -66,7 +65,10 @@ func (s *Service) Start(register bool) {
 	// Endless loop to keep app from returning
 	select {
 	case _ = <-s.doneChan:
-    syscall.Exit(0)
+		//NOTE: probably shouldn't call Exit() in a lib. Just let the function return?
+		//      But then, this is triggered by a kill signal, so it's more like we 
+		//      intercept the kill signal, clean up, and then die anyway.
+		syscall.Exit(0)
 	}
 }
 
@@ -85,24 +87,24 @@ func (s *Service) UpdateCluster() {
 }
 
 func (s *Service) RemoveFromCluster() {
-  rev := s.doozer().GetCurrentRevision()
-  path := s.GetConfigPath()
-  err := s.doozer().Del(path, rev)
-  if err != nil {
-    s.Log.Panic(err.Error())
-  }
+	rev := s.doozer().GetCurrentRevision()
+	path := s.GetConfigPath()
+	err := s.doozer().Del(path, rev)
+	if err != nil {
+		s.Log.Panic(err.Error())
+	}
 }
 
 func (s *Service) Register() {
-  s.Registered = true
-  s.UpdateCluster()
+	s.Registered = true
+	s.UpdateCluster()
 
 	s.Delegate.Registered(s) // Call user defined callback
 }
 
 func (s *Service) Unregister() {
-  s.Registered = false
-  s.UpdateCluster()
+	s.Registered = false
+	s.UpdateCluster()
 
 	s.Delegate.Unregistered(s) // Call user defined callback
 }
@@ -111,7 +113,7 @@ func (s *Service) Shutdown() {
 	s.Unregister()
 
 	// TODO: make this wait for requests to finish
-  s.RemoveFromCluster()
+	s.RemoveFromCluster()
 	s.doneChan <- true
 
 	s.Delegate.Stopped(s) // Call user defined callback
@@ -154,13 +156,16 @@ func (s *Service) findRPCMethods(typ reflect.Type) {
 		}
 
 		s.methods[m.Name] = m.Func
-		s.Log.Println("Registered RPC Method: " + m.Name)
+		//s.Log.Println("Registered RPC Method: " + m.Name)
+		s.Log.ServiceItem(s, RegisteredMethod{
+			Method: m.Name,
+		})
 	}
 }
 
 func initializeConfig(c *ServiceConfig) {
 	if c.Log == nil {
-		c.Log = log.New(os.Stderr, "", log.LstdFlags)
+		c.Log = NewConsoleLogger(os.Stderr)
 	}
 
 	if c.Name == "" {
@@ -183,12 +188,12 @@ func initializeConfig(c *ServiceConfig) {
 		c.ServiceAddr.Port = 9000
 	}
 
-  if c.DoozerConfig == nil {
-    c.DoozerConfig = &DoozerConfig {
-      Uri: "127.0.0.1:8046",
-      AutoDiscover: true,
-    }
-  }
+	if c.DoozerConfig == nil {
+		c.DoozerConfig = &DoozerConfig{
+			Uri:          "127.0.0.1:8046",
+			AutoDiscover: true,
+		}
+	}
 }
 
 func (s *Service) GetConfigPath() string {

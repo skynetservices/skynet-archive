@@ -1,14 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"github.com/bketelsen/skynet/skylib"
 	"os"
 	"strconv"
-  "bufio"
-  "syscall"
-  "strings"
+	"strings"
+	"syscall"
 )
 
 var VersionFlag *string = flag.String("version", "", "service version")
@@ -45,23 +45,23 @@ func main() {
 		ListServiceVersions(query)
 	case "topology":
 		PrintTopology(query)
-  case "cli":
-    InteractiveShell()
+	case "cli":
+		InteractiveShell()
 
 	default:
 		CommandLineHelp()
 	}
 }
 
-func Doozer() (skylib.DoozerConnection) {
-  if DC == nil {
-    DC = Connect()
-  }
+func Doozer() skylib.DoozerConnection {
+	if DC == nil {
+		DC = Connect()
+	}
 
-  return DC
+	return DC
 }
 
-func Connect() (skylib.DoozerConnection) {
+func Connect() skylib.DoozerConnection {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Failed to connect to Doozer")
@@ -69,34 +69,34 @@ func Connect() (skylib.DoozerConnection) {
 		}
 	}()
 
-  // TODO: This needs to come from command line, or environment variable
-  conn := skylib.NewDoozerConnection("127.0.0.1:8046", "", false, nil) // nil as the last param will default to a Stdout logger
-  conn.Connect()
+	// TODO: This needs to come from command line, or environment variable
+	conn := skylib.NewDoozerConnection("127.0.0.1:8046", "", false, nil) // nil as the last param will default to a Stdout logger
+	conn.Connect()
 
-  return conn
+	return conn
 }
 
 func ListInstances(q *skylib.Query) {
-  var regFlag *bool
+	var regFlag *bool
 
-  if *RegisteredFlag == "true" {
-    b := true
-    regFlag = &b
-  } else if *RegisteredFlag == "false" {
-    b := false
-    regFlag = &b
-  }
+	if *RegisteredFlag == "true" {
+		b := true
+		regFlag = &b
+	} else if *RegisteredFlag == "false" {
+		b := false
+		regFlag = &b
+	}
 
-  q.Registered = regFlag
+	q.Registered = regFlag
 
 	results := q.FindInstances()
 
 	for _, instance := range *results {
-    registered := ""
+		registered := ""
 
-    if(instance.Registered){
-      registered = " [Registered]"
-    }
+		if instance.Registered {
+			registered = " [Registered]"
+		}
 
 		fmt.Println(instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port) + " - " + instance.Config.Name + " " + instance.Config.Version + registered)
 	}
@@ -129,7 +129,7 @@ func ListServices(q *skylib.Query) {
 func ListServiceVersions(q *skylib.Query) {
 	if *ServiceNameFlag == "" {
 		fmt.Println("Service name is required")
-    return
+		return
 	}
 
 	results := q.FindServiceVersions()
@@ -179,11 +179,11 @@ func PrintTopology(q *skylib.Query) {
 					fmt.Println("\t\t\tVersion: " + versionName)
 
 					for _, instance := range version {
-            registered := ""
+						registered := ""
 
-            if(instance.Registered){
-              registered = " [Registered]"
-            }
+						if instance.Registered {
+							registered = " [Registered]"
+						}
 
 						fmt.Println("\t\t\t\t" + instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port) + registered)
 					}
@@ -231,132 +231,132 @@ func CommandLineHelp() {
 			"\n\n\n")
 }
 
-
 /*
  * CLI Logic
  */
 
-func InteractiveShell(){
+func InteractiveShell() {
 	lineReader := bufio.NewReader(os.Stdin)
-  doozer := Doozer()
+	doozer := Doozer()
 
-  fmt.Println("Skynet Interactive Shell")
-  prompt()
+	fmt.Println("Skynet Interactive Shell")
+	prompt()
 
-  query := &skylib.Query{
-    DoozerConn: doozer,
-  }
+	query := &skylib.Query{
+		DoozerConn: doozer,
+	}
 
 	for {
 		l, _, e := lineReader.ReadLine()
-		if e != nil { break }
+		if e != nil {
+			break
+		}
 
 		s := string(l)
-    parts := strings.Split(s, " ")
+		parts := strings.Split(s, " ")
 
-    switch(parts[0]) {
-    case "exit":
-      syscall.Exit(0)
-    case "help", "h":
-      InteractiveShellHelp()
-    case "services":
-      ListServices(query)
-    case "hosts":
-      ListHosts(query)
-    case "regions":
-      ListRegions(query)
-    case "instances":
-      ListInstances(query)
-    case "versions":
-      ListServiceVersions(query)
-    case "topology":
-      PrintTopology(query)
+		switch parts[0] {
+		case "exit":
+			syscall.Exit(0)
+		case "help", "h":
+			InteractiveShellHelp()
+		case "services":
+			ListServices(query)
+		case "hosts":
+			ListHosts(query)
+		case "regions":
+			ListRegions(query)
+		case "instances":
+			ListInstances(query)
+		case "versions":
+			ListServiceVersions(query)
+		case "topology":
+			PrintTopology(query)
 
-    case "service":
-      if len(parts) >= 2 {
-        query.Service = parts[1]
-      }
-      
-      fmt.Printf("Service: %v\n", query.Service)
+		case "service":
+			if len(parts) >= 2 {
+				query.Service = parts[1]
+			}
 
-    case "host":
-      if len(parts) >= 2 {
-        query.Host = parts[1]
-      }
-      
-      fmt.Printf("Host: %v\n", query.Host)
+			fmt.Printf("Service: %v\n", query.Service)
 
-    case "version":
-      if len(parts) >= 2 {
-        query.Version = parts[1]
-      }
-      
-      fmt.Printf("Version: %v\n", query.Version)
+		case "host":
+			if len(parts) >= 2 {
+				query.Host = parts[1]
+			}
 
-    case "region":
-      if len(parts) >= 2 {
-        query.Region = parts[1]
-      }
-      
-      fmt.Printf("Region: %v\n", query.Region)
+			fmt.Printf("Host: %v\n", query.Host)
 
-    case "registered":
-      if len(parts) >= 2 {
-        var reg bool
+		case "version":
+			if len(parts) >= 2 {
+				query.Version = parts[1]
+			}
 
-        if(parts[1] == "true"){
-          reg = true
-        } else {
-          reg = false
-        }
+			fmt.Printf("Version: %v\n", query.Version)
 
-        query.Registered = &reg
-      }
+		case "region":
+			if len(parts) >= 2 {
+				query.Region = parts[1]
+			}
 
-      registered := ""
-      if query.Registered != nil {
-        registered = strconv.FormatBool(*query.Registered)
-      }
-      
-      fmt.Printf("Registered: %v\n", registered)
+			fmt.Printf("Region: %v\n", query.Region)
 
+		case "registered":
+			if len(parts) >= 2 {
+				var reg bool
 
-    case "reset":
-      if len(parts) == 1 || parts[1] == "service" {
-        query.Service = ""
-      }
+				if parts[1] == "true" {
+					reg = true
+				} else {
+					reg = false
+				}
 
-      if len(parts) == 1 || parts[1] == "version" {
-        query.Version = ""
-      }
+				query.Registered = &reg
+			}
 
-      if len(parts) == 1 || parts[1] == "host" {
-        query.Host = ""
-      }
+			registered := ""
+			if query.Registered != nil {
+				registered = strconv.FormatBool(*query.Registered)
+			}
 
-      if len(parts) == 1 || parts[1] == "region" {
-        query.Region = ""
-      }
+			fmt.Printf("Registered: %v\n", registered)
 
-      if len(parts) == 1 || parts[1] == "registered" {
-        query.Registered = nil
-      }
-    case "filters":
-      registered := ""
-      if query.Registered != nil {
-        registered = strconv.FormatBool(*query.Registered)
-      }
+		case "reset":
+			if len(parts) == 1 || parts[1] == "service" {
+				query.Service = ""
+			}
 
-      fmt.Printf("Region: %v\nHost: %v\nService:%v\nVersion: %v\nRegistered: %v\n", query.Region, query.Host, query.Service, query.Version, registered)
-    default:
-      fmt.Println("Unknown Command - type 'help' for a list of commands")
-    }
+			if len(parts) == 1 || parts[1] == "version" {
+				query.Version = ""
+			}
 
-    prompt()
+			if len(parts) == 1 || parts[1] == "host" {
+				query.Host = ""
+			}
+
+			if len(parts) == 1 || parts[1] == "region" {
+				query.Region = ""
+			}
+
+			if len(parts) == 1 || parts[1] == "registered" {
+				query.Registered = nil
+			}
+		case "filters":
+			registered := ""
+			if query.Registered != nil {
+				registered = strconv.FormatBool(*query.Registered)
+			}
+
+			fmt.Printf("Region: %v\nHost: %v\nService:%v\nVersion: %v\nRegistered: %v\n", query.Region, query.Host, query.Service, query.Version, registered)
+		default:
+			fmt.Println("Unknown Command - type 'help' for a list of commands")
+		}
+
+		prompt()
 	}
 }
 
-func InteractiveShellHelp(){
+func InteractiveShellHelp() {
 	fmt.Print(
 		"\nCommands:" +
 			"\n\thosts: List all hosts available that meet the specified criteria" +
@@ -367,17 +367,17 @@ func InteractiveShellHelp(){
 
 			"\n\ttopology: Print detailed heirarchy of regions/hosts/services/versions/instances" +
 
-      "\n\nFilters:" +
-      "\n\tfilters - list current filters" +
-      "\n\treset <filter> - reset all filters or specified filter" +
-      "\n\tregion <region> - Set region filter, all commands will be scoped to this region until reset" +
-      "\n\tservice <service> - Set service filter, all commands will be scoped to this service until reset" +
-      "\n\tversion <version> - Set version filter, all commands will be scoped to this version until reset" +
-      "\n\thost <host> - Set host filter, all commands will be scoped to this host until reset" +
+			"\n\nFilters:" +
+			"\n\tfilters - list current filters" +
+			"\n\treset <filter> - reset all filters or specified filter" +
+			"\n\tregion <region> - Set region filter, all commands will be scoped to this region until reset" +
+			"\n\tservice <service> - Set service filter, all commands will be scoped to this service until reset" +
+			"\n\tversion <version> - Set version filter, all commands will be scoped to this version until reset" +
+			"\n\thost <host> - Set host filter, all commands will be scoped to this host until reset" +
 
 			"\n\n")
 }
 
-func prompt(){
-  fmt.Printf("> ")
+func prompt() {
+	fmt.Printf("> ")
 }

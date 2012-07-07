@@ -12,7 +12,7 @@ type Query struct {
 	Version    string
 	Host       string
 	Region     string
-  Registered *bool
+	Registered *bool
 	DoozerConn DoozerConnection
 	DoozerRev  int64
 
@@ -132,10 +132,9 @@ func (q *Query) FindInstances() *[]*Service {
 			continue
 		}
 
-
-    if q.Registered != nil && *q.Registered != service.Registered {
-      continue
-    }
+		if q.Registered != nil && *q.Registered != service.Registered {
+			continue
+		}
 
 		results = append(results, &service)
 	}
