@@ -9,3 +9,11 @@ type ConnectedToDoozer struct {
 type RegisteredMethod struct {
 	Method string
 }
+
+type NewDoozerDetected struct {
+	DoozerServer *DoozerServer
+}
+
+type DoozerNoLongerAvailable struct {
+	DoozerServer *DoozerServer
+}

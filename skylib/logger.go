@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 	"encoding/json"
+	"runtime"
 	"launchpad.net/mgo/v2"
 )
 
@@ -18,11 +19,11 @@ type Logger interface {
 	Item(item interface{})
 	// Log the item for the indicated Service
 	ServiceItem(service *Service, item interface{})
+	// Something has gone horribly wrong - remember what and bomb the program.
+	Panic(item interface{})
 
 	// this function exists only to catch things that are not transitioned
 	Println(items ...interface{})
-	// this function exists only to catch things that are not transitioned
-	Panic(item interface{})
 }
 
 func MakeJObj(item interface{}) (jobj map[string]interface{}) {
@@ -103,7 +104,7 @@ func (cl *ConsoleLogger) Println(items ...interface{}) {
 	cl.untransitioned.Println(items...)
 }
 func (cl *ConsoleLogger) Panic(item interface{}) {
-	cl.untransitioned.Panic(item)
+	cl.l.Panic(item)
 }
 
 // MongoLogger will archive log items into the specified mongo database.
@@ -153,10 +154,39 @@ func (ml *MongoLogger) ServiceItem(service *Service, item interface{}) {
 	}
 }
 func (ml *MongoLogger) Println(items ...interface{}) {
+	ml.Item(fmt.Sprint(items...))
 	ml.untransitioned.Println(items...)
 }
 func (ml *MongoLogger) Panic(item interface{}) {
-	ml.untransitioned.Panic(item)
+	var strace []string
+	for skip := 1; ; skip++ {
+		pc, file, line, ok := runtime.Caller(skip)
+		if !ok {
+			break
+		}
+		// if file[len(file)-1] == 'c' {
+		// continue
+		// }
+		f := runtime.FuncForPC(pc)
+		strace = append(strace, fmt.Sprintf("%s:%d %s()\n", file, line, f.Name()))
+	}
+	jobj := map[string]interface{}{
+		"Panic": map[string]interface{}{
+			"Item":  item,
+			"Trace": strace,
+		},
+		"uuid": ml.hash,
+	}
+
+	db := ml.session.DB(ml.dbName)
+	col := db.C(ml.colName)
+
+	err := col.Insert(jobj)
+	if err != nil {
+		log.Printf("Could not log %v: %v", jobj, err)
+	}
+
+	panic(item)
 }
 
 func uuid() string {

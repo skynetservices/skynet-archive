@@ -260,15 +260,20 @@ func (d *doozerConnection) monitorCluster() {
 
 		if buf.String() == "" && d.doozerInstances[id] != nil {
 			// Server is down, remove from list
-			d.Log.Println("Doozer instance no longer available, removing from available list")
+			//d.Log.Println("Doozer instance no longer available, removing from available list")
+			d.Log.Item(DoozerNoLongerAvailable{
+				DoozerServer: d.doozerInstances[id],
+			})
 			delete(d.doozerInstances, id)
 
 		} else if buf.String() != "" {
 			// Server changed, check to make sure it's different first
 			if d.doozerInstances[id] == nil || d.doozerInstances[id].Key != buf.String() {
-				d.Log.Println("New Doozer instance detected, adding to available list")
-
+				//d.Log.Println("New Doozer instance detected, adding to available list")
 				d.doozerInstances[id] = d.getDoozerServer(buf.String())
+				d.Log.Item(NewDoozerDetected{
+					DoozerServer: d.doozerInstances[id],
+				})
 			}
 		}
 	}
