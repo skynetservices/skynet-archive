@@ -132,6 +132,8 @@ func CreateService(s ServiceInterface, c *ServiceConfig) *Service {
 		methods:  make(map[string]reflect.Value),
 	}
 
+	c.Log.Item(c)
+
 	service.findRPCMethods(typ)
 
 	return service

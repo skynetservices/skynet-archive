@@ -2,6 +2,7 @@ package skylib
 
 import (
 	"bytes"
+	"crypto/rand"
 	"io"
 	"log"
 	"fmt"
@@ -112,6 +113,7 @@ func (cl *ConsoleLogger) Panic(item interface{}) {
 type MongoLogger struct {
 	session         *mgo.Session
 	dbName, colName string
+	hash            string
 
 	untransitioned *log.Logger
 }
@@ -121,12 +123,14 @@ func NewMongoLogger(addr string, dbName, collectionName string) (ml *MongoLogger
 		dbName:         dbName,
 		colName:        collectionName,
 		untransitioned: log.New(os.Stderr, "fix-me: ", log.LstdFlags),
+		hash:           uuid(),
 	}
 	ml.session, err = mgo.Dial(addr)
 	return
 }
 func (ml *MongoLogger) Item(item interface{}) {
 	jobj := MakeJObj(item)
+	jobj["uuid"] = ml.hash
 
 	db := ml.session.DB(ml.dbName)
 	col := db.C(ml.colName)
@@ -138,6 +142,7 @@ func (ml *MongoLogger) Item(item interface{}) {
 }
 func (ml *MongoLogger) ServiceItem(service *Service, item interface{}) {
 	jobj := MakeJObjService(service, item)
+	jobj["uuid"] = ml.hash
 
 	db := ml.session.DB(ml.dbName)
 	col := db.C(ml.colName)
@@ -152,4 +157,15 @@ func (ml *MongoLogger) Println(items ...interface{}) {
 }
 func (ml *MongoLogger) Panic(item interface{}) {
 	ml.untransitioned.Panic(item)
+}
+
+func uuid() string {
+	b := make([]byte, 16)
+	_, err := io.ReadFull(rand.Reader, b)
+	if err != nil {
+		log.Fatal(err)
+	}
+	b[6] = (b[6] & 0x0F) | 0x40
+	b[8] = (b[8] &^ 0x40) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[:4], b[4:6], b[6:8], b[8:10], b[10:])
 }

@@ -61,6 +61,8 @@ func NewClient(config *ClientConfig) *Client {
 		Log:        config.Log,
 	}
 
+	client.Log.Item(config)
+
 	client.DoozerConn.Connect()
 
 	return client
