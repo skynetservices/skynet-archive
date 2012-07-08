@@ -2,10 +2,6 @@
 #
 # Usage: doozer_cluster.sh <start|stop> (<instances> <dzns_instances>)
 
-
-DOOZERD_PATH=$GOPATH/src/github.com/4ad/doozerd
-DOOZER_PATH=$GOPATH/src/github.com/4ad/doozer
-
 BIND_IP="127.0.0.1"
 
 START_PORT=8046
@@ -74,7 +70,7 @@ function start {
     then
       # add to cluster
       # this has to connect to master, it blows up with a REV_MISMATCH if we connect to anyone else
-      echo "\c" | doozer -a "doozer:?ca=$BIND_IP:$START_PORT" -b "doozer:?ca$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dz_count" >/dev/null &
+      echo -n | doozer -a "doozer:?ca=$BIND_IP:$START_PORT" -b "doozer:?ca$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dz_count" >/dev/null &
     else
       sleep 1
     fi
