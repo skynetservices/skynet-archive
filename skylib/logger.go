@@ -76,6 +76,8 @@ func (cl *ConsoleLogger) Item(item interface{}) {
 		cl.l.Print(s)
 	case string:
 		cl.l.Print(s)
+	case error:
+		cl.l.Print(s)
 	default:
 		jobj := MakeJObj(item)
 		var buf bytes.Buffer
