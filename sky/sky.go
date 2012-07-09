@@ -225,6 +225,8 @@ Commands:
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
 
+	deploy: Deploy the services listed in the provided config
+		-config - name of a config file that lists each service to deploy
 
 `)
 
