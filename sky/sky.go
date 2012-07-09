@@ -194,41 +194,40 @@ func PrintTopology(q *skylib.Query) {
 }
 
 func CommandLineHelp() {
-	fmt.Println("Usage:\n\t sky -option1=value -option2=value command <arguments>")
+	fmt.Print(`Usage:\n\t sky -option1=value -option2=value command <arguments>
 
-	fmt.Print(
-		"\nCommands:\n" +
-			"\n\tcli: Interactive shell for executing commands against skynet cluster" +
-			"\n\thosts: List all hosts available that meet the specified criteria" +
-			"\n\t\t-service - limit results to hosts running the specified service" +
-			"\n\t\t-version - limit results to hosts running the specified version of the service (-service required)" +
-			"\n\t\t-region - limit results to hosts in the specified region" +
+Commands:
 
-			"\n\tinstances: List all instances available that meet the specified criteria" +
-			"\n\t\t-service - limit results to instances of the specified service" +
-			"\n\t\t-version - limit results to instances of the specified version of service" +
-			"\n\t\t-region - limit results to instances in the specified region" +
-			"\n\t\t-host - limit results to instances on the specified host" +
-			"\n\t\t-registered - (true, false) limit results to instances that are registered (accepting requests)" +
+	cli: Interactive shell for executing commands against skynet cluster
+	hosts: List all hosts available that meet the specified criteria
+		-service - limit results to hosts running the specified service
+		-version - limit results to hosts running the specified version of the service (-service required)
+		-region - limit results to hosts in the specified region
+	instances: List all instances available that meet the specified criteria
+		-service - limit results to instances of the specified service
+		-version - limit results to instances of the specified version of service
+		-region - limit results to instances in the specified region
+		-host - limit results to instances on the specified host
+		-registered - (true, false) limit results to instances that are registered (accepting requests)
+	regions: List all regions available that meet the specified criteria
+	services: List all services available that meet the specified criteria
+		-host - limit results to the specified host
+		-region - limit results to hosts in the specified region
 
-			"\n\tregions: List all regions available that meet the specified criteria" +
+	versions: List all services available that meet the specified criteria
+		-service - service name (required)
+		-host - limit results to the specified host
+		-region - limit results to hosts in the specified region
 
-			"\n\tservices: List all services available that meet the specified criteria" +
-			"\n\t\t-host - limit results to the specified host" +
-			"\n\t\t-region - limit results to hosts in the specified region" +
+	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
+		-service - limit results to instances of the specified service
+		-version - limit results to instances of the specified version of service
+		-region - limit results to instances in the specified region
+		-host - limit results to instances on the specified host
 
-			"\n\n\tversions: List all services available that meet the specified criteria" +
-			"\n\t\t-service - service name (required)" +
-			"\n\t\t-host - limit results to the specified host" +
-			"\n\t\t-region - limit results to hosts in the specified region" +
 
-			"\n\n\ttopology: Print detailed heirarchy of regions/hosts/services/versions/instances" +
-			"\n\t\t-service - limit results to instances of the specified service" +
-			"\n\t\t-version - limit results to instances of the specified version of service" +
-			"\n\t\t-region - limit results to instances in the specified region" +
-			"\n\t\t-host - limit results to instances on the specified host" +
+`)
 
-			"\n\n\n")
 }
 
 /*
@@ -357,25 +356,24 @@ func InteractiveShell() {
 }
 
 func InteractiveShellHelp() {
-	fmt.Print(
-		"\nCommands:" +
-			"\n\thosts: List all hosts available that meet the specified criteria" +
-			"\n\tinstances: List all instances available that meet the specified criteria" +
-			"\n\tregions: List all regions available that meet the specified criteria" +
-			"\n\tservices: List all services available that meet the specified criteria" +
-			"\n\tversions: List all services available that meet the specified criteria" +
+	fmt.Print(`
+Commands:
+	hosts: List all hosts available that meet the specified criteria
+	instances: List all instances available that meet the specified criteria
+	regions: List all regions available that meet the specified criteria
+	services: List all services available that meet the specified criteria
+	versions: List all services available that meet the specified criteria
+	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
 
-			"\n\ttopology: Print detailed heirarchy of regions/hosts/services/versions/instances" +
+Filters:
+	filters - list current filters
+	reset <filter> - reset all filters or specified filter
+	region <region> - Set region filter, all commands will be scoped to this region until reset
+	service <service> - Set service filter, all commands will be scoped to this service until reset
+	version <version> - Set version filter, all commands will be scoped to this version until reset
+	host <host> - Set host filter, all commands will be scoped to this host until reset
 
-			"\n\nFilters:" +
-			"\n\tfilters - list current filters" +
-			"\n\treset <filter> - reset all filters or specified filter" +
-			"\n\tregion <region> - Set region filter, all commands will be scoped to this region until reset" +
-			"\n\tservice <service> - Set service filter, all commands will be scoped to this service until reset" +
-			"\n\tversion <version> - Set version filter, all commands will be scoped to this version until reset" +
-			"\n\thost <host> - Set host filter, all commands will be scoped to this host until reset" +
-
-			"\n\n")
+`)
 }
 
 func prompt() {
