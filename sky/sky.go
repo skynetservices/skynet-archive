@@ -11,11 +11,13 @@ import (
 	"syscall"
 )
 
-var VersionFlag *string = flag.String("version", "", "service version")
-var ServiceNameFlag *string = flag.String("service", "", "service name")
-var HostFlag *string = flag.String("host", "", "host")
-var RegionFlag *string = flag.String("region", "", "region")
-var RegisteredFlag *string = flag.String("registered", "", "registered")
+var (
+	VersionFlag     *string = flag.String("version", "", "service version")
+	ServiceNameFlag *string = flag.String("service", "", "service name")
+	HostFlag        *string = flag.String("host", "", "host")
+	RegionFlag      *string = flag.String("region", "", "region")
+	RegisteredFlag  *string = flag.String("registered", "", "registered")
+)
 
 var DC skylib.DoozerConnection
 
@@ -45,6 +47,8 @@ func main() {
 		ListServiceVersions(query)
 	case "topology":
 		PrintTopology(query)
+	case "deploy":
+		Deploy(query)
 	case "cli":
 		InteractiveShell()
 
@@ -225,8 +229,8 @@ Commands:
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
 
-	deploy: Deploy the services listed in the provided config
-		-config - name of a config file that lists each service to deploy
+	deploy: Run the "SkynetDeployment" service, and deploy services listed in the provided config
+		
 
 `)
 
