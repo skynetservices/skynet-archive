@@ -116,7 +116,9 @@ func (d *doozerConnection) dial(server string, boot string) (bool, error) {
 
 	d.currentInstance = server
 	//d.Log.Println("Connected to Doozer Instance: " + server)
-	d.Log.Item(ConnectedToDoozer{Addr: server})
+	d.Log.Item(DoozerConnected{
+		Addr: server,
+	})
 
 	return true, nil
 }
@@ -206,7 +208,10 @@ func (d *doozerConnection) getDoozerInstances() {
 
 func (d *doozerConnection) recoverFromError(err interface{}) {
 	if err == "EOF" {
-		d.Log.Println("Lost connection to Doozer: Reconnecting...")
+		// d.Log.Println("Lost connection to Doozer: Reconnecting...")
+		d.Log.Item(DoozerLostConnection{
+			DoozerConfig: d.Config,
+		})
 		d.connectionMutex.Lock()
 		defer d.connectionMutex.Unlock()
 
@@ -261,7 +266,7 @@ func (d *doozerConnection) monitorCluster() {
 		if buf.String() == "" && d.doozerInstances[id] != nil {
 			// Server is down, remove from list
 			//d.Log.Println("Doozer instance no longer available, removing from available list")
-			d.Log.Item(DoozerNoLongerAvailable{
+			d.Log.Item(DoozerRemoved{
 				DoozerServer: d.doozerInstances[id],
 			})
 			delete(d.doozerInstances, id)
@@ -271,7 +276,7 @@ func (d *doozerConnection) monitorCluster() {
 			if d.doozerInstances[id] == nil || d.doozerInstances[id].Key != buf.String() {
 				//d.Log.Println("New Doozer instance detected, adding to available list")
 				d.doozerInstances[id] = d.getDoozerServer(buf.String())
-				d.Log.Item(NewDoozerDetected{
+				d.Log.Item(DoozerDiscovered{
 					DoozerServer: d.doozerInstances[id],
 				})
 			}

@@ -173,10 +173,16 @@ func (c *ServiceClient) monitorInstances() {
 					key := service.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(service.Config.ServiceAddr.Port)
 
 					if service.Registered == true {
-						c.Log.Println("New Service Instance Discovered: " + key)
+						//c.Log.Println("New Service Instance Discovered: " + key)
+						c.Log.Item(ServiceDiscovered{
+							Service: &service,
+						})
 						c.instances[key] = service
 					} else {
-						c.Log.Println("Service Instance Removed: " + key)
+						//c.Log.Println("Service Instance Removed: " + key)
+						c.Log.Item(ServiceRemoved{
+							Service: &service,
+						})
 						delete(c.instances, key)
 					}
 				}

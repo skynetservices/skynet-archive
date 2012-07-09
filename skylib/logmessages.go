@@ -2,18 +2,29 @@ package skylib
 
 import ()
 
-type ConnectedToDoozer struct {
+type DoozerConnected struct {
 	Addr string
+}
+type DoozerDiscovered struct {
+	DoozerServer *DoozerServer
+}
+
+type DoozerRemoved struct {
+	DoozerServer *DoozerServer
+}
+
+type DoozerLostConnection struct {
+	DoozerConfig *DoozerConfig
 }
 
 type RegisteredMethod struct {
 	Method string
 }
 
-type NewDoozerDetected struct {
-	DoozerServer *DoozerServer
+type ServiceDiscovered struct {
+	Service *Service
 }
 
-type DoozerNoLongerAvailable struct {
-	DoozerServer *DoozerServer
+type ServiceRemoved struct {
+	Service *Service
 }
