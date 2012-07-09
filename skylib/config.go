@@ -12,11 +12,16 @@ import (
 	"flag"
 	"os"
 	"time"
+	"fmt"
 )
 
 type BindAddr struct {
 	IPAddress string
 	Port      int
+}
+
+func (ba BindAddr) String() string {
+	return fmt.Sprintf("%s:%d", ba.IPAddress, ba.Port)
 }
 
 type ServiceConfig struct {

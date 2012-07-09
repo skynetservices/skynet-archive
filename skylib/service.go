@@ -132,7 +132,9 @@ func CreateService(s ServiceInterface, c *ServiceConfig) *Service {
 		methods:  make(map[string]reflect.Value),
 	}
 
-	c.Log.Item(c)
+	c.Log.Item(ServiceCreated{
+		ServiceConfig: service.Config,
+	})
 
 	service.findRPCMethods(typ)
 
@@ -159,7 +161,7 @@ func (s *Service) findRPCMethods(typ reflect.Type) {
 
 		s.methods[m.Name] = m.Func
 		//s.Log.Println("Registered RPC Method: " + m.Name)
-		s.Log.ServiceItem(s, RegisteredMethod{
+		s.Log.Item(RegisteredMethod{
 			Method: m.Name,
 		})
 	}

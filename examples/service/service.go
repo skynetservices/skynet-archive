@@ -38,9 +38,10 @@ func main() {
 	config.Version = "1"
 	config.Region = "Clearwater"
 	var err error
-	config.Log, err = skylib.NewMongoLogger("localhost", "skynet", "log")
+	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log")
+	clogger := skylib.NewConsoleLogger(os.Stdout)
+	config.Log = skylib.NewMultiLogger(mlogger, clogger)
 	if err != nil {
-		config.Log = skylib.NewConsoleLogger(os.Stderr)
 		config.Log.Item("Could not connect to mongo db for logging")
 	}
 	service := skylib.CreateService(testService, config)

@@ -17,8 +17,6 @@ import (
 type Logger interface {
 	// Log the item. Can be anything that is representable as a single JSON object.
 	Item(item interface{})
-	// Log the item for the indicated Service
-	ServiceItem(service *Service, item interface{})
 	// Something has gone horribly wrong - remember what and bomb the program.
 	Panic(item interface{})
 
@@ -29,15 +27,6 @@ type Logger interface {
 func MakeJObj(item interface{}) (jobj map[string]interface{}) {
 	jobj = map[string]interface{}{
 		"Time":                  time.Now(),
-		fmt.Sprintf("%T", item): item,
-	}
-	return
-}
-
-func MakeJObjService(service *Service, item interface{}) (jobj map[string]interface{}) {
-	jobj = map[string]interface{}{
-		"Time":                  time.Now(),
-		"Service":               service.Config.Name,
 		fmt.Sprintf("%T", item): item,
 	}
 	return
@@ -54,11 +43,6 @@ func NewMultiLogger(loggers ...Logger) (ml MultiLogger) {
 func (ml MultiLogger) Item(item interface{}) {
 	for _, l := range ml {
 		l.Item(item)
-	}
-}
-func (ml MultiLogger) ServiceItem(service *Service, item interface{}) {
-	for _, l := range ml {
-		l.ServiceItem(service, item)
 	}
 }
 func (ml MultiLogger) Println(items ...interface{}) {
@@ -87,18 +71,19 @@ func NewConsoleLogger(w io.Writer) (cl *ConsoleLogger) {
 	return
 }
 func (cl *ConsoleLogger) Item(item interface{}) {
-	jobj := MakeJObj(item)
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.Encode(jobj)
-	cl.l.Print(buf.String())
-}
-func (cl *ConsoleLogger) ServiceItem(service *Service, item interface{}) {
-	jobj := MakeJObjService(service, item)
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.Encode(jobj)
-	cl.l.Print(buf.String())
+	switch s := item.(type) {
+	case fmt.Stringer:
+		cl.l.Print(s)
+	case string:
+		cl.l.Print(s)
+	default:
+		jobj := MakeJObj(item)
+		var buf bytes.Buffer
+		enc := json.NewEncoder(&buf)
+		enc.Encode(jobj)
+		cl.l.Print(buf.String())
+	}
+
 }
 func (cl *ConsoleLogger) Println(items ...interface{}) {
 	cl.untransitioned.Println(items...)
@@ -127,22 +112,16 @@ func NewMongoLogger(addr string, dbName, collectionName string) (ml *MongoLogger
 		hash:           uuid(),
 	}
 	ml.session, err = mgo.Dial(addr)
+	if err != nil {
+		ml.session = nil
+	}
 	return
 }
 func (ml *MongoLogger) Item(item interface{}) {
-	jobj := MakeJObj(item)
-	jobj["uuid"] = ml.hash
-
-	db := ml.session.DB(ml.dbName)
-	col := db.C(ml.colName)
-
-	err := col.Insert(jobj)
-	if err != nil {
-		log.Printf("Could not log %v: %v", jobj, err)
+	if ml.session == nil {
+		return
 	}
-}
-func (ml *MongoLogger) ServiceItem(service *Service, item interface{}) {
-	jobj := MakeJObjService(service, item)
+	jobj := MakeJObj(item)
 	jobj["uuid"] = ml.hash
 
 	db := ml.session.DB(ml.dbName)
@@ -158,6 +137,9 @@ func (ml *MongoLogger) Println(items ...interface{}) {
 	ml.untransitioned.Println(items...)
 }
 func (ml *MongoLogger) Panic(item interface{}) {
+	if ml.session == nil {
+		return
+	}
 	var strace []string
 	for skip := 1; ; skip++ {
 		pc, file, line, ok := runtime.Caller(skip)
