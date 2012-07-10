@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"errors"
 	"flag"
-	"fmt"
 	"github.com/bketelsen/skynet/skylib"
 	"io"
+	"bytes"
+	"encoding/json"
 	"log"
 	"os"
 	"strings"
@@ -116,7 +117,10 @@ func (s *SkynetDaemon) Deploy(servicePath, args string) (uuid string, err error)
 }
 
 func (s *SkynetDaemon) ListSubServices() (data string, err error) {
-	data = fmt.Sprint("Services:", s.Services)
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.Encode(s.Services)
+	data = buf.String()
 	return
 }
 

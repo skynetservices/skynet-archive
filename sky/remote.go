@@ -57,10 +57,7 @@ func remoteList(q *skylib.Query) {
 	query := &skylib.Query{
 		DoozerConn: client.DoozerConn,
 		Service:    "SkynetDaemon",
-		Version:    "1",
 		Host:       "127.0.0.1",
-		Port:       "9999",
-		Region:     "Jersey",
 		Registered: &registered,
 	}
 	service := client.GetServiceFromQuery(query)
