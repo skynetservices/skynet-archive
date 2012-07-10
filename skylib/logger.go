@@ -2,14 +2,14 @@ package skylib
 
 import (
 	"bytes"
-	"io"
-	"log"
-	"fmt"
-	"os"
-	"time"
 	"encoding/json"
-	"runtime"
+	"fmt"
+	"io"
 	"launchpad.net/mgo/v2"
+	"log"
+	"os"
+	"runtime"
+	"time"
 )
 
 // Logger is an interface to any logging utility.

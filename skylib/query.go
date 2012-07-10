@@ -11,6 +11,7 @@ type Query struct {
 	Service    string
 	Version    string
 	Host       string
+	Port       int
 	Region     string
 	Registered *bool
 	DoozerConn DoozerConnection

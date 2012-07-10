@@ -1,13 +1,13 @@
 package main
 
 import (
-	"path"
 	"github.com/bketelsen/skynet/skylib"
 	"go/build"
-	"sync"
-	"os/exec"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
+	"sync"
 )
 
 type SubService struct {

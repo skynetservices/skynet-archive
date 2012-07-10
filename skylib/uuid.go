@@ -2,9 +2,9 @@ package skylib
 
 import (
 	"crypto/rand"
+	"fmt"
 	"io"
 	"log"
-	"fmt"
 )
 
 func UUID() string {

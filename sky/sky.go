@@ -48,7 +48,9 @@ func main() {
 	case "topology":
 		PrintTopology(query)
 	case "daemon":
-		Daemon(query)
+		Daemon(query, flag.Args()[1:])
+	case "remote":
+		Remote(query, flag.Args()[1:])
 	case "cli":
 		InteractiveShell()
 
@@ -198,7 +200,7 @@ func PrintTopology(q *skylib.Query) {
 }
 
 func CommandLineHelp() {
-	fmt.Print(`Usage:\n\t sky -option1=value -option2=value command <arguments>
+	fmt.Print(`Usage: sky [options] command <arguments>
 
 Commands:
 
@@ -217,22 +219,20 @@ Commands:
 	services: List all services available that meet the specified criteria
 		-host - limit results to the specified host
 		-region - limit results to hosts in the specified region
-
 	versions: List all services available that meet the specified criteria
 		-service - service name (required)
 		-host - limit results to the specified host
 		-region - limit results to hosts in the specified region
-
 	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
 		-service - limit results to instances of the specified service
 		-version - limit results to instances of the specified version of service
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
+	daemon [config file]: Run the "SkynetDaemon" service, and deploy services listed in the provided config
+	remote [command]: Administer the services run by the SkynetDaemon service on the given host.
+		-host - the SkynetDaemon service to connect to
+		use "remote help" for details.
 
-	daemon: Run the "SkynetDaemon" service, and deploy services listed in the provided config
-
-	skyadmin: Administer the services run by the SkynetDaemon service on the given host.
-		list: List the services run by the SkynetDaemon
 		
 		
 

@@ -191,16 +191,19 @@ func (c *ServiceClient) monitorInstances() {
 	}
 }
 
-func (c *ServiceClient) Send(funcName string, arguments ...interface{}) (reflect.Value, error) {
+func (c *ServiceClient) Send(funcName string, arguments ...interface{}) (val reflect.Value, err error) {
 	// TODO: timeout logic
-	service, _ := c.getConnection(0)
+	service, err := c.getConnection(0)
+	if err != nil {
+		return
+	}
 
 	// TODO: Check for connectivity issue so that we can try to get another resource out of the pool
-	val, er := service.conn.SendV(funcName, arguments)
+	val, err = service.conn.SendV(funcName, arguments)
 
 	c.connectionPool.Put(service)
 
-	return val, er
+	return
 }
 
 func (c *ServiceClient) getConnection(lvl int) (ServiceResource, error) {

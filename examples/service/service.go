@@ -10,8 +10,8 @@ package main
 import (
 	"github.com/bketelsen/skynet/skylib"
 	"log"
-	"strings"
 	"os"
+	"strings"
 )
 
 type TestService struct{}

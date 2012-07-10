@@ -10,9 +10,9 @@ package skylib
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"time"
-	"fmt"
 )
 
 type BindAddr struct {
