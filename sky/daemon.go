@@ -110,6 +110,7 @@ func (s *SkynetDaemon) Stopped(service *skylib.Service)      {}
 
 func (s *SkynetDaemon) Deploy(servicePath, args string) (uuid string, err error) {
 	uuid = skylib.UUID()
+	s.Log.Println("Deploying", servicePath, args)
 	s.Services[uuid], err = NewSubService(s.Log, servicePath, args)
 	return
 }

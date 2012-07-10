@@ -11,7 +11,7 @@ type Query struct {
 	Service    string
 	Version    string
 	Host       string
-	Port       int
+	Port       string
 	Region     string
 	Registered *bool
 	DoozerConn DoozerConnection
@@ -43,6 +43,37 @@ func (q *Query) VisitFile(path string, f *doozer.FileInfo) {
 	q.files[path] = f
 }
 
+func (q *Query) makePath() (path string) {
+	path = "/services"
+
+	if q.Service == "" {
+		return
+	}
+	path += "/" + q.Service
+
+	if q.Version == "" {
+		return
+	}
+	path += "/" + q.Version
+
+	if q.Region == "" {
+		return
+	}
+	path += "/" + q.Region
+
+	if q.Host == "" {
+		return
+	}
+	path += "/" + q.Host
+
+	if q.Port == "" {
+		return
+	}
+	path += "/" + q.Port
+
+	return
+}
+
 func (q *Query) search() {
 	q.paths = make(map[string]*doozer.FileInfo, 0)
 	q.files = make(map[string]*doozer.FileInfo, 0)
@@ -51,23 +82,7 @@ func (q *Query) search() {
 		q.DoozerRev = q.getCurrentDoozerRevision()
 	}
 
-	path := "/services"
-
-	if q.Service != "" {
-		path += "/" + q.Service
-
-		if q.Version != "" {
-			path += "/" + q.Version
-
-			if q.Region != "" {
-				path += "/" + q.Region
-
-				if q.Host != "" {
-					path += "/" + q.Host
-				}
-			}
-		}
-	}
+	path := q.makePath()
 
 	q.DoozerConn.Walk(q.DoozerRev, path, q, nil)
 }
@@ -130,6 +145,7 @@ func (q *Query) FindInstances() *[]*Service {
 		}
 
 		if q.Host != "" && q.Host != service.Config.ServiceAddr.IPAddress {
+			println("skipped because", q.Host, "!=", service.Config.ServiceAddr.IPAddress)
 			continue
 		}
 

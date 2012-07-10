@@ -68,26 +68,15 @@ func NewClient(config *ClientConfig) *Client {
 	return client
 }
 
-// This will not fail if no services currently exist, this saves from chicken and egg issues with dependencies between services
-// TODO: We should probably determine a way of supplying secondary conditions, for example it's ok to go to a different data center only if there are no instances in our current datacenter
-func (c *Client) GetService(name string, version string, region string, host string) *ServiceClient {
+func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 	var conn net.Conn
 	var err error
 
-	registered := true
-
-	service := &ServiceClient{
+	service = &ServiceClient{
 		Log:            c.Config.Log,
 		connectionPool: pools.NewRoundRobin(c.Config.ConnectionPoolSize, c.Config.IdleTimeout),
-		query: &Query{
-			DoozerConn: c.DoozerConn,
-			Service:    name,
-			Version:    version,
-			Host:       host,
-			Region:     region,
-			Registered: &registered,
-		},
-		instances: make(map[string]Service, 0),
+		query:          q,
+		instances:      make(map[string]Service, 0),
 	}
 
 	// Load initial list of instances
@@ -140,6 +129,22 @@ func (c *Client) GetService(name string, version string, region string, host str
 	service.connectionPool.Open(factory)
 
 	return service
+}
+
+// This will not fail if no services currently exist, this saves from chicken and egg issues with dependencies between services
+// TODO: We should probably determine a way of supplying secondary conditions, for example it's ok to go to a different data center only if there are no instances in our current datacenter
+func (c *Client) GetService(name string, version string, region string, host string) *ServiceClient {
+	registered := true
+	query := &Query{
+		DoozerConn: c.DoozerConn,
+		Service:    name,
+		Version:    version,
+		Host:       host,
+		Region:     region,
+		Registered: &registered,
+	}
+
+	return c.GetServiceFromQuery(query)
 }
 
 type ServiceClient struct {
@@ -195,20 +200,25 @@ func (c *ServiceClient) Send(funcName string, arguments ...interface{}) (val ref
 	// TODO: timeout logic
 	service, err := c.getConnection(0)
 	if err != nil {
+		c.Log.Item(err)
 		return
 	}
 
 	// TODO: Check for connectivity issue so that we can try to get another resource out of the pool
 	val, err = service.conn.SendV(funcName, arguments)
+	if err != nil {
+		c.Log.Item(err)
+	}
 
 	c.connectionPool.Put(service)
 
 	return
 }
 
-func (c *ServiceClient) getConnection(lvl int) (ServiceResource, error) {
+func (c *ServiceClient) getConnection(lvl int) (service ServiceResource, err error) {
 	if lvl > 5 {
-		panic("Unable to retrieve a valid connection to the service")
+		err = errors.New("Unable to retrieve a valid connection to the service")
+		return
 	}
 
 	conn, err := c.connectionPool.Get()
@@ -224,7 +234,7 @@ func (c *ServiceClient) getConnection(lvl int) (ServiceResource, error) {
 		return c.getConnection(lvl + 1)
 	}
 
-	service := conn.(ServiceResource)
+	service = conn.(ServiceResource)
 
 	return service, err
 }

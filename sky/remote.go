@@ -53,9 +53,17 @@ func remoteList(q *skylib.Query) {
 	// }
 	client := skylib.NewClient(config)
 
-	// This will not fail if no services currently exist, as connections are created on demand
-	// this saves from chicken and egg issues with dependencies between services
-	service := client.GetService("SkynetDaemon", "", "", "127.0.0.1") // any version, any region, specified host
+	registered := true
+	query := &skylib.Query{
+		DoozerConn: client.DoozerConn,
+		Service:    "SkynetDaemon",
+		Version:    "1",
+		Host:       "127.0.0.1",
+		Port:       "9999",
+		Region:     "Jersey",
+		Registered: &registered,
+	}
+	service := client.GetServiceFromQuery(query)
 
 	// This on the other hand will fail if it can't find a service to connect to
 	client.Log.Item("attempting to send request")
