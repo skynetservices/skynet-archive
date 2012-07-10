@@ -47,8 +47,8 @@ func main() {
 		ListServiceVersions(query)
 	case "topology":
 		PrintTopology(query)
-	case "deploy":
-		Deploy(query)
+	case "daemon":
+		Daemon(query)
 	case "cli":
 		InteractiveShell()
 
@@ -229,7 +229,11 @@ Commands:
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
 
-	deploy: Run the "SkynetDeployment" service, and deploy services listed in the provided config
+	daemon: Run the "SkynetDaemon" service, and deploy services listed in the provided config
+
+	skyadmin: Administer the services run by the SkynetDaemon service on the given host.
+		list: List the services run by the SkynetDaemon
+		
 		
 
 `)
