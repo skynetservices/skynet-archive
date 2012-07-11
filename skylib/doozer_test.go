@@ -1,7 +1,6 @@
 package skylib
 
 import (
-	"log"
 	"os"
 	"testing"
 )
@@ -21,7 +20,7 @@ func TestBasename(t *testing.T) {
 }
 
 func TestNewDoozerConnection(t *testing.T) {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := NewConsoleLogger(os.Stdout)
 
 	doozer := NewDoozerConnection("localhost:1234", "localhost:4321", true, logger)
 
@@ -51,7 +50,7 @@ func TestNewDoozerConnectionDefaultLogger(t *testing.T) {
 }
 
 func TestNewDoozerConnectionFromConfig(t *testing.T) {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := NewConsoleLogger(os.Stdout)
 
 	config := DoozerConfig{
 		Uri:          "localhost:1234",
