@@ -5,6 +5,7 @@ import (
 	"github.com/4ad/doozer"
 	"log"
 	"strings"
+	"fmt"
 )
 
 type Query struct {
@@ -145,7 +146,10 @@ func (q *Query) FindInstances() *[]*Service {
 		}
 
 		if q.Host != "" && q.Host != service.Config.ServiceAddr.IPAddress {
-			println("skipped because", q.Host, "!=", service.Config.ServiceAddr.IPAddress)
+			continue
+		}
+
+		if q.Port != "" && q.Port != fmt.Sprintf("%d", service.Config.ServiceAddr.Port) {
 			continue
 		}
 

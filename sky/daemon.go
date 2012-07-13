@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"errors"
 	"flag"
-	"fmt"
 	"github.com/bketelsen/skynet/skylib"
+	"sync"
 	"io"
+	"bytes"
+	"encoding/json"
 	"log"
 	"os"
 	"strings"
@@ -26,7 +28,7 @@ func Daemon(q *skylib.Query, args []string) {
 	config.Region = "Jersey"
 
 	var err error
-	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log")
+	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log", config)
 	clogger := skylib.NewConsoleLogger(os.Stdout)
 	config.Log = skylib.NewMultiLogger(mlogger, clogger)
 	if err != nil {
@@ -99,53 +101,107 @@ func deployConfig(s *SkynetDaemon, cfg string) (err error) {
 
 // SkynetDaemon is a service for administering other services
 type SkynetDaemon struct {
-	Log      skylib.Logger
-	Services map[string]*SubService
+	Log         skylib.Logger
+	Services    map[string]*SubService
+	serviceLock sync.Mutex
 }
 
 func (s *SkynetDaemon) Registered(service *skylib.Service)   {}
 func (s *SkynetDaemon) Unregistered(service *skylib.Service) {}
 func (s *SkynetDaemon) Started(service *skylib.Service)      {}
-func (s *SkynetDaemon) Stopped(service *skylib.Service)      {}
+func (s *SkynetDaemon) Stopped(service *skylib.Service) {
+	s.StopAllSubServices()
+}
 
 func (s *SkynetDaemon) Deploy(servicePath, args string) (uuid string, err error) {
 	uuid = skylib.UUID()
 	s.Log.Println("Deploying", servicePath, args)
-	s.Services[uuid], err = NewSubService(s.Log, servicePath, args)
+
+	ss, err := NewSubService(s.Log, servicePath, args)
+	if err != nil {
+		return
+	}
+	s.serviceLock.Lock()
+	s.Services[uuid] = ss
+	s.serviceLock.Unlock()
+	return
+}
+
+func (s *SkynetDaemon) getSubService(uuid string) (ss *SubService) {
+	s.serviceLock.Lock()
+	ss = s.Services[uuid]
+	s.serviceLock.Unlock()
 	return
 }
 
 func (s *SkynetDaemon) ListSubServices() (data string, err error) {
-	data = fmt.Sprint("Services:", s.Services)
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	s.serviceLock.Lock()
+	enc.Encode(s.Services)
+	s.serviceLock.Unlock()
+	data = buf.String()
+	return
+}
+
+func (s *SkynetDaemon) StopAllSubServices() (err error) {
+	var uuids []string
+	s.serviceLock.Lock()
+	for uuid := range s.Services {
+		uuids = append(uuids, uuid)
+	}
+	s.serviceLock.Unlock()
+	for _, uuid := range uuids {
+		err = s.StopSubService(uuid)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (s *SkynetDaemon) StartAllSubServices() (err error) {
+	var uuids []string
+	s.serviceLock.Lock()
+	for uuid := range s.Services {
+		uuids = append(uuids, uuid)
+	}
+	s.serviceLock.Unlock()
+	for _, uuid := range uuids {
+		err = s.StartSubService(uuid)
+		if err != nil {
+			return
+		}
+	}
 	return
 }
 
 func (s *SkynetDaemon) StartSubService(uuid string) (err error) {
-	ss := s.Services[uuid]
+	ss := s.getSubService(uuid)
 	ss.Start()
 	return
 }
 
 func (s *SkynetDaemon) StopSubService(uuid string) (err error) {
-	ss := s.Services[uuid]
+	ss := s.getSubService(uuid)
 	ss.Stop()
 	return
 }
 
 func (s *SkynetDaemon) RegisterSubService(uuid string) (err error) {
-	ss := s.Services[uuid]
+	ss := s.getSubService(uuid)
 	ss.Register()
 	return
 }
 
 func (s *SkynetDaemon) DeregisterSubService(uuid string) (err error) {
-	ss := s.Services[uuid]
+	ss := s.getSubService(uuid)
 	ss.Deregister()
 	return
 }
 
 func (s *SkynetDaemon) RestartSubService(uuid string) (err error) {
-	ss := s.Services[uuid]
+	ss := s.getSubService(uuid)
 	ss.Restart()
 	return
 }
