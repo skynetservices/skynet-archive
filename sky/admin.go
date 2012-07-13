@@ -37,9 +37,8 @@ func Unregister(q *skylib.Query) {
 func doSomething(q *skylib.Query, do func(*rpc.Client, skylib.Logger)) {
 
 	log := skylib.NewConsoleLogger(os.Stderr)
-	results := *q.FindInstances()
-	for _, result := range results {
-		conn, err := net.Dial("tcp", result.Config.AdminAddr.String())
+	for _, instance := range q.FindInstances() {
+		conn, err := net.Dial("tcp", instance.Config.AdminAddr.String())
 		if err != nil {
 			log.Item(err)
 			continue

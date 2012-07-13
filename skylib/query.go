@@ -2,10 +2,10 @@ package skylib
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/4ad/doozer"
 	"log"
 	"strings"
-	"fmt"
 )
 
 type Query struct {
@@ -88,35 +88,35 @@ func (q *Query) search() {
 	q.DoozerConn.Walk(q.DoozerRev, path, q, nil)
 }
 
-func (q *Query) FindHosts() *[]string {
+func (q *Query) FindHosts() []string {
 	q.pathLength = 6
 	q.search()
 
 	return q.matchingPaths()
 }
 
-func (q *Query) FindRegions() *[]string {
+func (q *Query) FindRegions() []string {
 	q.pathLength = 5
 	q.search()
 
 	return q.matchingPaths()
 }
 
-func (q *Query) FindServices() *[]string {
+func (q *Query) FindServices() []string {
 	q.pathLength = 3
 	q.search()
 
 	return q.matchingPaths()
 }
 
-func (q *Query) FindServiceVersions() *[]string {
+func (q *Query) FindServiceVersions() []string {
 	q.pathLength = 4
 	q.search()
 
 	return q.matchingPaths()
 }
 
-func (q *Query) FindInstances() *[]*Service {
+func (q *Query) FindInstances() []*Service {
 	q.search()
 
 	results := make([]*Service, 0)
@@ -165,10 +165,10 @@ func (q *Query) FindInstances() *[]*Service {
 	q.paths = nil
 	q.files = nil
 
-	return &results
+	return results
 }
 
-func (q *Query) matchingPaths() *[]string {
+func (q *Query) matchingPaths() []string {
 	results := make([]string, 0)
 
 	for path, dir := range q.paths {
@@ -187,7 +187,7 @@ func (q *Query) matchingPaths() *[]string {
 	q.files = nil
 	q.pathLength = 0
 
-	return &results
+	return results
 }
 
 func (q *Query) pathMatches(parts []string, path string) bool {

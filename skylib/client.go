@@ -83,7 +83,7 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 	results := service.query.FindInstances()
 
 	if results != nil {
-		for _, instance := range *results {
+		for _, instance := range results {
 			key := instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port)
 			service.instances[key] = *instance
 		}

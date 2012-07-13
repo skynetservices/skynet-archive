@@ -101,7 +101,7 @@ func ListInstances(q *skylib.Query) {
 
 	results := q.FindInstances()
 
-	for _, instance := range *results {
+	for _, instance := range results {
 		registered := ""
 
 		if instance.Registered {
@@ -115,7 +115,7 @@ func ListInstances(q *skylib.Query) {
 func ListHosts(q *skylib.Query) {
 	results := q.FindHosts()
 
-	for _, host := range *results {
+	for _, host := range results {
 		fmt.Println(host)
 	}
 }
@@ -123,7 +123,7 @@ func ListHosts(q *skylib.Query) {
 func ListRegions(q *skylib.Query) {
 	results := q.FindRegions()
 
-	for _, region := range *results {
+	for _, region := range results {
 		fmt.Println(region)
 	}
 }
@@ -131,7 +131,7 @@ func ListRegions(q *skylib.Query) {
 func ListServices(q *skylib.Query) {
 	results := q.FindServices()
 
-	for _, service := range *results {
+	for _, service := range results {
 		fmt.Println(service)
 	}
 }
@@ -144,7 +144,7 @@ func ListServiceVersions(q *skylib.Query) {
 
 	results := q.FindServiceVersions()
 
-	for _, version := range *results {
+	for _, version := range results {
 		fmt.Println(version)
 	}
 }
@@ -155,7 +155,7 @@ func PrintTopology(q *skylib.Query) {
 	results := q.FindInstances()
 
 	// Build topology hash first
-	for _, instance := range *results {
+	for _, instance := range results {
 		if topology[instance.Config.Region] == nil {
 			topology[instance.Config.Region] = make(map[string]map[string]map[string][]*skylib.Service)
 		}
