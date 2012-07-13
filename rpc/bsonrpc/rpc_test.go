@@ -2,8 +2,8 @@ package bsonrpc
 
 import (
 	"io"
-	"testing"
 	"net/rpc"
+	"testing"
 )
 
 type duplex struct {
@@ -26,12 +26,6 @@ func (ts Test) Foo(in TestParam, out *TestParam) (err error) {
 	out.Val1 = in.Val1 + "world!"
 	out.Val2 = in.Val2 + 5
 	return
-}
-
-func basicServer(conn io.ReadWriteCloser) {
-	s := ServeConn(conn)
-	var ts Test
-	s.Register(&ts)
 }
 
 func TestBasicClientServer(t *testing.T) {

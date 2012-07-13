@@ -9,9 +9,12 @@
 package skylib
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -42,12 +45,41 @@ type ClientConfig struct {
 	IdleTimeout        time.Duration
 }
 
-func GetServiceConfigFromFlags() *ServiceConfig {
+func BindAddrFromString(host string) (ba *BindAddr, err error) {
+	if host == "" {
+		return
+	}
+	split := strings.Index(host, ":")
+	if split == -1 {
+		err = errors.New(fmt.Sprintf("Must specify a port for address (got %q)", host))
+		return
+	}
+	port, err := strconv.Atoi(host[split+1:])
+	if err != nil {
+		err = errors.New(fmt.Sprintf("Couldn't process port for %q: %v", host, err))
+		return
+	}
+	ip := host[:split]
+	if ip == "" {
+		ip = "127.0.0.1"
+	}
+	ba = &BindAddr{
+		IPAddress: ip,
+		Port:      port,
+	}
+	return
+}
+
+func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []string) {
 	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
 
 	var (
-		bindPort       *int    = flagset.Int("port", 9999, "tcp port to listen")
-		bindAddr       *string = flagset.String("address", "127.0.0.1", "address to bind")
+
+		// bindPort       *int    = flagset.Int("port", 9999, "tcp port to listen")
+		// adminPort      *int    = flagset.Int("adminport", 9998, "tcp port to listen for admin")
+		// bindAddr       *string = flagset.String("address", "127.0.0.1", "address to bind")
+		rpcAddr        *string = flagset.String("l", ":9999", "host:port to listen on for RPC")
+		adminAddr      *string = flagset.String("admin", ":9998", "host:port to listen on for admin")
 		region         *string = flagset.String("region", "unknown", "region service is located in")
 		doozer         *string = flagset.String("doozer", "127.0.0.1:8046", "initial doozer instance to connect to")
 		doozerBoot     *string = flagset.String("doozerboot", "127.0.0.1:8046", "initial doozer instance to connect to")
@@ -55,23 +87,36 @@ func GetServiceConfigFromFlags() *ServiceConfig {
 		uuid           *string = flagset.String("uuid", "", "UUID for this service")
 	)
 
-	flagset.Parse(os.Args[1:])
+	if len(args) == 0 {
+		args = os.Args[1:]
+	}
+	flagset.Parse(argv)
+	args = flagset.Args()
 
 	if *uuid == "" {
 		*uuid = UUID()
 	}
 
-	return &ServiceConfig{
-		UUID:   *uuid,
-		Region: *region,
-		ServiceAddr: &BindAddr{
-			IPAddress: *bindAddr,
-			Port:      *bindPort,
-		},
+	rpcBA, err := BindAddrFromString(*rpcAddr)
+	if err != nil {
+		panic(err)
+	}
+	adminBA, err := BindAddrFromString(*adminAddr)
+	if err != nil {
+		panic(err)
+	}
+
+	config = &ServiceConfig{
+		UUID:        *uuid,
+		Region:      *region,
+		ServiceAddr: rpcBA,
+		AdminAddr:   adminBA,
 		DoozerConfig: &DoozerConfig{
 			Uri:          *doozer,
 			BootUri:      *doozerBoot,
 			AutoDiscover: *doozerDiscover,
 		},
 	}
+
+	return
 }

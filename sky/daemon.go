@@ -2,16 +2,15 @@ package main
 
 import (
 	"bufio"
-	"errors"
-	"flag"
-	"github.com/bketelsen/skynet/skylib"
-	"sync"
-	"io"
 	"bytes"
 	"encoding/json"
+	"errors"
+	"github.com/bketelsen/skynet/skylib"
+	"io"
 	"log"
 	"os"
 	"strings"
+	"sync"
 )
 
 // Daemon() will run and maintain skynet services.
@@ -20,9 +19,9 @@ import (
 //
 // Daemon() will run the "SkynetDeployment" service, which can be used to remotely spawn
 // new services on the host.
-func Daemon(q *skylib.Query, args []string) {
+func Daemon(q *skylib.Query, argv []string) {
 
-	config := skylib.GetServiceConfigFromFlags()
+	config, args := skylib.GetServiceConfigFromFlags(argv...)
 	config.Name = "SkynetDaemon"
 	config.Version = "1"
 	config.Region = "Jersey"
@@ -50,7 +49,7 @@ func Daemon(q *skylib.Query, args []string) {
 		}
 	}()
 
-	if len(flag.Args()) == 2 {
+	if len(args) == 2 {
 		err := deployConfig(deployment, args[0])
 		if err != nil {
 			config.Log.Item(err)
@@ -115,7 +114,11 @@ func (s *SkynetDaemon) Stopped(service *skylib.Service) {
 
 func (s *SkynetDaemon) Deploy(servicePath, args string) (uuid string, err error) {
 	uuid = skylib.UUID()
-	s.Log.Println("Deploying", servicePath, args)
+
+	s.Log.Item(SubserviceDeployment{
+		ServicePath: servicePath,
+		Args:        args,
+	})
 
 	ss, err := NewSubService(s.Log, servicePath, args)
 	if err != nil {
