@@ -47,6 +47,7 @@ func GetServiceConfigFromFlags() *ServiceConfig {
 
 	var (
 		bindPort       *int    = flagset.Int("port", 9999, "tcp port to listen")
+		adminPort      *int    = flagset.Int("adminport", 9998, "tcp port to listen for admin")
 		bindAddr       *string = flagset.String("address", "127.0.0.1", "address to bind")
 		region         *string = flagset.String("region", "unknown", "region service is located in")
 		doozer         *string = flagset.String("doozer", "127.0.0.1:8046", "initial doozer instance to connect to")
@@ -67,6 +68,10 @@ func GetServiceConfigFromFlags() *ServiceConfig {
 		ServiceAddr: &BindAddr{
 			IPAddress: *bindAddr,
 			Port:      *bindPort,
+		},
+		AdminAddr: &BindAddr{
+			IPAddress: *bindAddr,
+			Port:      *adminPort,
 		},
 		DoozerConfig: &DoozerConfig{
 			Uri:          *doozer,

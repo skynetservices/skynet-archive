@@ -2,16 +2,16 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"github.com/bketelsen/skynet/skylib"
-	"sync"
 	"io"
-	"bytes"
-	"encoding/json"
 	"log"
 	"os"
 	"strings"
+	"sync"
 )
 
 // Daemon() will run and maintain skynet services.
@@ -115,7 +115,11 @@ func (s *SkynetDaemon) Stopped(service *skylib.Service) {
 
 func (s *SkynetDaemon) Deploy(servicePath, args string) (uuid string, err error) {
 	uuid = skylib.UUID()
-	s.Log.Println("Deploying", servicePath, args)
+
+	s.Log.Item(SubserviceDeployment{
+		ServicePath: servicePath,
+		Args:        args,
+	})
 
 	ss, err := NewSubService(s.Log, servicePath, args)
 	if err != nil {

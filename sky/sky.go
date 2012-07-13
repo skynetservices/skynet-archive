@@ -51,6 +51,10 @@ func main() {
 		Daemon(query, flag.Args()[1:])
 	case "remote":
 		Remote(query, flag.Args()[1:])
+	case "register":
+		Register(query)
+	case "unregister":
+		Unregister(query)
 	case "cli":
 		InteractiveShell()
 
