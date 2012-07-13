@@ -26,6 +26,7 @@ func (ba BindAddr) String() string {
 
 type ServiceConfig struct {
 	Log          Logger `json:"-"`
+	UUID         string
 	Name         string
 	Version      string
 	Region       string
@@ -51,11 +52,17 @@ func GetServiceConfigFromFlags() *ServiceConfig {
 		doozer         *string = flagset.String("doozer", "127.0.0.1:8046", "initial doozer instance to connect to")
 		doozerBoot     *string = flagset.String("doozerboot", "127.0.0.1:8046", "initial doozer instance to connect to")
 		doozerDiscover *bool   = flagset.Bool("autodiscover", true, "auto discover new doozer instances")
+		uuid           *string = flagset.String("uuid", "", "UUID for this service")
 	)
 
 	flagset.Parse(os.Args[1:])
 
+	if *uuid == "" {
+		*uuid = UUID()
+	}
+
 	return &ServiceConfig{
+		UUID:   *uuid,
 		Region: *region,
 		ServiceAddr: &BindAddr{
 			IPAddress: *bindAddr,

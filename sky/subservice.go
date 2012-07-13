@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/bketelsen/skynet/skylib"
+	"strings"
 	"go/build"
 	"os"
 	"os/exec"
@@ -16,6 +17,8 @@ type SubService struct {
 	// Args is the unprocessed command line arguments tacked on
 	// after the binary name.
 	Args string
+	// argv is Args after it is properly split up
+	argv []string
 
 	running bool
 	binPath string
@@ -29,6 +32,8 @@ func NewSubService(log skylib.Logger, servicePath, args string) (ss *SubService,
 	ss = &SubService{
 		ServicePath: servicePath,
 		Args:        args,
+		// TODO: proper argument splitting
+		argv: strings.Fields(args),
 	}
 
 	//verify that it exists on the local system
@@ -96,7 +101,7 @@ func (ss *SubService) rerunner(rerunChan chan bool) {
 			break
 		}
 
-		cmd := exec.Command(ss.binPath)
+		cmd := exec.Command(ss.binPath, ss. argv...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Start()

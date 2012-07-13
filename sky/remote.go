@@ -24,6 +24,14 @@ func Remote(q *skylib.Query, args []string) {
 		servicePath := args[1]
 		serviceArgs := args[2:]
 		remoteDeploy(q, servicePath, serviceArgs)
+	case "start":
+		if len(args) != 2 {
+			fmt.Printf("Must specify a service UUID")
+			remoteHelp()
+			return
+		}
+		uuid := args[1]
+		remoteStart(q, uuid)
 	case "help":
 		remoteHelp()
 	default:
@@ -33,10 +41,7 @@ func Remote(q *skylib.Query, args []string) {
 	return
 }
 
-func remoteList(q *skylib.Query) {
-
-	// config := &skylib.ClientConfig{DoozerConfig: &skylib.DoozerConfig{}}
-
+func getDaemonServiceClient(q *skylib.Query) (client *skylib.Client, service *skylib.ServiceClient) {
 	config := &skylib.ClientConfig{
 		DoozerConfig: &skylib.DoozerConfig{
 			Uri:          "127.0.0.1:8046",
@@ -46,29 +51,24 @@ func remoteList(q *skylib.Query) {
 
 	config.Log = skylib.NewConsoleLogger(os.Stderr)
 
-	// client := &skylib.Client{
-	// 	Config:     config,
-	// 	DoozerConn: q.DoozerConn,
-	// 	Log:        config.Log,
-	// }
-	client := skylib.NewClient(config)
+	client = skylib.NewClient(config)
 
 	registered := true
 	query := &skylib.Query{
 		DoozerConn: client.DoozerConn,
 		Service:    "SkynetDaemon",
-		Version:    "1",
 		Host:       "127.0.0.1",
-		Port:       "9999",
-		Region:     "Jersey",
 		Registered: &registered,
 	}
-	service := client.GetServiceFromQuery(query)
+	service = client.GetServiceFromQuery(query)
+	return
+}
+
+func remoteList(q *skylib.Query) {
+	_, service := getDaemonServiceClient(q)
 
 	// This on the other hand will fail if it can't find a service to connect to
-	client.Log.Item("attempting to send request")
 	ret, err := service.Send("ListSubServices")
-	client.Log.Item("returned")
 
 	if err != nil {
 		fmt.Println(err)
@@ -80,6 +80,20 @@ func remoteList(q *skylib.Query) {
 
 func remoteDeploy(q *skylib.Query, servicePath string, serviceArgs []string) {
 
+}
+
+func remoteStart(q *skylib.Query, uuid string) {
+	_, service := getDaemonServiceClient(q)
+
+	// This on the other hand will fail if it can't find a service to connect to
+	ret, err := service.Send("StartSubService", uuid)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(ret)
 }
 
 func remoteHelp() {

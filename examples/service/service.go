@@ -38,7 +38,7 @@ func main() {
 	config.Version = "1"
 	config.Region = "Clearwater"
 	var err error
-	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log")
+	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log", config)
 	clogger := skylib.NewConsoleLogger(os.Stdout)
 	config.Log = skylib.NewMultiLogger(mlogger, clogger)
 	if err != nil {
