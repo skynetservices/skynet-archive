@@ -29,6 +29,8 @@ type Service struct {
 
 	Log Logger `json:"-"`
 
+	Admin *ServiceAdmin `json:"-"`
+
 	Delegate ServiceInterface         `json:"-"`
 	methods  map[string]reflect.Value `json:"-"`
 }
@@ -44,6 +46,12 @@ func (s *Service) Start(register bool) {
 	l, _ := net.Listen("tcp", portString)
 
 	rpcServ.Listen(l)
+
+	// the admin server
+	if s.Config.AdminAddr != nil {
+		s.Admin = NewServiceAdmin(s)
+		go s.Admin.Listen(s.Config.AdminAddr)
+	}
 
 	// Watch signals for shutdown
 	c := make(chan os.Signal, 1)
