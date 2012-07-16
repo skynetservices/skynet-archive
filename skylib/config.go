@@ -70,6 +70,14 @@ func BindAddrFromString(host string) (ba *BindAddr, err error) {
 	return
 }
 
+func getDefaultEnvVar(name, def string) (v string) {
+	v = os.Getenv(name)
+	if v == "" {
+		v = def
+	}
+	return
+}
+
 func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []string) {
 	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
 
@@ -78,13 +86,13 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 		// bindPort       *int    = flagset.Int("port", 9999, "tcp port to listen")
 		// adminPort      *int    = flagset.Int("adminport", 9998, "tcp port to listen for admin")
 		// bindAddr       *string = flagset.String("address", "127.0.0.1", "address to bind")
-		rpcAddr        *string = flagset.String("l", ":9999", "host:port to listen on for RPC")
-		adminAddr      *string = flagset.String("admin", ":9998", "host:port to listen on for admin")
-		region         *string = flagset.String("region", "unknown", "region service is located in")
-		doozer         *string = flagset.String("doozer", "127.0.0.1:8046", "initial doozer instance to connect to")
-		doozerBoot     *string = flagset.String("doozerboot", "127.0.0.1:8046", "initial doozer instance to connect to")
-		doozerDiscover *bool   = flagset.Bool("autodiscover", true, "auto discover new doozer instances")
-		uuid           *string = flagset.String("uuid", "", "UUID for this service")
+		rpcAddr        *string = flagset.String("l", getDefaultEnvVar("SKYNET_LISTEN", ":9999"), "host:port to listen on for RPC")
+		adminAddr      *string = flagset.String("admin", getDefaultEnvVar("SKYNET_ADMIN", ":9998"), "host:port to listen on for admin")
+		region         *string = flagset.String("region", getDefaultEnvVar("SKYNET_REGION", "unknown"), "region service is located in")
+		doozer         *string = flagset.String("doozer", getDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
+		doozerBoot     *string = flagset.String("doozerboot", getDefaultEnvVar("DZNSHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
+		doozerDiscover *bool   = flagset.Bool("autodiscover", getDefaultEnvVar("DZDISCOVER", "true") == "true", "auto discover new doozer instances")
+		uuid           *string = flagset.String("uuid", getDefaultEnvVar("SKYNET_UUID", ""), "UUID for this service")
 	)
 
 	if len(args) == 0 {
