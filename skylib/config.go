@@ -92,7 +92,7 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 		doozer         *string = flagset.String("doozer", getDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
 		doozerBoot     *string = flagset.String("doozerboot", getDefaultEnvVar("DZNSHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
 		doozerDiscover *bool   = flagset.Bool("autodiscover", getDefaultEnvVar("DZDISCOVER", "true") == "true", "auto discover new doozer instances")
-		uuid           *string = flagset.String("uuid", getDefaultEnvVar("SKYNET_UUID", ""), "UUID for this service")
+		uuid           *string = flagset.String("uuid", "", "UUID for this service")
 	)
 
 	if len(args) == 0 {
