@@ -36,14 +36,6 @@ func (dlc DoozerLostConnection) String() string {
 	return fmt.Sprintf("Lost connection to doozer at %s", dlc.DoozerConfig.Uri)
 }
 
-type RegisteredMethod struct {
-	Method string
-}
-
-func (rm RegisteredMethod) String() string {
-	return fmt.Sprintf("Registered method %q", rm.Method)
-}
-
 type ServiceDiscovered struct {
 	Service *Service
 }

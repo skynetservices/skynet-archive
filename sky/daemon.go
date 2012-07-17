@@ -95,7 +95,7 @@ func deployConfig(s *SkynetDaemon, cfg string) (err error) {
 		}
 		servicePath := line[:split]
 		args := strings.TrimSpace(line[split:])
-		s.Deploy(servicePath, args)
+		s.Deploy(M{"service": servicePath, "args": args}, &M{})
 	}
 	return
 }
@@ -114,8 +114,13 @@ func (s *SkynetDaemon) Stopped(service *skylib.Service) {
 	s.StopAllSubServices(M{}, &M{})
 }
 
-func (s *SkynetDaemon) Deploy(servicePath, args string) (uuid string, err error) {
-	uuid = skylib.UUID()
+func (s *SkynetDaemon) Deploy(in M, out *M) (err error) {
+	*out = map[string]interface{}{}
+	uuid := skylib.UUID()
+	(*out)["uuid"] = uuid
+
+	servicePath := in["service"].(string)
+	args := in["args"].(string)
 
 	s.Log.Item(SubserviceDeployment{
 		ServicePath: servicePath,

@@ -14,7 +14,7 @@ import (
 // TODO: Better error handling, should gracefully fail to startup if it can't connect to doozer
 
 // A Generic struct to represent any service in the SkyNet system.
-type ServiceInterface interface {
+type ServiceDelegate interface {
 	Started(s *Service)
 	Stopped(s *Service)
 	Registered(s *Service)
@@ -32,13 +32,12 @@ type Service struct {
 	RPCServ *rpc.Server   `json:"-"`
 	Admin   *ServiceAdmin `json:"-"`
 
-	Delegate ServiceInterface         `json:"-"`
-	methods  map[string]reflect.Value `json:"-"`
+	Delegate ServiceDelegate `json:"-"`
+
+	methods map[string]reflect.Value `json:"-"`
 }
 
-func CreateService(s ServiceInterface, c *ServiceConfig) *Service {
-	typ := reflect.TypeOf(s)
-
+func CreateService(s ServiceDelegate, c *ServiceConfig) *Service {
 	// This will set defaults
 	initializeConfig(c)
 
@@ -52,8 +51,6 @@ func CreateService(s ServiceInterface, c *ServiceConfig) *Service {
 	c.Log.Item(ServiceCreated{
 		ServiceConfig: service.Config,
 	})
-
-	service.findRPCMethods(typ)
 
 	return service
 }
@@ -73,10 +70,6 @@ func (s *Service) Listen(addr *BindAddr) {
 		}
 		go s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
 	}
-}
-
-func (s *Service) Resolve(name string, arguments []reflect.Value) (interface{}, reflect.Value, error) {
-	return s.Delegate, s.methods[name], nil
 }
 
 func (s *Service) Start(register bool) {
@@ -162,32 +155,6 @@ func (s *Service) Shutdown() {
 	s.doneChan <- true
 
 	s.Delegate.Stopped(s) // Call user defined callback
-}
-
-func (s *Service) findRPCMethods(typ reflect.Type) {
-	for i := 0; i < typ.NumMethod(); i++ {
-		m := typ.Method(i)
-
-		// Don't register callbacks
-		if m.Name == "Started" || m.Name == "Stopped" || m.Name == "Registered" || m.Name == "Unregistered" {
-			continue
-		}
-
-		// Only register exported methods
-		if m.PkgPath != "" {
-			continue
-		}
-
-		if m.Type.NumOut() != 1 && m.Type.NumOut() != 2 {
-			continue
-		}
-
-		s.methods[m.Name] = m.Func
-		//s.Log.Println("Registered RPC Method: " + m.Name)
-		s.Log.Item(RegisteredMethod{
-			Method: m.Name,
-		})
-	}
 }
 
 func initializeConfig(c *ServiceConfig) {
