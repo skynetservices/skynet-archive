@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/bketelsen/skynet/skylib"
 	"io"
 	"log"
@@ -90,8 +89,6 @@ func deployConfig(s *SkynetDaemon, cfg string) (err error) {
 			continue
 		}
 
-		fmt.Println(line)
-
 		split := strings.Index(line, " ")
 		if split == -1 {
 			split = len(line)
@@ -114,7 +111,7 @@ func (s *SkynetDaemon) Registered(service *skylib.Service)   {}
 func (s *SkynetDaemon) Unregistered(service *skylib.Service) {}
 func (s *SkynetDaemon) Started(service *skylib.Service)      {}
 func (s *SkynetDaemon) Stopped(service *skylib.Service) {
-	s.StopAllSubServices()
+	s.StopAllSubServices(M{}, &M{})
 }
 
 func (s *SkynetDaemon) Deploy(servicePath, args string) (uuid string, err error) {
@@ -145,19 +142,19 @@ func (s *SkynetDaemon) getSubService(uuid string) (ss *SubService) {
 type M map[string]interface{}
 
 func (s *SkynetDaemon) ListSubServices(in M, out *M) (err error) {
+	*out = map[string]interface{}{}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	s.serviceLock.Lock()
 	enc.Encode(s.Services)
 	s.serviceLock.Unlock()
 	data := buf.String()
-	*out = map[string]interface{}{
-		"data": data,
-	}
+	(*out)["data"] = data
 	return
 }
 
-func (s *SkynetDaemon) StopAllSubServices() (err error) {
+func (s *SkynetDaemon) StopAllSubServices(in M, out *M) (err error) {
+	*out = map[string]interface{}{}
 	var uuids []string
 	s.serviceLock.Lock()
 	for uuid := range s.Services {
@@ -165,7 +162,7 @@ func (s *SkynetDaemon) StopAllSubServices() (err error) {
 	}
 	s.serviceLock.Unlock()
 	for _, uuid := range uuids {
-		err = s.StopSubService(uuid)
+		err = s.StopSubService(M{"uuid": uuid}, &M{})
 		if err != nil {
 			return
 		}
@@ -174,6 +171,7 @@ func (s *SkynetDaemon) StopAllSubServices() (err error) {
 }
 
 func (s *SkynetDaemon) StartAllSubServices(in M, out *M) (err error) {
+	*out = map[string]interface{}{}
 	var uuids []string
 	s.serviceLock.Lock()
 	for uuid := range s.Services {
@@ -190,31 +188,40 @@ func (s *SkynetDaemon) StartAllSubServices(in M, out *M) (err error) {
 }
 
 func (s *SkynetDaemon) StartSubService(in M, out *M) (err error) {
+	*out = map[string]interface{}{}
 	uuid := in["uuid"].(string)
 	ss := s.getSubService(uuid)
 	ss.Start()
 	return
 }
 
-func (s *SkynetDaemon) StopSubService(uuid string) (err error) {
+func (s *SkynetDaemon) StopSubService(in M, out *M) (err error) {
+	*out = map[string]interface{}{}
+	uuid := in["uuid"].(string)
 	ss := s.getSubService(uuid)
 	ss.Stop()
 	return
 }
 
-func (s *SkynetDaemon) RegisterSubService(uuid string) (err error) {
+func (s *SkynetDaemon) RegisterSubService(in M, out *M) (err error) {
+	*out = map[string]interface{}{}
+	uuid := in["uuid"].(string)
 	ss := s.getSubService(uuid)
 	ss.Register()
 	return
 }
 
-func (s *SkynetDaemon) DeregisterSubService(uuid string) (err error) {
+func (s *SkynetDaemon) DeregisterSubService(in M, out *M) (err error) {
+	*out = map[string]interface{}{}
+	uuid := in["uuid"].(string)
 	ss := s.getSubService(uuid)
 	ss.Deregister()
 	return
 }
 
-func (s *SkynetDaemon) RestartSubService(uuid string) (err error) {
+func (s *SkynetDaemon) RestartSubService(in M, out *M) (err error) {
+	*out = map[string]interface{}{}
+	uuid := in["uuid"].(string)
 	ss := s.getSubService(uuid)
 	ss.Restart()
 	return
