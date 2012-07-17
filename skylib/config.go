@@ -139,7 +139,6 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 	if len(argv) == 0 {
 		argv = os.Args[1:]
 	}
-	fmt.Println("parsing", argv)
 	flagset.Parse(argv)
 	args = flagset.Args()
 

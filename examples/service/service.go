@@ -38,7 +38,7 @@ func main() {
 	testService := NewTestService()
 
 	config, _ := skylib.GetServiceConfigFromFlags()
-	fmt.Printf("%+v\n", config)
+
 	config.Name = "TestService"
 	config.Version = "1"
 	config.Region = "Clearwater"

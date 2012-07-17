@@ -61,7 +61,7 @@ func (s *Service) Listen(addr *BindAddr) {
 		panic(err)
 	}
 
-	s.Log.Println(ServiceListening{
+	s.Log.Item(ServiceListening{
 		Addr:          addr,
 		ServiceConfig: s.Config,
 	})
