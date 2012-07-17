@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/bketelsen/skynet/skylib"
 	"io"
 	"log"
@@ -22,12 +23,13 @@ import (
 func Daemon(q *skylib.Query, argv []string) {
 
 	config, args := skylib.GetServiceConfigFromFlags(argv...)
+
 	config.Name = "SkynetDaemon"
 	config.Version = "1"
 	config.Region = "Jersey"
 
 	var err error
-	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log", config)
+	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log", config.UUID)
 	clogger := skylib.NewConsoleLogger(os.Stdout)
 	config.Log = skylib.NewMultiLogger(mlogger, clogger)
 	if err != nil {
@@ -49,7 +51,7 @@ func Daemon(q *skylib.Query, argv []string) {
 		}
 	}()
 
-	if len(args) == 2 {
+	if len(args) == 1 {
 		err := deployConfig(deployment, args[0])
 		if err != nil {
 			config.Log.Item(err)
@@ -87,6 +89,9 @@ func deployConfig(s *SkynetDaemon, cfg string) (err error) {
 		if len(line) == 0 {
 			continue
 		}
+
+		fmt.Println(line)
+
 		split := strings.Index(line, " ")
 		if split == -1 {
 			split = len(line)
@@ -137,13 +142,18 @@ func (s *SkynetDaemon) getSubService(uuid string) (ss *SubService) {
 	return
 }
 
-func (s *SkynetDaemon) ListSubServices() (data string, err error) {
+type M map[string]interface{}
+
+func (s *SkynetDaemon) ListSubServices(in M, out *M) (err error) {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	s.serviceLock.Lock()
 	enc.Encode(s.Services)
 	s.serviceLock.Unlock()
-	data = buf.String()
+	data := buf.String()
+	*out = map[string]interface{}{
+		"data": data,
+	}
 	return
 }
 
@@ -163,7 +173,7 @@ func (s *SkynetDaemon) StopAllSubServices() (err error) {
 	return
 }
 
-func (s *SkynetDaemon) StartAllSubServices() (err error) {
+func (s *SkynetDaemon) StartAllSubServices(in M, out *M) (err error) {
 	var uuids []string
 	s.serviceLock.Lock()
 	for uuid := range s.Services {
@@ -171,7 +181,7 @@ func (s *SkynetDaemon) StartAllSubServices() (err error) {
 	}
 	s.serviceLock.Unlock()
 	for _, uuid := range uuids {
-		err = s.StartSubService(uuid)
+		err = s.StartSubService(M{"uuid": uuid}, &M{})
 		if err != nil {
 			return
 		}
@@ -179,7 +189,8 @@ func (s *SkynetDaemon) StartAllSubServices() (err error) {
 	return
 }
 
-func (s *SkynetDaemon) StartSubService(uuid string) (err error) {
+func (s *SkynetDaemon) StartSubService(in M, out *M) (err error) {
+	uuid := in["uuid"].(string)
 	ss := s.getSubService(uuid)
 	ss.Start()
 	return

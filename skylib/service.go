@@ -2,8 +2,8 @@ package skylib
 
 import (
 	"encoding/json"
-	"fmt"
-	"net"
+	"github.com/bketelsen/skynet/rpc/bsonrpc"
+	"net/rpc"
 	"os"
 	"os/signal"
 	"reflect"
@@ -29,10 +29,50 @@ type Service struct {
 
 	Log Logger `json:"-"`
 
-	Admin *ServiceAdmin `json:"-"`
+	RPCServ *rpc.Server   `json:"-"`
+	Admin   *ServiceAdmin `json:"-"`
 
 	Delegate ServiceInterface         `json:"-"`
 	methods  map[string]reflect.Value `json:"-"`
+}
+
+func CreateService(s ServiceInterface, c *ServiceConfig) *Service {
+	typ := reflect.TypeOf(s)
+
+	// This will set defaults
+	initializeConfig(c)
+
+	service := &Service{
+		Config:   c,
+		Delegate: s,
+		Log:      c.Log,
+		methods:  make(map[string]reflect.Value),
+	}
+
+	c.Log.Item(ServiceCreated{
+		ServiceConfig: service.Config,
+	})
+
+	service.findRPCMethods(typ)
+
+	return service
+}
+
+func (s *Service) Listen(addr *BindAddr) {
+	listener, err := addr.Listen()
+	if err != nil {
+		panic(err)
+	}
+
+	s.Log.Println("rpc server listening", addr)
+
+	for {
+		conn, err := listener.AcceptTCP()
+		if err != nil {
+			panic(err)
+		}
+		go s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
+	}
 }
 
 func (s *Service) Resolve(name string, arguments []reflect.Value) (interface{}, reflect.Value, error) {
@@ -40,12 +80,11 @@ func (s *Service) Resolve(name string, arguments []reflect.Value) (interface{}, 
 }
 
 func (s *Service) Start(register bool) {
-	portString := fmt.Sprintf("%s:%d", s.Config.ServiceAddr.IPAddress, s.Config.ServiceAddr.Port)
 
-	rpcServ := NewRpcServer(s, true, nil)
-	l, _ := net.Listen("tcp", portString)
-
-	rpcServ.Listen(l)
+	// the main rpc server
+	s.RPCServ = rpc.NewServer()
+	s.RPCServ.RegisterName(s.Config.Name, s.Delegate)
+	go s.Listen(s.Config.ServiceAddr)
 
 	// the admin server
 	if s.Config.AdminAddr != nil {
@@ -59,8 +98,6 @@ func (s *Service) Start(register bool) {
 
 	s.doneChan = make(chan bool, 1)
 	s.Log.Item("Starting server")
-
-	go rpcServ.Run()
 
 	go s.Delegate.Started(s) // Call user defined callback
 
@@ -125,28 +162,6 @@ func (s *Service) Shutdown() {
 	s.doneChan <- true
 
 	s.Delegate.Stopped(s) // Call user defined callback
-}
-
-func CreateService(s ServiceInterface, c *ServiceConfig) *Service {
-	typ := reflect.TypeOf(s)
-
-	// This will set defaults
-	initializeConfig(c)
-
-	service := &Service{
-		Config:   c,
-		Delegate: s,
-		Log:      c.Log,
-		methods:  make(map[string]reflect.Value),
-	}
-
-	c.Log.Item(ServiceCreated{
-		ServiceConfig: service.Config,
-	})
-
-	service.findRPCMethods(typ)
-
-	return service
 }
 
 func (s *Service) findRPCMethods(typ reflect.Type) {

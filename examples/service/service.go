@@ -8,6 +8,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/bketelsen/skynet/skylib"
 	"log"
 	"os"
@@ -26,19 +27,23 @@ func NewTestService() *TestService {
 	return r
 }
 
-func (s *TestService) Upcase(msg string) string {
-	return strings.ToUpper(msg)
+func (s *TestService) Upcase(in map[string]interface{}, out *map[string]interface{}) (err error) {
+	fmt.Println("got", in)
+	*out = make(map[string]interface{})
+	(*out)["data"] = strings.ToUpper(in["data"].(string))
+	return
 }
 
 func main() {
 	testService := NewTestService()
 
-	config := skylib.GetServiceConfigFromFlags()
+	config, _ := skylib.GetServiceConfigFromFlags()
+	fmt.Printf("%+v\n", config)
 	config.Name = "TestService"
 	config.Version = "1"
 	config.Region = "Clearwater"
 	var err error
-	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log", config)
+	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log", config.UUID)
 	clogger := skylib.NewConsoleLogger(os.Stdout)
 	config.Log = skylib.NewMultiLogger(mlogger, clogger)
 	if err != nil {

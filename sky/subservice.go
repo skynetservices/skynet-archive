@@ -2,12 +2,12 @@ package main
 
 import (
 	"github.com/bketelsen/skynet/skylib"
-	"strings"
 	"go/build"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -55,11 +55,11 @@ func NewSubService(log skylib.Logger, servicePath, args string) (ss *SubService,
 }
 
 func (ss *SubService) Register() {
-
+	// TODO: connect to admin port or remove this method
 }
 
 func (ss *SubService) Deregister() {
-
+	// TODO: connect to admin port or remove this method
 }
 
 func (ss *SubService) Stop() {
@@ -101,7 +101,7 @@ func (ss *SubService) rerunner(rerunChan chan bool) {
 			break
 		}
 
-		cmd := exec.Command(ss.binPath, ss. argv...)
+		cmd := exec.Command(ss.binPath, ss.argv...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Start()
@@ -111,7 +111,7 @@ func (ss *SubService) rerunner(rerunChan chan bool) {
 		// If this signal is sent after the stop signal, it is ignored.
 		go func(proc *os.Process) {
 			proc.Wait()
-			rerunChan <- true
+			//rerunChan <- true
 		}(proc)
 	}
 	proc.Kill()

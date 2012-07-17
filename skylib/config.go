@@ -12,6 +12,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -21,10 +22,75 @@ import (
 type BindAddr struct {
 	IPAddress string
 	Port      int
+	MaxPort   int
+}
+
+func BindAddrFromString(host string) (ba *BindAddr, err error) {
+	if host == "" {
+		return
+	}
+	split := strings.Index(host, ":")
+	if split == -1 {
+		err = errors.New(fmt.Sprintf("Must specify a port for address (got %q)", host))
+		return
+	}
+
+	ba = &BindAddr{}
+
+	ba.IPAddress = host[:split]
+	if ba.IPAddress == "" {
+		ba.IPAddress = "127.0.0.1"
+	}
+
+	portstr := host[split+1:]
+	if ba.Port, err = strconv.Atoi(portstr); err == nil {
+		return
+	}
+
+	var rindex int
+	if rindex = strings.Index(portstr, "-"); rindex == -1 {
+		err = errors.New(fmt.Sprintf("Couldn't process port for %q: %v", host, err))
+		return
+	}
+
+	maxPortStr := portstr[rindex+1:]
+	portstr = portstr[:rindex]
+
+	if ba.Port, err = strconv.Atoi(portstr); err != nil {
+		err = errors.New(fmt.Sprintf("Couldn't process port for %q: %v", host, err))
+		return
+	}
+	if ba.MaxPort, err = strconv.Atoi(maxPortStr); err != nil {
+		err = errors.New(fmt.Sprintf("Couldn't process port for %q: %v", host, err))
+		return
+	}
+
+	return
 }
 
 func (ba BindAddr) String() string {
 	return fmt.Sprintf("%s:%d", ba.IPAddress, ba.Port)
+}
+
+func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
+	for {
+		var laddr *net.TCPAddr
+		laddr, err = net.ResolveTCPAddr("tcp", ba.String())
+		if err != nil {
+			panic(err)
+		}
+		listener, err = net.ListenTCP("tcp", laddr)
+		if err == nil {
+			return
+		}
+		if ba.Port < ba.MaxPort {
+			ba.Port++
+		} else {
+			return
+		}
+
+	}
+	return
 }
 
 type ServiceConfig struct {
@@ -43,31 +109,6 @@ type ClientConfig struct {
 	DoozerConfig       *DoozerConfig `json:"-"`
 	ConnectionPoolSize int
 	IdleTimeout        time.Duration
-}
-
-func BindAddrFromString(host string) (ba *BindAddr, err error) {
-	if host == "" {
-		return
-	}
-	split := strings.Index(host, ":")
-	if split == -1 {
-		err = errors.New(fmt.Sprintf("Must specify a port for address (got %q)", host))
-		return
-	}
-	port, err := strconv.Atoi(host[split+1:])
-	if err != nil {
-		err = errors.New(fmt.Sprintf("Couldn't process port for %q: %v", host, err))
-		return
-	}
-	ip := host[:split]
-	if ip == "" {
-		ip = "127.0.0.1"
-	}
-	ba = &BindAddr{
-		IPAddress: ip,
-		Port:      port,
-	}
-	return
 }
 
 func getDefaultEnvVar(name, def string) (v string) {
@@ -95,9 +136,10 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 		uuid           *string = flagset.String("uuid", "", "UUID for this service")
 	)
 
-	if len(args) == 0 {
-		args = os.Args[1:]
+	if len(argv) == 0 {
+		argv = os.Args[1:]
 	}
+	fmt.Println("parsing", argv)
 	flagset.Parse(argv)
 	args = flagset.Args()
 

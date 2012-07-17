@@ -68,7 +68,9 @@ func remoteList(q *skylib.Query) {
 	_, service := getDaemonServiceClient(q)
 
 	// This on the other hand will fail if it can't find a service to connect to
-	ret, err := service.Send("ListSubServices")
+	var x struct{}
+	ret := map[string]interface{}{}
+	err := service.Send("ListSubServices", x, ret)
 
 	if err != nil {
 		fmt.Println(err)
@@ -86,14 +88,16 @@ func remoteStart(q *skylib.Query, uuid string) {
 	_, service := getDaemonServiceClient(q)
 
 	// This on the other hand will fail if it can't find a service to connect to
-	ret, err := service.Send("StartSubService", uuid)
+	var in = M{"uuid": uuid}
+	var out = M{}
+	err := service.Send("StartSubService", in, out)
 
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Println(ret)
+	fmt.Println(out)
 }
 
 func remoteHelp() {

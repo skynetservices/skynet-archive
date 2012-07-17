@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"github.com/bketelsen/skynet/skylib/util"
-	"github.com/erikstmartin/msgpack-rpc/go/rpc"
 	"math/rand"
 	"net"
+	"net/rpc"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 )
@@ -22,14 +22,14 @@ type Client struct {
 }
 
 type ServiceResource struct {
-	conn    *rpc.Session
-	service Service
-	closed  bool
+	rpcClient *rpc.Client
+	service   Service
+	closed    bool
 }
 
 func (s ServiceResource) Close() {
 	s.closed = true
-	s.conn.Close()
+	s.rpcClient.Close()
 }
 
 func (s ServiceResource) IsClosed() bool {
@@ -119,8 +119,8 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 		}
 
 		resource := ServiceResource{
-			conn:    rpc.NewSession(conn, true),
-			service: instance,
+			rpcClient: bsonrpc.NewClient(conn),
+			service:   instance,
 		}
 
 		return resource, nil
@@ -196,7 +196,7 @@ func (c *ServiceClient) monitorInstances() {
 	}
 }
 
-func (c *ServiceClient) Send(funcName string, arguments ...interface{}) (val reflect.Value, err error) {
+func (c *ServiceClient) Send(funcName string, in interface{}, outPointer interface{}) (err error) {
 	// TODO: timeout logic
 	service, err := c.getConnection(0)
 	if err != nil {
@@ -205,7 +205,7 @@ func (c *ServiceClient) Send(funcName string, arguments ...interface{}) (val ref
 	}
 
 	// TODO: Check for connectivity issue so that we can try to get another resource out of the pool
-	val, err = service.conn.SendV(funcName, arguments)
+	err = service.rpcClient.Call(service.service.Config.Name+"."+funcName, in, outPointer)
 	if err != nil {
 		c.Log.Item(err)
 	}
