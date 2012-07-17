@@ -127,7 +127,7 @@ func (s *SkynetDaemon) Deploy(in M, out *M) (err error) {
 		Args:        args,
 	})
 
-	ss, err := NewSubService(s.Log, servicePath, args)
+	ss, err := NewSubService(s.Log, servicePath, args, uuid)
 	if err != nil {
 		return
 	}
@@ -145,6 +145,15 @@ func (s *SkynetDaemon) getSubService(uuid string) (ss *SubService) {
 }
 
 type M map[string]interface{}
+
+func (m M) String(key string) (val string, ok bool) {
+	vali, ok := m[key]
+	if !ok {
+		return
+	}
+	val, ok = vali.(string)
+	return
+}
 
 func (s *SkynetDaemon) ListSubServices(in M, out *M) (err error) {
 	*out = map[string]interface{}{}
@@ -194,7 +203,11 @@ func (s *SkynetDaemon) StartAllSubServices(in M, out *M) (err error) {
 
 func (s *SkynetDaemon) StartSubService(in M, out *M) (err error) {
 	*out = map[string]interface{}{}
-	uuid := in["uuid"].(string)
+	uuid, ok := in.String("uuid")
+	if !ok {
+		err = errors.New("No UUID provided")
+		return
+	}
 	ss := s.getSubService(uuid)
 	ss.Start()
 	return
@@ -202,31 +215,23 @@ func (s *SkynetDaemon) StartSubService(in M, out *M) (err error) {
 
 func (s *SkynetDaemon) StopSubService(in M, out *M) (err error) {
 	*out = map[string]interface{}{}
-	uuid := in["uuid"].(string)
+	uuid, ok := in.String("uuid")
+	if !ok {
+		err = errors.New("No UUID provided")
+		return
+	}
 	ss := s.getSubService(uuid)
 	ss.Stop()
 	return
 }
 
-func (s *SkynetDaemon) RegisterSubService(in M, out *M) (err error) {
-	*out = map[string]interface{}{}
-	uuid := in["uuid"].(string)
-	ss := s.getSubService(uuid)
-	ss.Register()
-	return
-}
-
-func (s *SkynetDaemon) DeregisterSubService(in M, out *M) (err error) {
-	*out = map[string]interface{}{}
-	uuid := in["uuid"].(string)
-	ss := s.getSubService(uuid)
-	ss.Deregister()
-	return
-}
-
 func (s *SkynetDaemon) RestartSubService(in M, out *M) (err error) {
 	*out = map[string]interface{}{}
-	uuid := in["uuid"].(string)
+	uuid, ok := in.String("uuid")
+	if !ok {
+		err = errors.New("No UUID provided")
+		return
+	}
 	ss := s.getSubService(uuid)
 	ss.Restart()
 	return

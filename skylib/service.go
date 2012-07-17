@@ -61,7 +61,10 @@ func (s *Service) Listen(addr *BindAddr) {
 		panic(err)
 	}
 
-	s.Log.Println("rpc server listening", addr)
+	s.Log.Println(ServiceListening{
+		Addr:          addr,
+		ServiceConfig: s.Config,
+	})
 
 	for {
 		conn, err := listener.AcceptTCP()

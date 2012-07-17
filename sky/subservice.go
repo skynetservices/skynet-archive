@@ -9,7 +9,10 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+	"time"
 )
+
+const RerunWait = time.Second * 5
 
 type SubService struct {
 	// ServicePath is the gopath repr of the service binary
@@ -28,7 +31,7 @@ type SubService struct {
 	startMutex sync.Mutex
 }
 
-func NewSubService(log skylib.Logger, servicePath, args string) (ss *SubService, err error) {
+func NewSubService(log skylib.Logger, servicePath, args, uuid string) (ss *SubService, err error) {
 	ss = &SubService{
 		ServicePath: servicePath,
 		Args:        args,
@@ -38,6 +41,8 @@ func NewSubService(log skylib.Logger, servicePath, args string) (ss *SubService,
 	if err != nil {
 		return
 	}
+
+	ss.argv = append([]string{"-uuid", uuid}, ss.argv...)
 
 	//verify that it exists on the local system
 
@@ -107,6 +112,9 @@ func (ss *SubService) rerunner(rerunChan chan bool) {
 		cmd := exec.Command(ss.binPath, ss.argv...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+
+		startupTimer := time.NewTimer(RerunWait)
+
 		cmd.Start()
 		proc = cmd.Process
 
@@ -114,7 +122,14 @@ func (ss *SubService) rerunner(rerunChan chan bool) {
 		// If this signal is sent after the stop signal, it is ignored.
 		go func(proc *os.Process) {
 			proc.Wait()
-			//rerunChan <- true
+			select {
+			case <-startupTimer.C:
+				// we let it run long enough that it might not be a recurring error, try again
+				rerunChan <- true
+			default:
+				// error happened too quickly - must be startup issue
+				startupTimer.Stop()
+			}
 		}(proc)
 	}
 	proc.Kill()

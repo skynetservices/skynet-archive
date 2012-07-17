@@ -57,7 +57,16 @@ type ServiceCreated struct {
 }
 
 func (sc ServiceCreated) String() string {
-	return fmt.Sprintf("Created service %q on %s", sc.ServiceConfig.Name, sc.ServiceConfig.ServiceAddr)
+	return fmt.Sprintf("Created service %q", sc.ServiceConfig.Name)
+}
+
+type ServiceListening struct {
+	ServiceConfig *ServiceConfig
+	Addr          *BindAddr
+}
+
+func (sc ServiceListening) String() string {
+	return fmt.Sprintf("Service %q listening on %s", sc.ServiceConfig.Name, sc.Addr)
 }
 
 type AdminListening struct {
