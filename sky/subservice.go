@@ -2,12 +2,12 @@ package main
 
 import (
 	"github.com/bketelsen/skynet/skylib"
+	"github.com/kballard/go-shellquote"
 	"go/build"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strings"
 	"sync"
 )
 
@@ -33,7 +33,10 @@ func NewSubService(log skylib.Logger, servicePath, args string) (ss *SubService,
 		ServicePath: servicePath,
 		Args:        args,
 		// TODO: proper argument splitting
-		argv: strings.Fields(args),
+	}
+	ss.argv, err = shellquote.Split(args)
+	if err != nil {
+		return
 	}
 
 	//verify that it exists on the local system
