@@ -90,6 +90,7 @@ func (s *Service) listen(addr *BindAddr) {
 // this function is the goroutine that owns this service - all thread-sensitive data needs to
 // be manipulated only through here.
 func (s *Service) mux() {
+loop:
 	for {
 		select {
 		case conn := <-s.connectionChan:
@@ -109,13 +110,7 @@ func (s *Service) mux() {
 				s.unregister()
 			}
 		case _ = <-s.doneChan:
-			//NOTE: probably shouldn't call Exit() in a lib. Just let the function return?
-			//      But then, this is triggered by a kill signal, so it's more like we 
-			//      intercept the kill signal, clean up, and then die anyway.
-
-			//NOTE: call the delegate shutdown method?
-
-			syscall.Exit(0)
+			break loop
 		}
 	}
 }
