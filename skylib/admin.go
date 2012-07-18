@@ -76,12 +76,7 @@ type StopReturns struct {
 }
 
 func (sa *Admin) Stop(in StopParams, out *StopReturns) (err error) {
-	sa.service.Log.Item("Got RPC admin command Stop")
-
-	if in.WaitForClients {
-		// this WaitGroup waits for all active requests to finish
-		sa.service.activeClients.Wait()
-	}
+	sa.service.Log.Println("Got RPC admin command Stop")
 
 	sa.service.Shutdown()
 	return

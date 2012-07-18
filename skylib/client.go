@@ -14,6 +14,10 @@ import (
 	"strings"
 )
 
+var (
+	ErrServiceUnregistered = errors.New("Service is unregistered")
+)
+
 type Client struct {
 	DoozerConn DoozerConnection
 
@@ -91,21 +95,24 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 
 	go service.monitorInstances()
 
-	factory := func() (pools.Resource, error) {
+	var factory func() (pools.Resource, error)
+	factory = func() (pools.Resource, error) {
 		if len(service.instances) < 1 {
 
 			return nil, errors.New("No services available that match your criteria")
 		}
 
 		// Connect to random instance
-		key := (rand.Int() % len(service.instances))
+		index := (rand.Int() % len(service.instances))
 
 		var instance Service
 
 		i := 0
 
-		for _, v := range service.instances {
-			if i == key {
+		var key string
+		for k, v := range service.instances {
+			if i == index {
+				key = k
 				instance = v
 				break
 			}
@@ -125,9 +132,9 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 
 		if !sh.Registered {
 			// this service has unregistered itself, look elsewhere
-			println("got unregistered service")
-		} else {
-			println("got registered service")
+			conn.Close()
+			delete(service.instances, key)
+			return factory()
 		}
 
 		resource := ServiceResource{

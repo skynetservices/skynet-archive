@@ -43,7 +43,8 @@ type Service struct {
 	connectionChan chan *net.TCPConn `json:"-"`
 	registeredChan chan bool         `json:"-"`
 
-	doozerChan chan interface{} `json:"-"`
+	doozerChan   chan interface{} `json:"-"`
+	doozerWaiter sync.WaitGroup   `json:"-"`
 
 	rpcListener *net.TCPListener `json:"-"`
 }
@@ -128,6 +129,12 @@ loop:
 				s.unregister()
 			}
 		case _ = <-s.doneChan:
+			go func() {
+				for _ = range s.doneChan {
+				}
+			}()
+			s.RemoveFromCluster()
+			s.doozerChan <- doozerFinish{}
 			break loop
 		}
 	}
@@ -139,9 +146,13 @@ type doozerSetConfig struct {
 }
 
 type doozerRemoveFromCluster struct {
+	ConfigPath string
 }
 
+type doozerFinish struct{}
+
 func (s *Service) doozerMux() {
+loop:
 	for i := range s.doozerChan {
 		switch i := i.(type) {
 		case doozerSetConfig:
@@ -152,13 +163,15 @@ func (s *Service) doozerMux() {
 			}
 		case doozerRemoveFromCluster:
 			rev := s.doozer().GetCurrentRevision()
-			path := s.GetConfigPath()
-			err := s.doozer().Del(path, rev)
+			err := s.doozer().Del(i.ConfigPath, rev)
 			if err != nil {
 				s.Log.Panic(err.Error())
 			}
+		case doozerFinish:
+			break loop
 		}
 	}
+	s.doozerWaiter.Done()
 }
 
 // only call this from doozerMux
@@ -193,6 +206,7 @@ func (s *Service) Start(register bool) {
 
 	go s.Delegate.Started(s) // Call user defined callback
 
+	s.doozerWaiter.Add(1)
 	go s.doozerMux()
 
 	s.UpdateCluster()
@@ -218,7 +232,9 @@ func (s *Service) UpdateCluster() {
 }
 
 func (s *Service) RemoveFromCluster() {
-	s.doozerChan <- doozerRemoveFromCluster{}
+	s.doozerChan <- doozerRemoveFromCluster{
+		ConfigPath: s.GetConfigPath(),
+	}
 }
 
 func (s *Service) register() {
@@ -250,13 +266,12 @@ func (s *Service) Unregister() {
 }
 
 func (s *Service) Shutdown() {
-	s.Unregister()
 
 	// TODO: make this wait for requests to finish
-	s.RemoveFromCluster()
 	s.doneChan <- true
 
 	s.activeClients.Wait()
+	s.doozerWaiter.Wait()
 
 	s.Delegate.Stopped(s) // Call user defined callback
 
