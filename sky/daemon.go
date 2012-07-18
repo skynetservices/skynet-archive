@@ -2,8 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/json"
 	"errors"
 	"github.com/bketelsen/skynet/skylib"
 	"io"
@@ -156,14 +154,9 @@ func (m M) String(key string) (val string, ok bool) {
 }
 
 func (s *SkynetDaemon) ListSubServices(in M, out *M) (err error) {
-	*out = map[string]interface{}{}
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	s.serviceLock.Lock()
-	enc.Encode(s.Services)
-	s.serviceLock.Unlock()
-	data := buf.String()
-	(*out)["data"] = data
+	*out = M{
+		"Services": s.Services,
+	}
 	return
 }
 

@@ -51,7 +51,7 @@ type RegisterReturns struct {
 }
 
 func (sa *Admin) Register(in RegisterParams, out *RegisterReturns) (err error) {
-	sa.service.Log.Item("Got RPC admin command Register")
+	sa.service.Log.Println("Got RPC admin command Register")
 	sa.service.Register()
 	return
 }
@@ -63,7 +63,26 @@ type UnregisterReturns struct {
 }
 
 func (sa *Admin) Unregister(in UnregisterParams, out *UnregisterReturns) (err error) {
-	sa.service.Log.Item("Got RPC admin command Unregister")
+	sa.service.Log.Println("Got RPC admin command Unregister")
 	sa.service.Unregister()
+	return
+}
+
+type StopParams struct {
+	WaitForClients bool
+}
+
+type StopReturns struct {
+}
+
+func (sa *Admin) Stop(in StopParams, out *StopReturns) (err error) {
+	sa.service.Log.Item("Got RPC admin command Stop")
+
+	if in.WaitForClients {
+		// this WaitGroup waits for all active requests to finish
+		sa.service.activeClients.Wait()
+	}
+
+	sa.service.Shutdown()
 	return
 }

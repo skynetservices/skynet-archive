@@ -3,11 +3,13 @@ package skylib
 import (
 	"encoding/json"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
+	"net"
 	"net/rpc"
 	"os"
 	"os/signal"
 	"reflect"
 	"strconv"
+	"sync"
 	"syscall"
 )
 
@@ -35,6 +37,11 @@ type Service struct {
 	Delegate ServiceDelegate `json:"-"`
 
 	methods map[string]reflect.Value `json:"-"`
+
+	activeClients sync.WaitGroup `json:"-"`
+
+	connectionChan chan *net.TCPConn `json:"-"`
+	registeredChan chan bool         `json:"-"`
 }
 
 func CreateService(s ServiceDelegate, c *ServiceConfig) *Service {
@@ -42,10 +49,12 @@ func CreateService(s ServiceDelegate, c *ServiceConfig) *Service {
 	initializeConfig(c)
 
 	service := &Service{
-		Config:   c,
-		Delegate: s,
-		Log:      c.Log,
-		methods:  make(map[string]reflect.Value),
+		Config:         c,
+		Delegate:       s,
+		Log:            c.Log,
+		methods:        make(map[string]reflect.Value),
+		connectionChan: make(chan *net.TCPConn),
+		registeredChan: make(chan bool),
 	}
 
 	c.Log.Item(ServiceCreated{
@@ -71,7 +80,38 @@ func (s *Service) Listen(addr *BindAddr) {
 		if err != nil {
 			panic(err)
 		}
-		go s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
+		s.connectionChan <- conn
+	}
+}
+
+func (s *Service) runService() {
+	for {
+		select {
+		case conn := <-s.connectionChan:
+			if !s.Registered {
+				// TODO: tell the client the service is not registered
+				break
+			}
+			s.activeClients.Add(1)
+			go func() {
+				s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
+				s.activeClients.Done()
+			}()
+		case register := <-s.registeredChan:
+			if register {
+				s.register()
+			} else {
+				s.unregister()
+			}
+		case _ = <-s.doneChan:
+			//NOTE: probably shouldn't call Exit() in a lib. Just let the function return?
+			//      But then, this is triggered by a kill signal, so it's more like we 
+			//      intercept the kill signal, clean up, and then die anyway.
+
+			//NOTE: call the delegate shutdown method?
+
+			syscall.Exit(0)
+		}
 	}
 }
 
@@ -93,24 +133,17 @@ func (s *Service) Start(register bool) {
 	go watchSignals(c, s)
 
 	s.doneChan = make(chan bool, 1)
-	s.Log.Item("Starting server")
 
 	go s.Delegate.Started(s) // Call user defined callback
 
 	s.UpdateCluster()
 
 	if register == true {
-		s.Register()
+		s.register()
 	}
 
-	// Endless loop to keep app from returning
-	select {
-	case _ = <-s.doneChan:
-		//NOTE: probably shouldn't call Exit() in a lib. Just let the function return?
-		//      But then, this is triggered by a kill signal, so it's more like we 
-		//      intercept the kill signal, clean up, and then die anyway.
-		syscall.Exit(0)
-	}
+	s.runService()
+
 }
 
 func (s *Service) UpdateCluster() {
@@ -136,18 +169,32 @@ func (s *Service) RemoveFromCluster() {
 	}
 }
 
-func (s *Service) Register() {
+func (s *Service) register() {
+	// this version must be run from the runService() goroutine
+	if s.Registered {
+		return
+	}
 	s.Registered = true
 	s.UpdateCluster()
-
 	s.Delegate.Registered(s) // Call user defined callback
 }
 
-func (s *Service) Unregister() {
+func (s *Service) Register() {
+	s.registeredChan <- true
+}
+
+func (s *Service) unregister() {
+	// this version must be run from the runService() goroutine
+	if !s.Registered {
+		return
+	}
 	s.Registered = false
 	s.UpdateCluster()
-
 	s.Delegate.Unregistered(s) // Call user defined callback
+}
+
+func (s *Service) Unregister() {
+	s.registeredChan <- false
 }
 
 func (s *Service) Shutdown() {
@@ -158,6 +205,7 @@ func (s *Service) Shutdown() {
 	s.doneChan <- true
 
 	s.Delegate.Stopped(s) // Call user defined callback
+
 }
 
 func initializeConfig(c *ServiceConfig) {
