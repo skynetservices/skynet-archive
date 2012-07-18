@@ -57,6 +57,10 @@ type ServiceHandshake struct {
 	Registered bool
 }
 
+// ClientHandshake is sent by the client to the service after receipt of the ServiceHandshake.
+type ClientHandshake struct {
+}
+
 func CreateService(s ServiceDelegate, c *ServiceConfig) *Service {
 	// This will set defaults
 	initializeConfig(c)
@@ -111,7 +115,21 @@ loop:
 			}
 
 			encoder := bsonrpc.NewEncoder(conn)
-			encoder.Encode(sh)
+			err := encoder.Encode(sh)
+			if err != nil {
+				s.Log.Item(err)
+				break
+			}
+
+			decoder := bsonrpc.NewDecoder(conn)
+			var ch ClientHandshake
+			err = decoder.Decode(&ch)
+			if err != nil {
+				s.Log.Item(err)
+				break
+			}
+
+			// here do stuff with the client handshake
 
 			if !s.Registered {
 				conn.Close()

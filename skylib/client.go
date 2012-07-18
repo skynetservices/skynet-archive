@@ -127,8 +127,20 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 
 		// get the service handshake
 		var sh ServiceHandshake
-		dec := bsonrpc.NewDecoder(conn)
-		dec.Decode(&sh)
+		decoder := bsonrpc.NewDecoder(conn)
+		err = decoder.Decode(&sh)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+
+		ch := ClientHandshake{}
+		encoder := bsonrpc.NewEncoder(conn)
+		err = encoder.Encode(ch)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
 
 		if !sh.Registered {
 			// this service has unregistered itself, look elsewhere
