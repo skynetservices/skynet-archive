@@ -44,6 +44,16 @@ type Service struct {
 	registeredChan chan bool         `json:"-"`
 
 	doozerChan chan interface{} `json:"-"`
+
+	rpcListener *net.TCPListener `json:"-"`
+}
+
+// ServiceHandshake is data sent by the service to the client immediately once the connection
+// is opened.
+type ServiceHandshake struct {
+	// Registered indicates the state of this service. If it is false, the connection will
+	// close immediately and the client should look elsewhere for this service.
+	Registered bool
 }
 
 func CreateService(s ServiceDelegate, c *ServiceConfig) *Service {
@@ -68,7 +78,8 @@ func CreateService(s ServiceDelegate, c *ServiceConfig) *Service {
 }
 
 func (s *Service) listen(addr *BindAddr) {
-	listener, err := addr.Listen()
+	var err error
+	s.rpcListener, err = addr.Listen()
 	if err != nil {
 		panic(err)
 	}
@@ -79,7 +90,7 @@ func (s *Service) listen(addr *BindAddr) {
 	})
 
 	for {
-		conn, err := listener.AcceptTCP()
+		conn, err := s.rpcListener.AcceptTCP()
 		if err != nil {
 			panic(err)
 		}
@@ -94,8 +105,15 @@ loop:
 	for {
 		select {
 		case conn := <-s.connectionChan:
+			sh := ServiceHandshake{
+				Registered: s.Registered,
+			}
+
+			encoder := bsonrpc.NewEncoder(conn)
+			encoder.Encode(sh)
+
 			if !s.Registered {
-				// TODO: tell the client the service is not registered
+				conn.Close()
 				break
 			}
 			s.activeClients.Add(1)
@@ -237,6 +255,8 @@ func (s *Service) Shutdown() {
 	// TODO: make this wait for requests to finish
 	s.RemoveFromCluster()
 	s.doneChan <- true
+
+	s.activeClients.Wait()
 
 	s.Delegate.Stopped(s) // Call user defined callback
 

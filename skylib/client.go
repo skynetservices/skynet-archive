@@ -118,6 +118,18 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 			return nil, errors.New("Failed to connect to service: " + instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port))
 		}
 
+		// get the service handshake
+		var sh ServiceHandshake
+		dec := bsonrpc.NewDecoder(conn)
+		dec.Decode(&sh)
+
+		if !sh.Registered {
+			// this service has unregistered itself, look elsewhere
+			println("got unregistered service")
+		} else {
+			println("got registered service")
+		}
+
 		resource := ServiceResource{
 			rpcClient: bsonrpc.NewClient(conn),
 			service:   instance,
