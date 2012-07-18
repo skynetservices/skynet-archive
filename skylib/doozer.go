@@ -2,7 +2,7 @@ package skylib
 
 import (
 	"bytes"
-	"github.com/4ad/doozer"
+	"github.com/skelterjohn/doozer"
 	"os"
 	"sync"
 )

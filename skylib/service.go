@@ -42,6 +42,8 @@ type Service struct {
 
 	connectionChan chan *net.TCPConn `json:"-"`
 	registeredChan chan bool         `json:"-"`
+
+	doozerChan chan interface{} `json:"-"`
 }
 
 func CreateService(s ServiceDelegate, c *ServiceConfig) *Service {
@@ -55,6 +57,7 @@ func CreateService(s ServiceDelegate, c *ServiceConfig) *Service {
 		methods:        make(map[string]reflect.Value),
 		connectionChan: make(chan *net.TCPConn),
 		registeredChan: make(chan bool),
+		doozerChan:     make(chan interface{}),
 	}
 
 	c.Log.Item(ServiceCreated{
@@ -64,7 +67,7 @@ func CreateService(s ServiceDelegate, c *ServiceConfig) *Service {
 	return service
 }
 
-func (s *Service) Listen(addr *BindAddr) {
+func (s *Service) listen(addr *BindAddr) {
 	listener, err := addr.Listen()
 	if err != nil {
 		panic(err)
@@ -84,7 +87,9 @@ func (s *Service) Listen(addr *BindAddr) {
 	}
 }
 
-func (s *Service) runService() {
+// this function is the goroutine that owns this service - all thread-sensitive data needs to
+// be manipulated only through here.
+func (s *Service) mux() {
 	for {
 		select {
 		case conn := <-s.connectionChan:
@@ -115,12 +120,51 @@ func (s *Service) runService() {
 	}
 }
 
+type doozerSetConfig struct {
+	ConfigPath string
+	ConfigData []byte
+}
+
+type doozerRemoveFromCluster struct {
+}
+
+func (s *Service) doozerMux() {
+	for i := range s.doozerChan {
+		switch i := i.(type) {
+		case doozerSetConfig:
+			rev := s.doozer().GetCurrentRevision()
+			_, err := s.DoozerConn.Set(i.ConfigPath, rev, i.ConfigData)
+			if err != nil {
+				s.Log.Panic(err.Error())
+			}
+		case doozerRemoveFromCluster:
+			rev := s.doozer().GetCurrentRevision()
+			path := s.GetConfigPath()
+			err := s.doozer().Del(path, rev)
+			if err != nil {
+				s.Log.Panic(err.Error())
+			}
+		}
+	}
+}
+
+// only call this from doozerMux
+func (s *Service) doozer() DoozerConnection {
+	if s.DoozerConn == nil {
+		s.DoozerConn = NewDoozerConnectionFromConfig(*s.Config.DoozerConfig, s.Log)
+
+		s.DoozerConn.Connect()
+	}
+
+	return s.DoozerConn
+}
+
 func (s *Service) Start(register bool) {
 
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
 	s.RPCServ.RegisterName(s.Config.Name, s.Delegate)
-	go s.Listen(s.Config.ServiceAddr)
+	go s.listen(s.Config.ServiceAddr)
 
 	// the admin server
 	if s.Config.AdminAddr != nil {
@@ -136,13 +180,14 @@ func (s *Service) Start(register bool) {
 
 	go s.Delegate.Started(s) // Call user defined callback
 
+	go s.doozerMux()
+
 	s.UpdateCluster()
 
 	if register == true {
 		s.register()
 	}
-
-	s.runService()
+	s.mux()
 
 }
 
@@ -151,22 +196,16 @@ func (s *Service) UpdateCluster() {
 	if err != nil {
 		s.Log.Panic(err.Error())
 	}
+	cfgpath := s.GetConfigPath()
 
-	rev := s.doozer().GetCurrentRevision()
-
-	_, err = s.doozer().Set(s.GetConfigPath(), rev, b)
-	if err != nil {
-		s.Log.Panic(err.Error())
+	s.doozerChan <- doozerSetConfig{
+		ConfigPath: cfgpath,
+		ConfigData: b,
 	}
 }
 
 func (s *Service) RemoveFromCluster() {
-	rev := s.doozer().GetCurrentRevision()
-	path := s.GetConfigPath()
-	err := s.doozer().Del(path, rev)
-	if err != nil {
-		s.Log.Panic(err.Error())
-	}
+	s.doozerChan <- doozerRemoveFromCluster{}
 }
 
 func (s *Service) register() {
@@ -262,7 +301,7 @@ func (r *Service) Equal(that *Service) bool {
 }
 
 func watchSignals(c chan os.Signal, s *Service) {
-	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM)
 
 	for {
 		select {
@@ -274,14 +313,4 @@ func watchSignals(c chan os.Signal, s *Service) {
 			}
 		}
 	}
-}
-
-func (s *Service) doozer() DoozerConnection {
-	if s.DoozerConn == nil {
-		s.DoozerConn = NewDoozerConnectionFromConfig(*s.Config.DoozerConfig, s.Log)
-
-		s.DoozerConn.Connect()
-	}
-
-	return s.DoozerConn
 }

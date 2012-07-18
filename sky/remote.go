@@ -87,8 +87,6 @@ func remoteDeploy(q *skylib.Query, servicePath string, serviceArgs []string) {
 func remoteStart(q *skylib.Query, uuid string) {
 	_, service := getDaemonServiceClient(q)
 
-	
-
 	// This on the other hand will fail if it can't find a service to connect to
 	var in = M{"uuid": uuid}
 	var out = M{}
