@@ -1,6 +1,8 @@
 package skylib
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -26,6 +28,7 @@ func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
 	typ := reflect.TypeOf(srpc.delegate)
 	for i := 0; i < typ.NumMethod(); i++ {
 		m := typ.Method(i)
+
 		f := m.Func
 		ftyp := f.Type()
 
@@ -55,6 +58,37 @@ func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
 
 // ServiceRPC.Forward is the entry point for RPC calls
 func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error) {
+	/*
+		defer func() {
+			e := recover()
+			if e != nil {
+				// what?
+			}
+		}()
+	*/
+
+	m, ok := srpc.methods[in.Method]
+	if !ok {
+		err = errors.New(fmt.Sprintf("No such method %q", in.Method))
+		return
+	}
+
+	outValue := reflect.New(m.Type().In(3).Elem())
+
+	returns := m.Call([]reflect.Value{
+		reflect.ValueOf(srpc.delegate),
+		reflect.ValueOf(in.RequestInfo),
+		reflect.ValueOf(in.In),
+		outValue,
+	})
+	outReply := reflect.ValueOf(out.Out).Elem()
+	outReply.Set(outValue.Elem())
+
+	erri := returns[0].Interface()
+	if erri != nil {
+		out.Err = erri.(error)
+	}
+
 	return
 }
 
