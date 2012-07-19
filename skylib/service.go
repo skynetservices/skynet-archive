@@ -98,32 +98,37 @@ loop:
 	for {
 		select {
 		case conn := <-s.connectionChan:
+			s.activeClients.Add(1)
+
+			// send the server handshake
 			sh := ServiceHandshake{
 				Registered: s.Registered,
 			}
-
 			encoder := bsonrpc.NewEncoder(conn)
 			err := encoder.Encode(sh)
 			if err != nil {
 				s.Log.Item(err)
+				s.activeClients.Done()
+				break
+			}
+			if !s.Registered {
+				conn.Close()
+				s.activeClients.Done()
 				break
 			}
 
-			decoder := bsonrpc.NewDecoder(conn)
+			// read the client handshake
 			var ch ClientHandshake
+			decoder := bsonrpc.NewDecoder(conn)
 			err = decoder.Decode(&ch)
 			if err != nil {
 				s.Log.Item(err)
+				s.activeClients.Done()
 				break
 			}
 
 			// here do stuff with the client handshake
 
-			if !s.Registered {
-				conn.Close()
-				break
-			}
-			s.activeClients.Add(1)
 			go func() {
 				s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
 				s.activeClients.Done()

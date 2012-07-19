@@ -79,6 +79,7 @@ func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
 
 // ServiceRPC.Forward is the entry point for RPC calls
 func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error) {
+	// TODO: something smart with panics? Or just let the server go down?
 	/*
 		defer func() {
 			e := recover()
