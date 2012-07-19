@@ -18,14 +18,20 @@ type ServiceRPC struct {
 	methods  map[string]reflect.Value
 }
 
-var reservedMethodNames = map[string]bool{
-	"Started":      true,
-	"Stopped":      true,
-	"Registered":   true,
-	"Unregistered": true,
+var reservedMethodNames = map[string]bool{}
+
+func init() {
+
+	var sd ServiceDelegate
+	sdvalue := reflect.ValueOf(&sd).Elem().Type()
+	for i := 0; i < sdvalue.NumMethod(); i++ {
+		m := sdvalue.Method(i)
+		reservedMethodNames[m.Name] = true
+	}
 }
 
 func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
+
 	srpc = &ServiceRPC{
 		delegate: sd,
 		methods:  make(map[string]reflect.Value),
