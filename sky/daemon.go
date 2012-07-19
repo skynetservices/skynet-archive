@@ -57,7 +57,7 @@ func Daemon(q *skylib.Query, argv []string) {
 
 	// If we pass false here service will not be Registered
 	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
-	service.Start(true)
+	service.Start(true).Wait()
 }
 
 // deploy each of the services listed in the provided file

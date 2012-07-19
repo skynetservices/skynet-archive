@@ -203,7 +203,7 @@ func (s *Service) doozer() DoozerConnection {
 	return s.DoozerConn
 }
 
-func (s *Service) Start(register bool) {
+func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
@@ -232,8 +232,14 @@ func (s *Service) Start(register bool) {
 	if register == true {
 		s.register()
 	}
-	s.mux()
 
+	done = &sync.WaitGroup{}
+	done.Add(1)
+	go func() {
+		s.mux()
+		done.Done()
+	}()
+	return
 }
 
 func (s *Service) UpdateCluster() {
