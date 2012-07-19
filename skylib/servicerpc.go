@@ -18,6 +18,13 @@ type ServiceRPC struct {
 	methods  map[string]reflect.Value
 }
 
+var reservedMethodNames = map[string]bool{
+	"Started":      true,
+	"Stopped":      true,
+	"Registered":   true,
+	"Unregistered": true,
+}
+
 func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
 	srpc = &ServiceRPC{
 		delegate: sd,
@@ -29,28 +36,36 @@ func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
 	for i := 0; i < typ.NumMethod(); i++ {
 		m := typ.Method(i)
 
+		if reservedMethodNames[m.Name] {
+			continue
+		}
+
 		f := m.Func
 		ftyp := f.Type()
 
 		// must have four parameters: (receiver, RequestInfo, something, something)
 		if ftyp.NumIn() != 4 {
-			continue
+			goto problem
 		}
 		// don't have to check for the receiver
 		if ftyp.In(1) != RequestInfoType {
-			continue
+			goto problem
 		}
 
 		// must have one return value that is an error
 		if ftyp.NumOut() != 1 {
-			continue
+			goto problem
 		}
 		if ftyp.Out(0) != ErrorType {
-			continue
+			goto problem
 		}
 
 		// we've got a method!
 		srpc.methods[m.Name] = f
+		continue
+
+	problem:
+		panic(fmt.Sprintf("Bad RPC method for %T: %v", sd, f))
 	}
 
 	return
