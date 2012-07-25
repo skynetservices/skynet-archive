@@ -236,6 +236,12 @@ func (c *ServiceClient) Send(requestInfo *RequestInfo, funcName string, in inter
 		return
 	}
 
+	if requestInfo == nil {
+		requestInfo = &RequestInfo{
+			RequestID: UUID(),
+		}
+	}
+
 	sin := ServiceRPCIn{
 		RequestInfo: requestInfo,
 		Method:      funcName,
