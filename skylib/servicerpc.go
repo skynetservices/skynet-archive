@@ -1,8 +1,12 @@
 package skylib
 
 import (
+	"code.google.com/p/gonicetrace/nicetrace"
 	"errors"
 	"fmt"
+	"github.com/bketelsen/skynet/rpc/bsonrpc"
+	"launchpad.net/mgo/v2/bson"
+	"os"
 	"reflect"
 )
 
@@ -31,7 +35,6 @@ func init() {
 }
 
 func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
-
 	srpc = &ServiceRPC{
 		delegate: sd,
 		methods:  make(map[string]reflect.Value),
@@ -43,6 +46,11 @@ func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
 		m := typ.Method(i)
 
 		if reservedMethodNames[m.Name] {
+			continue
+		}
+
+		// this is the check to see if something is exported
+		if m.PkgPath != "" {
 			continue
 		}
 
@@ -71,7 +79,10 @@ func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
 		continue
 
 	problem:
-		panic(fmt.Sprintf("Bad RPC method for %T: %v", sd, f))
+		fmt.Println("trying to panic")
+		fmt.Printf("Bad RPC method for %T: %q %v\n", sd, m.Name, f)
+		nicetrace.WriteStacktrace(os.Stdout)
+		panic(fmt.Sprintf("Bad RPC method for %T: %q %v\n", sd, m.Name, f))
 	}
 
 	return
@@ -79,37 +90,37 @@ func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
 
 // ServiceRPC.Forward is the entry point for RPC calls
 func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error) {
-	// TODO: something smart with panics? Or just let the server go down?
-	/*
-		defer func() {
-			e := recover()
-			if e != nil {
-				// what?
-			}
-		}()
-	*/
-
 	m, ok := srpc.methods[in.Method]
 	if !ok {
 		err = errors.New(fmt.Sprintf("No such method %q", in.Method))
 		return
 	}
 
-	outValue := reflect.New(m.Type().In(3).Elem())
+	inValuePtr := reflect.New(m.Type().In(2))
 
+	// fmt.Printf("in.In: %v\n", in.In)
+
+	err = bsonrpc.CopyTo(in.In.(bson.M), inValuePtr.Interface())
+	if err != nil {
+		return
+	}
+
+	outValue := reflect.New(m.Type().In(3).Elem())
+	// fmt.Printf("in: %T %v\n", inValuePtr.Elem().Interface(), inValuePtr.Elem().Interface())
+
+	// fmt.Println("calling", in.Method)
 	returns := m.Call([]reflect.Value{
 		reflect.ValueOf(srpc.delegate),
 		reflect.ValueOf(in.RequestInfo),
-		reflect.ValueOf(in.In),
+		inValuePtr.Elem(),
 		outValue,
 	})
-	outReply := reflect.ValueOf(out.Out).Elem()
-	outReply.Set(outValue.Elem())
+	out.Out = outValue.Elem().Interface()
+	// fmt.Println("out:", out.Out)
+	// fmt.Println("err:", out.Err)
 
 	erri := returns[0].Interface()
-	if erri != nil {
-		out.Err = erri.(error)
-	}
+	out.Err, _ = erri.(error)
 
 	return
 }

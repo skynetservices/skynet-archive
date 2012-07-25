@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"github.com/bketelsen/skynet/skylib/util"
+	"launchpad.net/mgo/v2/bson"
 	"math/rand"
 	"net"
 	"net/rpc"
@@ -235,10 +236,21 @@ func (c *ServiceClient) Send(funcName string, in interface{}, outPointer interfa
 		return
 	}
 
+	sin := ServiceRPCIn{
+		Method: funcName,
+		In:     in,
+	}
+	sout := ServiceRPCOut{}
+
 	// TODO: Check for connectivity issue so that we can try to get another resource out of the pool
-	err = service.rpcClient.Call(service.service.Config.Name+"."+funcName, in, outPointer)
+	err = service.rpcClient.Call(service.service.Config.Name+".Forward", sin, &sout)
 	if err != nil {
 		c.Log.Item(err)
+	}
+
+	outMap, ok := sout.Out.(bson.M)
+	if ok {
+		bsonrpc.CopyTo(outMap, outPointer)
 	}
 
 	c.connectionPool.Put(service)

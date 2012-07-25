@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"github.com/bketelsen/skynet/skylib"
 	"io"
 	"log"
@@ -93,7 +94,7 @@ func deployConfig(s *SkynetDaemon, cfg string) (err error) {
 		}
 		servicePath := line[:split]
 		args := strings.TrimSpace(line[split:])
-		s.Deploy(M{"service": servicePath, "args": args}, &M{})
+		s.Deploy(skylib.RequestInfo{}, M{"service": servicePath, "args": args}, &M{})
 	}
 	return
 }
@@ -109,10 +110,10 @@ func (s *SkynetDaemon) Registered(service *skylib.Service)   {}
 func (s *SkynetDaemon) Unregistered(service *skylib.Service) {}
 func (s *SkynetDaemon) Started(service *skylib.Service)      {}
 func (s *SkynetDaemon) Stopped(service *skylib.Service) {
-	s.StopAllSubServices(M{}, &M{})
+	s.StopAllSubServices(skylib.RequestInfo{}, M{}, &M{})
 }
 
-func (s *SkynetDaemon) Deploy(in M, out *M) (err error) {
+func (s *SkynetDaemon) Deploy(requestInfo skylib.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	uuid := skylib.UUID()
 	(*out)["uuid"] = uuid
@@ -153,14 +154,14 @@ func (m M) String(key string) (val string, ok bool) {
 	return
 }
 
-func (s *SkynetDaemon) ListSubServices(in M, out *M) (err error) {
+func (s *SkynetDaemon) ListSubServices(requestInfo skylib.RequestInfo, in M, out *M) (err error) {
 	*out = M{
 		"Services": s.Services,
 	}
 	return
 }
 
-func (s *SkynetDaemon) StopAllSubServices(in M, out *M) (err error) {
+func (s *SkynetDaemon) StopAllSubServices(requestInfo skylib.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	var uuids []string
 	s.serviceLock.Lock()
@@ -169,7 +170,7 @@ func (s *SkynetDaemon) StopAllSubServices(in M, out *M) (err error) {
 	}
 	s.serviceLock.Unlock()
 	for _, uuid := range uuids {
-		err = s.StopSubService(M{"uuid": uuid}, &M{})
+		err = s.StopSubService(skylib.RequestInfo{}, M{"uuid": uuid}, &M{})
 		if err != nil {
 			return
 		}
@@ -177,7 +178,7 @@ func (s *SkynetDaemon) StopAllSubServices(in M, out *M) (err error) {
 	return
 }
 
-func (s *SkynetDaemon) StartAllSubServices(in M, out *M) (err error) {
+func (s *SkynetDaemon) StartAllSubServices(requestInfo skylib.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	var uuids []string
 	s.serviceLock.Lock()
@@ -186,7 +187,7 @@ func (s *SkynetDaemon) StartAllSubServices(in M, out *M) (err error) {
 	}
 	s.serviceLock.Unlock()
 	for _, uuid := range uuids {
-		err = s.StartSubService(M{"uuid": uuid}, &M{})
+		err = s.StartSubService(skylib.RequestInfo{}, M{"uuid": uuid}, &M{})
 		if err != nil {
 			return
 		}
@@ -194,19 +195,24 @@ func (s *SkynetDaemon) StartAllSubServices(in M, out *M) (err error) {
 	return
 }
 
-func (s *SkynetDaemon) StartSubService(in M, out *M) (err error) {
+func (s *SkynetDaemon) StartSubService(requestInfo skylib.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	uuid, ok := in.String("uuid")
 	if !ok {
 		err = errors.New("No UUID provided")
 		return
 	}
+
 	ss := s.getSubService(uuid)
-	ss.Start()
+	if ss != nil {
+		ss.Start()
+	} else {
+		err = errors.New(fmt.Sprintf("No such service UUID %q", uuid))
+	}
 	return
 }
 
-func (s *SkynetDaemon) StopSubService(in M, out *M) (err error) {
+func (s *SkynetDaemon) StopSubService(requestInfo skylib.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	uuid, ok := in.String("uuid")
 	if !ok {
@@ -218,7 +224,7 @@ func (s *SkynetDaemon) StopSubService(in M, out *M) (err error) {
 	return
 }
 
-func (s *SkynetDaemon) RestartSubService(in M, out *M) (err error) {
+func (s *SkynetDaemon) RestartSubService(requestInfo skylib.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	uuid, ok := in.String("uuid")
 	if !ok {

@@ -200,7 +200,8 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
-	s.RPCServ.RegisterName(s.Config.Name, s.Delegate)
+	rpcForwarder := NewServiceRPC(s.Delegate)
+	s.RPCServ.RegisterName(s.Config.Name, rpcForwarder)
 	go s.listen(s.Config.ServiceAddr)
 
 	// the admin server
