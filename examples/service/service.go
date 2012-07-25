@@ -27,7 +27,7 @@ func NewTestService() *TestService {
 	return r
 }
 
-func (s *TestService) Upcase(in map[string]interface{}, out *map[string]interface{}) (err error) {
+func (s *TestService) Upcase(requestInfo skylib.RequestInfo, in map[string]interface{}, out *map[string]interface{}) (err error) {
 	fmt.Println("got", in)
 	*out = make(map[string]interface{})
 	(*out)["data"] = strings.ToUpper(in["data"].(string))

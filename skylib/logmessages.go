@@ -76,3 +76,11 @@ type AdminListening struct {
 func (al AdminListening) String() string {
 	return fmt.Sprintf("Service %q listening for admin on %s", al.ServiceConfig.Name, al.ServiceConfig.AdminAddr)
 }
+
+type RegisteredMethods struct {
+	Methods []string
+}
+
+func (rm RegisteredMethods) String() string {
+	return fmt.Sprintf("Registered methods: %v", rm.Methods)
+}

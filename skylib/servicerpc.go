@@ -18,8 +18,9 @@ var (
 )
 
 type ServiceRPC struct {
-	delegate ServiceDelegate
-	methods  map[string]reflect.Value
+	delegate    ServiceDelegate
+	methods     map[string]reflect.Value
+	MethodNames []string
 }
 
 var reservedMethodNames = map[string]bool{}
@@ -76,6 +77,7 @@ func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
 
 		// we've got a method!
 		srpc.methods[m.Name] = f
+		srpc.MethodNames = append(srpc.MethodNames, m.Name)
 		continue
 
 	problem:

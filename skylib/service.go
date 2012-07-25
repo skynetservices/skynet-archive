@@ -49,13 +49,13 @@ type Service struct {
 	rpcListener *net.TCPListener `json:"-"`
 }
 
-func CreateService(s ServiceDelegate, c *ServiceConfig) *Service {
+func CreateService(sd ServiceDelegate, c *ServiceConfig) (s *Service) {
 	// This will set defaults
 	initializeConfig(c)
 
-	service := &Service{
+	s = &Service{
 		Config:         c,
-		Delegate:       s,
+		Delegate:       sd,
 		Log:            c.Log,
 		methods:        make(map[string]reflect.Value),
 		connectionChan: make(chan *net.TCPConn),
@@ -64,10 +64,17 @@ func CreateService(s ServiceDelegate, c *ServiceConfig) *Service {
 	}
 
 	c.Log.Item(ServiceCreated{
-		ServiceConfig: service.Config,
+		ServiceConfig: s.Config,
 	})
+	// the main rpc server
+	s.RPCServ = rpc.NewServer()
+	rpcForwarder := NewServiceRPC(s.Delegate)
 
-	return service
+	c.Log.Item(RegisteredMethods{rpcForwarder.MethodNames})
+
+	s.RPCServ.RegisterName(s.Config.Name, rpcForwarder)
+
+	return
 }
 
 func (s *Service) listen(addr *BindAddr) {
@@ -198,10 +205,6 @@ func (s *Service) doozer() DoozerConnection {
 
 func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 
-	// the main rpc server
-	s.RPCServ = rpc.NewServer()
-	rpcForwarder := NewServiceRPC(s.Delegate)
-	s.RPCServ.RegisterName(s.Config.Name, rpcForwarder)
 	go s.listen(s.Config.ServiceAddr)
 
 	// the admin server
