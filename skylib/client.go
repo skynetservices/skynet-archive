@@ -228,7 +228,7 @@ func (c *ServiceClient) monitorInstances() {
 	}
 }
 
-func (c *ServiceClient) Send(funcName string, in interface{}, outPointer interface{}) (err error) {
+func (c *ServiceClient) Send(requestInfo *RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
 	// TODO: timeout logic
 	service, err := c.getConnection(0)
 	if err != nil {
@@ -237,9 +237,11 @@ func (c *ServiceClient) Send(funcName string, in interface{}, outPointer interfa
 	}
 
 	sin := ServiceRPCIn{
-		Method: funcName,
-		In:     in,
+		RequestInfo: requestInfo,
+		Method:      funcName,
+		In:          in,
 	}
+
 	sout := ServiceRPCOut{}
 
 	// TODO: Check for connectivity issue so that we can try to get another resource out of the pool

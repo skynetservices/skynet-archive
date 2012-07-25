@@ -32,7 +32,7 @@ func main() {
 		"data": "Upcase me!!",
 	}
 	out := map[string]interface{}{}
-	err = service.Send("Upcase", in, &out)
+	err = service.Send(nil, "Upcase", in, &out)
 
 	if err != nil {
 		fmt.Println(err)

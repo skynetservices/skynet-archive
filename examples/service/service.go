@@ -8,7 +8,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/bketelsen/skynet/skylib"
 	"log"
 	"os"
@@ -27,8 +26,7 @@ func NewTestService() *TestService {
 	return r
 }
 
-func (s *TestService) Upcase(requestInfo skylib.RequestInfo, in map[string]interface{}, out *map[string]interface{}) (err error) {
-	fmt.Println("got", in)
+func (s *TestService) Upcase(requestInfo *skylib.RequestInfo, in map[string]interface{}, out *map[string]interface{}) (err error) {
 	*out = make(map[string]interface{})
 	(*out)["data"] = strings.ToUpper(in["data"].(string))
 	return

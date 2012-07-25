@@ -70,7 +70,7 @@ func remoteList(q *skylib.Query) {
 	// This on the other hand will fail if it can't find a service to connect to
 	var x struct{}
 	ret := map[string]interface{}{}
-	err := service.Send("ListSubServices", x, ret)
+	err := service.Send(nil, "ListSubServices", x, ret)
 
 	if err != nil {
 		fmt.Println(err)
@@ -90,7 +90,7 @@ func remoteStart(q *skylib.Query, uuid string) {
 	// This on the other hand will fail if it can't find a service to connect to
 	var in = M{"uuid": uuid}
 	var out = M{}
-	err := service.Send("StartSubService", in, out)
+	err := service.Send(nil, "StartSubService", in, out)
 
 	if err != nil {
 		fmt.Println(err)

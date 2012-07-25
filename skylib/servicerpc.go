@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	RequestInfoType = reflect.TypeOf(RequestInfo{})
+	RequestInfoPtrType = reflect.TypeOf(&RequestInfo{})
 
 	anError   error
 	ErrorType = reflect.TypeOf(&anError).Elem()
@@ -63,7 +63,7 @@ func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
 			goto problem
 		}
 		// don't have to check for the receiver
-		if ftyp.In(1) != RequestInfoType {
+		if ftyp.In(1) != RequestInfoPtrType {
 			goto problem
 		}
 
@@ -129,7 +129,7 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 
 type ServiceRPCIn struct {
 	Method      string
-	RequestInfo RequestInfo
+	RequestInfo *RequestInfo
 	In          interface{}
 }
 
