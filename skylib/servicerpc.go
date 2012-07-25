@@ -8,6 +8,7 @@ import (
 	"launchpad.net/mgo/v2/bson"
 	"os"
 	"reflect"
+	"time"
 )
 
 var (
@@ -18,6 +19,7 @@ var (
 )
 
 type ServiceRPC struct {
+	log         Logger
 	delegate    ServiceDelegate
 	methods     map[string]reflect.Value
 	MethodNames []string
@@ -35,8 +37,9 @@ func init() {
 	}
 }
 
-func NewServiceRPC(sd ServiceDelegate) (srpc *ServiceRPC) {
+func NewServiceRPC(sd ServiceDelegate, log Logger) (srpc *ServiceRPC) {
 	srpc = &ServiceRPC{
+		log:      log,
 		delegate: sd,
 		methods:  make(map[string]reflect.Value),
 	}
@@ -111,12 +114,28 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 	// fmt.Printf("in: %T %v\n", inValuePtr.Elem().Interface(), inValuePtr.Elem().Interface())
 
 	// fmt.Println("calling", in.Method)
+
+	startTime := time.Now().UnixNano()
+
 	returns := m.Call([]reflect.Value{
 		reflect.ValueOf(srpc.delegate),
 		reflect.ValueOf(in.RequestInfo),
 		inValuePtr.Elem(),
 		outValue,
 	})
+
+	duration := time.Now().UnixNano() - startTime
+
+	mc := MethodCall{
+		MethodName:  in.Method,
+		RequestInfo: in.RequestInfo,
+		Duration:    duration,
+	}
+
+	if srpc.log != nil {
+		srpc.log.Item(mc)
+	}
+
 	out.Out = outValue.Elem().Interface()
 	// fmt.Println("out:", out.Out)
 	// fmt.Println("err:", out.Err)

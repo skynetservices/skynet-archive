@@ -68,7 +68,7 @@ func CreateService(sd ServiceDelegate, c *ServiceConfig) (s *Service) {
 	})
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
-	rpcForwarder := NewServiceRPC(s.Delegate)
+	rpcForwarder := NewServiceRPC(s.Delegate, c.Log)
 
 	c.Log.Item(RegisteredMethods{rpcForwarder.MethodNames})
 

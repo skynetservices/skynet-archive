@@ -84,3 +84,13 @@ type RegisteredMethods struct {
 func (rm RegisteredMethods) String() string {
 	return fmt.Sprintf("Registered methods: %v", rm.Methods)
 }
+
+type MethodCall struct {
+	RequestInfo *RequestInfo
+	MethodName  string
+	Duration    int64
+}
+
+func (mi MethodCall) String() string {
+	return fmt.Sprintf("Method %q called with RequestInfo %v and duration %dns", mi.MethodName, mi.RequestInfo, mi.Duration)
+}
