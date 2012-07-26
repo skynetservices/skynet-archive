@@ -5,16 +5,6 @@ import (
 	"net/rpc"
 )
 
-/*
-type ServerCodec interface {
-    ReadRequestHeader(*Request) error
-    ReadRequestBody(interface{}) error
-    WriteResponse(*Response, interface{}) error
-
-    Close() error
-}
-*/
-
 type scodec struct {
 	conn io.ReadWriteCloser
 	enc  *Encoder
