@@ -26,19 +26,21 @@ func NewTestService() *TestService {
 	return r
 }
 
-func (s *TestService) Upcase(msg string) string {
-	return strings.ToUpper(msg)
+func (s *TestService) Upcase(requestInfo *skylib.RequestInfo, in map[string]interface{}, out map[string]interface{}) (err error) {
+	out["data"] = strings.ToUpper(in["data"].(string))
+	return
 }
 
 func main() {
 	testService := NewTestService()
 
-	config := skylib.GetServiceConfigFromFlags()
+	config, _ := skylib.GetServiceConfigFromFlags()
+
 	config.Name = "TestService"
 	config.Version = "1"
 	config.Region = "Clearwater"
 	var err error
-	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log", config)
+	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log", config.UUID)
 	clogger := skylib.NewConsoleLogger(os.Stdout)
 	config.Log = skylib.NewMultiLogger(mlogger, clogger)
 	if err != nil {
@@ -56,5 +58,8 @@ func main() {
 
 	// If we pass false here service will not be Registered
 	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
-	service.Start(true)
+	waiter := service.Start(true)
+
+	// waiting on the sync.WaitGroup returned by service.Start() will wait for the service to finish running.
+	waiter.Wait()
 }

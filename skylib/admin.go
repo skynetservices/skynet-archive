@@ -2,7 +2,6 @@ package skylib
 
 import (
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
-	"net"
 	"net/rpc"
 )
 
@@ -25,11 +24,7 @@ func NewServiceAdmin(service *Service) (sa *ServiceAdmin) {
 }
 
 func (sa *ServiceAdmin) Listen(addr *BindAddr) {
-	laddr, err := net.ResolveTCPAddr("tcp", addr.String())
-	if err != nil {
-		panic(err)
-	}
-	listener, err := net.ListenTCP("tcp", laddr)
+	listener, err := addr.Listen()
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +51,7 @@ type RegisterReturns struct {
 }
 
 func (sa *Admin) Register(in RegisterParams, out *RegisterReturns) (err error) {
-	sa.service.Log.Item("Got RPC admin command Register")
+	sa.service.Log.Println("Got RPC admin command Register")
 	sa.service.Register()
 	return
 }
@@ -68,7 +63,21 @@ type UnregisterReturns struct {
 }
 
 func (sa *Admin) Unregister(in UnregisterParams, out *UnregisterReturns) (err error) {
-	sa.service.Log.Item("Got RPC admin command Unregister")
+	sa.service.Log.Println("Got RPC admin command Unregister")
 	sa.service.Unregister()
+	return
+}
+
+type StopParams struct {
+	WaitForClients bool
+}
+
+type StopReturns struct {
+}
+
+func (sa *Admin) Stop(in StopParams, out *StopReturns) (err error) {
+	sa.service.Log.Println("Got RPC admin command Stop")
+
+	sa.service.Shutdown()
 	return
 }

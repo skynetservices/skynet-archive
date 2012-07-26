@@ -19,6 +19,3 @@ SKYNET_ADMIN=:9998
 
 SKYNET_REGION=unknown
 	The service's self-reported region.
-
-SKYNET_UUID=<randomly generated ID>
-	A unique ID associated with a service. Used for logging and some remote administration.

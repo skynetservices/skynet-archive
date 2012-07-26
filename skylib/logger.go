@@ -100,17 +100,17 @@ func (cl *ConsoleLogger) Panic(item interface{}) {
 type MongoLogger struct {
 	session         *mgo.Session
 	dbName, colName string
-	config          *ServiceConfig
+	uuid            string
 
 	untransitioned *log.Logger
 }
 
-func NewMongoLogger(addr string, dbName, collectionName string, config *ServiceConfig) (ml *MongoLogger, err error) {
+func NewMongoLogger(addr string, dbName, collectionName string, uuid string) (ml *MongoLogger, err error) {
 	ml = &MongoLogger{
 		dbName:         dbName,
 		colName:        collectionName,
 		untransitioned: log.New(os.Stderr, "fix-me: ", log.LstdFlags),
-		config:         config,
+		uuid:           uuid,
 	}
 	ml.session, err = mgo.Dial(addr)
 	if err != nil {
@@ -123,7 +123,7 @@ func (ml *MongoLogger) Item(item interface{}) {
 		return
 	}
 	jobj := MakeJObj(item)
-	jobj["uuid"] = ml.config.UUID
+	jobj["uuid"] = ml.uuid
 
 	db := ml.session.DB(ml.dbName)
 	col := db.C(ml.colName)
@@ -158,7 +158,7 @@ func (ml *MongoLogger) Panic(item interface{}) {
 			"Item":  item,
 			"Trace": strace,
 		},
-		"uuid": ml.config.UUID,
+		"uuid": ml.uuid,
 	}
 
 	db := ml.session.DB(ml.dbName)
