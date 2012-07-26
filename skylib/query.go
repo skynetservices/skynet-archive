@@ -3,7 +3,7 @@ package skylib
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/skelterjohn/doozer"
+	"github.com/4ad/doozer"
 	"log"
 	"strings"
 )
