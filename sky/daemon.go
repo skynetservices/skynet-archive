@@ -154,10 +154,8 @@ func (m M) String(key string) (val string, ok bool) {
 	return
 }
 
-func (s *SkynetDaemon) ListSubServices(requestInfo *skylib.RequestInfo, in M, out *M) (err error) {
-	*out = M{
-		"Services": s.Services,
-	}
+func (s *SkynetDaemon) ListSubServices(requestInfo *skylib.RequestInfo, in M, out M) (err error) {
+	out["Services"] = s.Services
 	return
 }
 

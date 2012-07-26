@@ -60,12 +60,24 @@ func NewServiceRPC(sd ServiceDelegate, log Logger) (srpc *ServiceRPC) {
 		f := m.Func
 		ftyp := f.Type()
 
-		// must have four parameters: (receiver, RequestInfo, something, something)
+		// must have four parameters: (receiver, RequestInfo, somethingIn, somethingOut)
 		if ftyp.NumIn() != 4 {
 			goto problem
 		}
+
 		// don't have to check for the receiver
+
+		// check the second parameter
 		if ftyp.In(1) != RequestInfoPtrType {
+			goto problem
+		}
+
+		// the somethingIn can be anything
+
+		// somethingOut must be a pointer or a map
+		switch ftyp.In(3).Kind() {
+		case reflect.Ptr, reflect.Map:
+		default:
 			goto problem
 		}
 
@@ -92,7 +104,10 @@ func NewServiceRPC(sd ServiceDelegate, log Logger) (srpc *ServiceRPC) {
 	return
 }
 
-// ServiceRPC.Forward is the entry point for RPC calls
+// ServiceRPC.Forward is the entry point for RPC calls. It wraps actual RPC calls
+// and provides a slot for the RequestInfo. The parameters to the actual RPC
+// calls are transmitted in a []byte, and are then marshalled/unmarshalled on
+// either end.
 func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error) {
 	m, ok := srpc.methods[in.Method]
 	if !ok {
@@ -102,31 +117,34 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 
 	inValuePtr := reflect.New(m.Type().In(2))
 
-	// fmt.Printf("in.In: %v\n", in.In)
-
 	err = bson.Unmarshal(in.In, inValuePtr.Interface())
 	if err != nil {
 		return
 	}
 
-	// err = bsonrpc.CopyTo(in.In.(bson.M), inValuePtr.Interface())
-	// if err != nil {
-	// 	return
-	// }
+	// Allocate the out parameter of the RPC call.
+	outType := m.Type().In(3)
+	var outValue reflect.Value
 
-	outValue := reflect.New(m.Type().In(3).Elem())
-	// fmt.Printf("in: %T %v\n", inValuePtr.Elem().Interface(), inValuePtr.Elem().Interface())
-
-	// fmt.Println("calling", in.Method)
+	switch outType.Kind() {
+	case reflect.Ptr:
+		outValue = reflect.New(m.Type().In(3).Elem())
+	case reflect.Map:
+		outValue = reflect.MakeMap(outType)
+	default:
+		panic("illegal out param type")
+	}
 
 	startTime := time.Now().UnixNano()
 
-	returns := m.Call([]reflect.Value{
+	params := []reflect.Value{
 		reflect.ValueOf(srpc.delegate),
 		reflect.ValueOf(in.RequestInfo),
 		inValuePtr.Elem(),
 		outValue,
-	})
+	}
+
+	returns := m.Call(params)
 
 	duration := time.Now().UnixNano() - startTime
 
@@ -140,12 +158,10 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 		srpc.log.Item(mc)
 	}
 
-	out.Out, err = bson.Marshal(outValue.Elem().Interface())
+	out.Out, err = bson.Marshal(outValue.Interface())
 	if err != nil {
 		return
 	}
-	// fmt.Println("out:", out.Out)
-	// fmt.Println("err:", out.Err)
 
 	erri := returns[0].Interface()
 	out.Err, _ = erri.(error)
