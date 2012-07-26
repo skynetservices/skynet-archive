@@ -4,7 +4,6 @@ import (
 	"code.google.com/p/gonicetrace/nicetrace"
 	"errors"
 	"fmt"
-	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"launchpad.net/mgo/v2/bson"
 	"os"
 	"reflect"
@@ -105,10 +104,15 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 
 	// fmt.Printf("in.In: %v\n", in.In)
 
-	err = bsonrpc.CopyTo(in.In.(bson.M), inValuePtr.Interface())
+	err = bson.Unmarshal(in.In, inValuePtr.Interface())
 	if err != nil {
 		return
 	}
+
+	// err = bsonrpc.CopyTo(in.In.(bson.M), inValuePtr.Interface())
+	// if err != nil {
+	// 	return
+	// }
 
 	outValue := reflect.New(m.Type().In(3).Elem())
 	// fmt.Printf("in: %T %v\n", inValuePtr.Elem().Interface(), inValuePtr.Elem().Interface())
@@ -136,7 +140,10 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 		srpc.log.Item(mc)
 	}
 
-	out.Out = outValue.Elem().Interface()
+	out.Out, err = bson.Marshal(outValue.Elem().Interface())
+	if err != nil {
+		return
+	}
 	// fmt.Println("out:", out.Out)
 	// fmt.Println("err:", out.Err)
 
@@ -149,11 +156,11 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 type ServiceRPCIn struct {
 	Method      string
 	RequestInfo *RequestInfo
-	In          interface{}
+	In          []byte
 }
 
 type ServiceRPCOut struct {
-	Out interface{}
+	Out []byte
 	Err error
 }
 

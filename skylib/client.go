@@ -245,7 +245,11 @@ func (c *ServiceClient) Send(requestInfo *RequestInfo, funcName string, in inter
 	sin := ServiceRPCIn{
 		RequestInfo: requestInfo,
 		Method:      funcName,
-		In:          in,
+	}
+
+	sin.In, err = bson.Marshal(in)
+	if err != nil {
+		return
 	}
 
 	sout := ServiceRPCOut{}
@@ -256,9 +260,9 @@ func (c *ServiceClient) Send(requestInfo *RequestInfo, funcName string, in inter
 		c.Log.Item(err)
 	}
 
-	outMap, ok := sout.Out.(bson.M)
-	if ok {
-		bsonrpc.CopyTo(outMap, outPointer)
+	err = bson.Unmarshal(sout.Out, outPointer)
+	if err != nil {
+		return
 	}
 
 	c.connectionPool.Put(service)
