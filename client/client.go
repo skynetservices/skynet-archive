@@ -124,7 +124,7 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 
 		if err != nil {
 			// TODO: handle failure here and attempt to connect to a different instance
-			return nil, errors.New("Failed to connect to service: " + instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port))
+			return nil, errors.New("Failed to connect to service: " + instance.Config.ServiceAddr.String())
 		}
 
 		// get the service handshake
