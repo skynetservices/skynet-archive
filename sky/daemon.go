@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
+	"github.com/bketelsen/skynet/service"
 	"io"
 	"log"
 	"os"
@@ -40,11 +41,11 @@ func Daemon(q *client.Query, argv []string) {
 		Services: map[string]*SubService{},
 	}
 
-	service := skynet.CreateService(deployment, config)
+	s := service.CreateService(deployment, config)
 
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
 	defer func() {
-		service.Shutdown()
+		s.Shutdown()
 		if err := recover(); err != nil {
 			log.Println("Unrecovered error occured: ", err)
 		}
@@ -59,7 +60,7 @@ func Daemon(q *client.Query, argv []string) {
 
 	// If we pass false here service will not be Registered
 	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
-	service.Start(true).Wait()
+	s.Start(true).Wait()
 }
 
 // deploy each of the services listed in the provided file
@@ -95,7 +96,7 @@ func deployConfig(s *SkynetDaemon, cfg string) (err error) {
 		}
 		servicePath := line[:split]
 		args := strings.TrimSpace(line[split:])
-		s.Deploy(&skynet.RequestInfo{}, M{"service": servicePath, "args": args}, &M{})
+		s.Deploy(&service.RequestInfo{}, M{"service": servicePath, "args": args}, &M{})
 	}
 	return
 }
@@ -107,14 +108,14 @@ type SkynetDaemon struct {
 	serviceLock sync.Mutex
 }
 
-func (s *SkynetDaemon) Registered(service *skynet.Service)   {}
-func (s *SkynetDaemon) Unregistered(service *skynet.Service) {}
-func (s *SkynetDaemon) Started(service *skynet.Service)      {}
-func (s *SkynetDaemon) Stopped(service *skynet.Service) {
-	s.StopAllSubServices(&skynet.RequestInfo{}, M{}, &M{})
+func (sd *SkynetDaemon) Registered(s *service.Service)   {}
+func (sd *SkynetDaemon) Unregistered(s *service.Service) {}
+func (sd *SkynetDaemon) Started(s *service.Service)      {}
+func (sd *SkynetDaemon) Stopped(s *service.Service) {
+	sd.StopAllSubServices(&service.RequestInfo{}, M{}, &M{})
 }
 
-func (s *SkynetDaemon) Deploy(requestInfo *skynet.RequestInfo, in M, out *M) (err error) {
+func (s *SkynetDaemon) Deploy(requestInfo *service.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	uuid := skynet.UUID()
 	(*out)["uuid"] = uuid
@@ -155,12 +156,12 @@ func (m M) String(key string) (val string, ok bool) {
 	return
 }
 
-func (s *SkynetDaemon) ListSubServices(requestInfo *skynet.RequestInfo, in M, out M) (err error) {
+func (s *SkynetDaemon) ListSubServices(requestInfo *service.RequestInfo, in M, out M) (err error) {
 	out["Services"] = s.Services
 	return
 }
 
-func (s *SkynetDaemon) StopAllSubServices(requestInfo *skynet.RequestInfo, in M, out *M) (err error) {
+func (s *SkynetDaemon) StopAllSubServices(requestInfo *service.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	var uuids []string
 	s.serviceLock.Lock()
@@ -177,7 +178,7 @@ func (s *SkynetDaemon) StopAllSubServices(requestInfo *skynet.RequestInfo, in M,
 	return
 }
 
-func (s *SkynetDaemon) StartAllSubServices(requestInfo *skynet.RequestInfo, in M, out *M) (err error) {
+func (s *SkynetDaemon) StartAllSubServices(requestInfo *service.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	var uuids []string
 	s.serviceLock.Lock()
@@ -194,7 +195,7 @@ func (s *SkynetDaemon) StartAllSubServices(requestInfo *skynet.RequestInfo, in M
 	return
 }
 
-func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in M, out *M) (err error) {
+func (s *SkynetDaemon) StartSubService(requestInfo *service.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	uuid, ok := in.String("uuid")
 	if !ok {
@@ -211,7 +212,7 @@ func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in M, ou
 	return
 }
 
-func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in M, out *M) (err error) {
+func (s *SkynetDaemon) StopSubService(requestInfo *service.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	uuid, ok := in.String("uuid")
 	if !ok {
@@ -223,7 +224,7 @@ func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in M, out
 	return
 }
 
-func (s *SkynetDaemon) RestartSubService(requestInfo *skynet.RequestInfo, in M, out *M) (err error) {
+func (s *SkynetDaemon) RestartSubService(requestInfo *service.RequestInfo, in M, out *M) (err error) {
 	*out = map[string]interface{}{}
 	uuid, ok := in.String("uuid")
 	if !ok {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
+	"github.com/bketelsen/skynet/service"
 	"os"
 	"strconv"
 	"strings"
@@ -160,26 +161,26 @@ func ListServiceVersions(q *client.Query) {
 }
 
 func PrintTopology(q *client.Query) {
-	topology := make(map[string]map[string]map[string]map[string][]*skynet.Service)
+	topology := make(map[string]map[string]map[string]map[string][]*service.Service)
 
 	results := q.FindInstances()
 
 	// Build topology hash first
 	for _, instance := range results {
 		if topology[instance.Config.Region] == nil {
-			topology[instance.Config.Region] = make(map[string]map[string]map[string][]*skynet.Service)
+			topology[instance.Config.Region] = make(map[string]map[string]map[string][]*service.Service)
 		}
 
 		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] = make(map[string]map[string][]*skynet.Service)
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] = make(map[string]map[string][]*service.Service)
 		}
 
 		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] = make(map[string][]*skynet.Service)
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] = make(map[string][]*service.Service)
 		}
 
 		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = make([]*skynet.Service, 0)
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = make([]*service.Service, 0)
 		}
 
 		topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = append(topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version], instance)

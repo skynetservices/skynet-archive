@@ -9,6 +9,7 @@ package main
 
 import (
 	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/service"
 	"log"
 	"os"
 	"strings"
@@ -16,17 +17,17 @@ import (
 
 type TestService struct{}
 
-func (s *TestService) Registered(service *skynet.Service)   {}
-func (s *TestService) Unregistered(service *skynet.Service) {}
-func (s *TestService) Started(service *skynet.Service)      {}
-func (s *TestService) Stopped(service *skynet.Service)      {}
+func (s *TestService) Registered(service *service.Service)   {}
+func (s *TestService) Unregistered(service *service.Service) {}
+func (s *TestService) Started(service *service.Service)      {}
+func (s *TestService) Stopped(service *service.Service)      {}
 
 func NewTestService() *TestService {
 	r := &TestService{}
 	return r
 }
 
-func (s *TestService) Upcase(requestInfo *skynet.RequestInfo, in map[string]interface{}, out map[string]interface{}) (err error) {
+func (s *TestService) Upcase(requestInfo *service.RequestInfo, in map[string]interface{}, out map[string]interface{}) (err error) {
 	out["data"] = strings.ToUpper(in["data"].(string))
 	return
 }
@@ -46,7 +47,7 @@ func main() {
 	if err != nil {
 		config.Log.Item("Could not connect to mongo db for logging")
 	}
-	service := skynet.CreateService(testService, config)
+	service := service.CreateService(testService, config)
 
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
 	defer func() {

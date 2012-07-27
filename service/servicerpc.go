@@ -1,9 +1,10 @@
-package skynet
+package service
 
 import (
 	"code.google.com/p/gonicetrace/nicetrace"
 	"errors"
 	"fmt"
+	"github.com/bketelsen/skynet"
 	"launchpad.net/mgo/v2/bson"
 	"os"
 	"reflect"
@@ -18,7 +19,7 @@ var (
 )
 
 type ServiceRPC struct {
-	log         Logger
+	log         skynet.Logger
 	delegate    ServiceDelegate
 	methods     map[string]reflect.Value
 	MethodNames []string
@@ -36,7 +37,7 @@ func init() {
 	}
 }
 
-func NewServiceRPC(sd ServiceDelegate, log Logger) (srpc *ServiceRPC) {
+func NewServiceRPC(sd ServiceDelegate, log skynet.Logger) (srpc *ServiceRPC) {
 	srpc = &ServiceRPC{
 		log:      log,
 		delegate: sd,

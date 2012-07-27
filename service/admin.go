@@ -1,6 +1,7 @@
-package skynet
+package service
 
 import (
+	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"net/rpc"
 )
@@ -23,7 +24,7 @@ func NewServiceAdmin(service *Service) (sa *ServiceAdmin) {
 	return
 }
 
-func (sa *ServiceAdmin) Listen(addr *BindAddr) {
+func (sa *ServiceAdmin) Listen(addr *skynet.BindAddr) {
 	listener, err := addr.Listen()
 	if err != nil {
 		panic(err)
