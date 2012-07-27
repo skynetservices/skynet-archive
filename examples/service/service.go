@@ -8,7 +8,7 @@
 package main
 
 import (
-	"github.com/bketelsen/skynet/skylib"
+	"github.com/bketelsen/skynet"
 	"log"
 	"os"
 	"strings"
@@ -16,17 +16,17 @@ import (
 
 type TestService struct{}
 
-func (s *TestService) Registered(service *skylib.Service)   {}
-func (s *TestService) Unregistered(service *skylib.Service) {}
-func (s *TestService) Started(service *skylib.Service)      {}
-func (s *TestService) Stopped(service *skylib.Service)      {}
+func (s *TestService) Registered(service *skynet.Service)   {}
+func (s *TestService) Unregistered(service *skynet.Service) {}
+func (s *TestService) Started(service *skynet.Service)      {}
+func (s *TestService) Stopped(service *skynet.Service)      {}
 
 func NewTestService() *TestService {
 	r := &TestService{}
 	return r
 }
 
-func (s *TestService) Upcase(requestInfo *skylib.RequestInfo, in map[string]interface{}, out map[string]interface{}) (err error) {
+func (s *TestService) Upcase(requestInfo *skynet.RequestInfo, in map[string]interface{}, out map[string]interface{}) (err error) {
 	out["data"] = strings.ToUpper(in["data"].(string))
 	return
 }
@@ -34,19 +34,19 @@ func (s *TestService) Upcase(requestInfo *skylib.RequestInfo, in map[string]inte
 func main() {
 	testService := NewTestService()
 
-	config, _ := skylib.GetServiceConfigFromFlags()
+	config, _ := skynet.GetServiceConfigFromFlags()
 
 	config.Name = "TestService"
 	config.Version = "1"
 	config.Region = "Clearwater"
 	var err error
-	mlogger, err := skylib.NewMongoLogger("localhost", "skynet", "log", config.UUID)
-	clogger := skylib.NewConsoleLogger(os.Stdout)
-	config.Log = skylib.NewMultiLogger(mlogger, clogger)
+	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
+	clogger := skynet.NewConsoleLogger(os.Stdout)
+	config.Log = skynet.NewMultiLogger(mlogger, clogger)
 	if err != nil {
 		config.Log.Item("Could not connect to mongo db for logging")
 	}
-	service := skylib.CreateService(testService, config)
+	service := skynet.CreateService(testService, config)
 
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
 	defer func() {

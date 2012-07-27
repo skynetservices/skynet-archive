@@ -1,11 +1,11 @@
-package skylib
+package skynet
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
-	"github.com/bketelsen/skynet/skylib/util"
+	"github.com/bketelsen/skynet/util"
 	"launchpad.net/mgo/v2/bson"
 	"math/rand"
 	"net"

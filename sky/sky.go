@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/bketelsen/skynet/skylib"
+	"github.com/bketelsen/skynet"
 	"os"
 	"strconv"
 	"strings"
@@ -28,12 +28,12 @@ var (
 	RegisteredFlag  *string = flag.String("registered", "", "registered")
 )
 
-var DC skylib.DoozerConnection
+var DC skynet.DoozerConnection
 
 func main() {
 	flag.Parse()
 
-	query := &skylib.Query{
+	query := &skynet.Query{
 		DoozerConn: Doozer(),
 		Service:    *ServiceNameFlag,
 		Version:    *VersionFlag,
@@ -72,7 +72,7 @@ func main() {
 	}
 }
 
-func Doozer() skylib.DoozerConnection {
+func Doozer() skynet.DoozerConnection {
 	if DC == nil {
 		DC = Connect()
 	}
@@ -80,7 +80,7 @@ func Doozer() skylib.DoozerConnection {
 	return DC
 }
 
-func Connect() skylib.DoozerConnection {
+func Connect() skynet.DoozerConnection {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Failed to connect to Doozer")
@@ -89,13 +89,13 @@ func Connect() skylib.DoozerConnection {
 	}()
 
 	// TODO: This needs to come from command line, or environment variable
-	conn := skylib.NewDoozerConnection(*DoozerHost, "", false, nil) // nil as the last param will default to a Stdout logger
+	conn := skynet.NewDoozerConnection(*DoozerHost, "", false, nil) // nil as the last param will default to a Stdout logger
 	conn.Connect()
 
 	return conn
 }
 
-func ListInstances(q *skylib.Query) {
+func ListInstances(q *skynet.Query) {
 	var regFlag *bool
 
 	if *RegisteredFlag == "true" {
@@ -121,7 +121,7 @@ func ListInstances(q *skylib.Query) {
 	}
 }
 
-func ListHosts(q *skylib.Query) {
+func ListHosts(q *skynet.Query) {
 	results := q.FindHosts()
 
 	for _, host := range results {
@@ -129,7 +129,7 @@ func ListHosts(q *skylib.Query) {
 	}
 }
 
-func ListRegions(q *skylib.Query) {
+func ListRegions(q *skynet.Query) {
 	results := q.FindRegions()
 
 	for _, region := range results {
@@ -137,7 +137,7 @@ func ListRegions(q *skylib.Query) {
 	}
 }
 
-func ListServices(q *skylib.Query) {
+func ListServices(q *skynet.Query) {
 	results := q.FindServices()
 
 	for _, service := range results {
@@ -145,7 +145,7 @@ func ListServices(q *skylib.Query) {
 	}
 }
 
-func ListServiceVersions(q *skylib.Query) {
+func ListServiceVersions(q *skynet.Query) {
 	if *ServiceNameFlag == "" {
 		fmt.Println("Service name is required")
 		return
@@ -158,27 +158,27 @@ func ListServiceVersions(q *skylib.Query) {
 	}
 }
 
-func PrintTopology(q *skylib.Query) {
-	topology := make(map[string]map[string]map[string]map[string][]*skylib.Service)
+func PrintTopology(q *skynet.Query) {
+	topology := make(map[string]map[string]map[string]map[string][]*skynet.Service)
 
 	results := q.FindInstances()
 
 	// Build topology hash first
 	for _, instance := range results {
 		if topology[instance.Config.Region] == nil {
-			topology[instance.Config.Region] = make(map[string]map[string]map[string][]*skylib.Service)
+			topology[instance.Config.Region] = make(map[string]map[string]map[string][]*skynet.Service)
 		}
 
 		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] = make(map[string]map[string][]*skylib.Service)
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] = make(map[string]map[string][]*skynet.Service)
 		}
 
 		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] = make(map[string][]*skylib.Service)
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] = make(map[string][]*skynet.Service)
 		}
 
 		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = make([]*skylib.Service, 0)
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = make([]*skynet.Service, 0)
 		}
 
 		topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = append(topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version], instance)
@@ -264,7 +264,7 @@ func InteractiveShell() {
 	fmt.Println("Skynet Interactive Shell")
 	prompt()
 
-	query := &skylib.Query{
+	query := &skynet.Query{
 		DoozerConn: doozer,
 	}
 

@@ -1,4 +1,4 @@
-package skylib
+package skynet
 
 import (
 	"code.google.com/p/gonicetrace/nicetrace"

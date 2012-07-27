@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/bketelsen/skynet/skylib"
+	"github.com/bketelsen/skynet"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,17 +11,17 @@ import (
 func main() {
 	c := make(chan os.Signal, 1)
 
-	config := &skylib.ClientConfig{
-		DoozerConfig: &skylib.DoozerConfig{
+	config := &skynet.ClientConfig{
+		DoozerConfig: &skynet.DoozerConfig{
 			Uri:          "127.0.0.1:8046",
 			AutoDiscover: true,
 		},
 	}
 
 	var err error
-	config.Log = skylib.NewConsoleLogger(os.Stderr)
+	config.Log = skynet.NewConsoleLogger(os.Stderr)
 
-	client := skylib.NewClient(config)
+	client := skynet.NewClient(config)
 
 	// This will not fail if no services currently exist, as connections are created on demand
 	// this saves from chicken and egg issues with dependencies between services

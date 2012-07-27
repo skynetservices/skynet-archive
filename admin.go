@@ -1,4 +1,4 @@
-package skylib
+package skynet
 
 import (
 	"github.com/bketelsen/skynet/rpc/bsonrpc"

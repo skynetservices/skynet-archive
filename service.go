@@ -1,4 +1,4 @@
-package skylib
+package skynet
 
 import (
 	"encoding/json"
