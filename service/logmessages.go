@@ -55,7 +55,7 @@ func (rm RegisteredMethods) String() string {
 }
 
 type MethodCall struct {
-	RequestInfo *RequestInfo
+	RequestInfo *skynet.RequestInfo
 	MethodName  string
 	Duration    int64
 }

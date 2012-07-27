@@ -230,7 +230,7 @@ func (c *ServiceClient) monitorInstances() {
 	}
 }
 
-func (c *ServiceClient) Send(requestInfo *service.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
+func (c *ServiceClient) Send(requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
 	// TODO: timeout logic
 	s, err := c.getConnection(0)
 	if err != nil {
@@ -239,7 +239,7 @@ func (c *ServiceClient) Send(requestInfo *service.RequestInfo, funcName string, 
 	}
 
 	if requestInfo == nil {
-		requestInfo = &service.RequestInfo{
+		requestInfo = &skynet.RequestInfo{
 			RequestID: skynet.UUID(),
 		}
 	}

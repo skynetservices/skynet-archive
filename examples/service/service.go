@@ -27,7 +27,7 @@ func NewTestService() *TestService {
 	return r
 }
 
-func (s *TestService) Upcase(requestInfo *service.RequestInfo, in map[string]interface{}, out map[string]interface{}) (err error) {
+func (s *TestService) Upcase(requestInfo *skynet.RequestInfo, in map[string]interface{}, out map[string]interface{}) (err error) {
 	out["data"] = strings.ToUpper(in["data"].(string))
 	return
 }

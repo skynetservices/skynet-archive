@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	RequestInfoPtrType = reflect.TypeOf(&RequestInfo{})
+	RequestInfoPtrType = reflect.TypeOf(&skynet.RequestInfo{})
 
 	anError   error
 	ErrorType = reflect.TypeOf(&anError).Elem()
@@ -172,15 +172,11 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 
 type ServiceRPCIn struct {
 	Method      string
-	RequestInfo *RequestInfo
+	RequestInfo *skynet.RequestInfo
 	In          []byte
 }
 
 type ServiceRPCOut struct {
 	Out []byte
 	Err error
-}
-
-type RequestInfo struct {
-	RequestID string
 }
