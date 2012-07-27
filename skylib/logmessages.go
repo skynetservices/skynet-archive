@@ -36,14 +36,6 @@ func (dlc DoozerLostConnection) String() string {
 	return fmt.Sprintf("Lost connection to doozer at %s", dlc.DoozerConfig.Uri)
 }
 
-type RegisteredMethod struct {
-	Method string
-}
-
-func (rm RegisteredMethod) String() string {
-	return fmt.Sprintf("Registered method %q", rm.Method)
-}
-
 type ServiceDiscovered struct {
 	Service *Service
 }
@@ -65,7 +57,16 @@ type ServiceCreated struct {
 }
 
 func (sc ServiceCreated) String() string {
-	return fmt.Sprintf("Created service %q on %s", sc.ServiceConfig.Name, sc.ServiceConfig.ServiceAddr)
+	return fmt.Sprintf("Created service %q", sc.ServiceConfig.Name)
+}
+
+type ServiceListening struct {
+	ServiceConfig *ServiceConfig
+	Addr          *BindAddr
+}
+
+func (sc ServiceListening) String() string {
+	return fmt.Sprintf("Service %q listening on %s", sc.ServiceConfig.Name, sc.Addr)
 }
 
 type AdminListening struct {
@@ -74,4 +75,22 @@ type AdminListening struct {
 
 func (al AdminListening) String() string {
 	return fmt.Sprintf("Service %q listening for admin on %s", al.ServiceConfig.Name, al.ServiceConfig.AdminAddr)
+}
+
+type RegisteredMethods struct {
+	Methods []string
+}
+
+func (rm RegisteredMethods) String() string {
+	return fmt.Sprintf("Registered methods: %v", rm.Methods)
+}
+
+type MethodCall struct {
+	RequestInfo *RequestInfo
+	MethodName  string
+	Duration    int64
+}
+
+func (mi MethodCall) String() string {
+	return fmt.Sprintf("Method %q called with RequestInfo %v and duration %dns", mi.MethodName, mi.RequestInfo, mi.Duration)
 }

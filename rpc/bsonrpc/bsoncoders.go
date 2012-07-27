@@ -16,13 +16,12 @@ func NewEncoder(w io.Writer) *Encoder {
 }
 
 func (e *Encoder) Encode(v interface{}) (err error) {
-	//fmt.Printf("encoding: %+v\n", v)
 	buf, err := bson.Marshal(v)
 	if err != nil {
 		return
 	}
 	_, err = e.w.Write(buf)
-	//fmt.Printf("encoded to: %v\n", buf)
+
 	return
 }
 
@@ -61,11 +60,7 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 		return
 	}
 
-	//fmt.Printf("decoding: %v\n", buf)
-
 	err = bson.Unmarshal(buf, pv)
-
-	//fmt.Printf("decoded: %+v\n", pv)
 
 	return
 }

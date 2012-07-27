@@ -4,14 +4,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"github.com/bketelsen/skynet/skylib/util"
-	"github.com/erikstmartin/msgpack-rpc/go/rpc"
+	"launchpad.net/mgo/v2/bson"
 	"math/rand"
 	"net"
+	"net/rpc"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
+)
+
+var (
+	ErrServiceUnregistered = errors.New("Service is unregistered")
 )
 
 type Client struct {
@@ -22,14 +27,14 @@ type Client struct {
 }
 
 type ServiceResource struct {
-	conn    *rpc.Session
-	service Service
-	closed  bool
+	rpcClient *rpc.Client
+	service   Service
+	closed    bool
 }
 
 func (s ServiceResource) Close() {
 	s.closed = true
-	s.conn.Close()
+	s.rpcClient.Close()
 }
 
 func (s ServiceResource) IsClosed() bool {
@@ -91,21 +96,24 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 
 	go service.monitorInstances()
 
-	factory := func() (pools.Resource, error) {
+	var factory func() (pools.Resource, error)
+	factory = func() (pools.Resource, error) {
 		if len(service.instances) < 1 {
 
 			return nil, errors.New("No services available that match your criteria")
 		}
 
 		// Connect to random instance
-		key := (rand.Int() % len(service.instances))
+		index := (rand.Int() % len(service.instances))
 
 		var instance Service
 
 		i := 0
 
-		for _, v := range service.instances {
-			if i == key {
+		var key string
+		for k, v := range service.instances {
+			if i == index {
+				key = k
 				instance = v
 				break
 			}
@@ -118,9 +126,33 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 			return nil, errors.New("Failed to connect to service: " + instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port))
 		}
 
+		// get the service handshake
+		var sh ServiceHandshake
+		decoder := bsonrpc.NewDecoder(conn)
+		err = decoder.Decode(&sh)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+
+		ch := ClientHandshake{}
+		encoder := bsonrpc.NewEncoder(conn)
+		err = encoder.Encode(ch)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+
+		if !sh.Registered {
+			// this service has unregistered itself, look elsewhere
+			conn.Close()
+			delete(service.instances, key)
+			return factory()
+		}
+
 		resource := ServiceResource{
-			conn:    rpc.NewSession(conn, true),
-			service: instance,
+			rpcClient: bsonrpc.NewClient(conn),
+			service:   instance,
 		}
 
 		return resource, nil
@@ -196,7 +228,7 @@ func (c *ServiceClient) monitorInstances() {
 	}
 }
 
-func (c *ServiceClient) Send(funcName string, arguments ...interface{}) (val reflect.Value, err error) {
+func (c *ServiceClient) Send(requestInfo *RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
 	// TODO: timeout logic
 	service, err := c.getConnection(0)
 	if err != nil {
@@ -204,10 +236,33 @@ func (c *ServiceClient) Send(funcName string, arguments ...interface{}) (val ref
 		return
 	}
 
+	if requestInfo == nil {
+		requestInfo = &RequestInfo{
+			RequestID: UUID(),
+		}
+	}
+
+	sin := ServiceRPCIn{
+		RequestInfo: requestInfo,
+		Method:      funcName,
+	}
+
+	sin.In, err = bson.Marshal(in)
+	if err != nil {
+		return
+	}
+
+	sout := ServiceRPCOut{}
+
 	// TODO: Check for connectivity issue so that we can try to get another resource out of the pool
-	val, err = service.conn.SendV(funcName, arguments)
+	err = service.rpcClient.Call(service.service.Config.Name+".Forward", sin, &sout)
 	if err != nil {
 		c.Log.Item(err)
+	}
+
+	err = bson.Unmarshal(sout.Out, outPointer)
+	if err != nil {
+		return
 	}
 
 	c.connectionPool.Put(service)

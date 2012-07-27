@@ -19,11 +19,7 @@ func main() {
 	}
 
 	var err error
-	config.Log, err = skylib.NewMongoLogger("localhost", "skynet", "log")
-	if err != nil {
-		config.Log = skylib.NewConsoleLogger(os.Stderr)
-		config.Log.Item("Could not connect to mongo db for logging")
-	}
+	config.Log = skylib.NewConsoleLogger(os.Stderr)
 
 	client := skylib.NewClient(config)
 
@@ -32,14 +28,18 @@ func main() {
 	service := client.GetService("TestService", "", "", "") // any version, any region, any host
 
 	// This on the other hand will fail if it can't find a service to connect to
-	ret, err := service.Send("Upcase", "Upcase me!!")
+	in := map[string]interface{}{
+		"data": "Upcase me!!",
+	}
+	out := map[string]interface{}{}
+	err = service.Send(nil, "Upcase", in, &out)
 
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Println(ret)
+	fmt.Println(out["data"].(string))
 
 	watchSignals(c)
 }

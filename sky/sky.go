@@ -11,7 +11,16 @@ import (
 	"syscall"
 )
 
+func getDefaultEnvVar(name, def string) (v string) {
+	v = os.Getenv(name)
+	if v == "" {
+		v = def
+	}
+	return
+}
+
 var (
+	DoozerHost      *string = flag.String("doozer", getDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
 	VersionFlag     *string = flag.String("version", "", "service version")
 	ServiceNameFlag *string = flag.String("service", "", "service name")
 	HostFlag        *string = flag.String("host", "", "host")
@@ -80,7 +89,7 @@ func Connect() skylib.DoozerConnection {
 	}()
 
 	// TODO: This needs to come from command line, or environment variable
-	conn := skylib.NewDoozerConnection("127.0.0.1:8046", "", false, nil) // nil as the last param will default to a Stdout logger
+	conn := skylib.NewDoozerConnection(*DoozerHost, "", false, nil) // nil as the last param will default to a Stdout logger
 	conn.Connect()
 
 	return conn

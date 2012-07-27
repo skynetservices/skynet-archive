@@ -2,19 +2,21 @@ package skylib
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"net"
+	"net/rpc"
 	"os"
 	"os/signal"
 	"reflect"
 	"strconv"
+	"sync"
 	"syscall"
 )
 
 // TODO: Better error handling, should gracefully fail to startup if it can't connect to doozer
 
 // A Generic struct to represent any service in the SkyNet system.
-type ServiceInterface interface {
+type ServiceDelegate interface {
 	Started(s *Service)
 	Stopped(s *Service)
 	Registered(s *Service)
@@ -29,23 +31,181 @@ type Service struct {
 
 	Log Logger `json:"-"`
 
-	Admin *ServiceAdmin `json:"-"`
+	RPCServ *rpc.Server   `json:"-"`
+	Admin   *ServiceAdmin `json:"-"`
 
-	Delegate ServiceInterface         `json:"-"`
-	methods  map[string]reflect.Value `json:"-"`
+	Delegate ServiceDelegate `json:"-"`
+
+	methods map[string]reflect.Value `json:"-"`
+
+	activeClients sync.WaitGroup `json:"-"`
+
+	connectionChan chan *net.TCPConn `json:"-"`
+	registeredChan chan bool         `json:"-"`
+
+	doozerChan   chan interface{} `json:"-"`
+	doozerWaiter sync.WaitGroup   `json:"-"`
+
+	rpcListener *net.TCPListener `json:"-"`
 }
 
-func (s *Service) Resolve(name string, arguments []reflect.Value) (interface{}, reflect.Value, error) {
-	return s.Delegate, s.methods[name], nil
+func CreateService(sd ServiceDelegate, c *ServiceConfig) (s *Service) {
+	// This will set defaults
+	initializeConfig(c)
+
+	s = &Service{
+		Config:         c,
+		Delegate:       sd,
+		Log:            c.Log,
+		methods:        make(map[string]reflect.Value),
+		connectionChan: make(chan *net.TCPConn),
+		registeredChan: make(chan bool),
+		doozerChan:     make(chan interface{}),
+	}
+
+	c.Log.Item(ServiceCreated{
+		ServiceConfig: s.Config,
+	})
+	// the main rpc server
+	s.RPCServ = rpc.NewServer()
+	rpcForwarder := NewServiceRPC(s.Delegate, c.Log)
+
+	c.Log.Item(RegisteredMethods{rpcForwarder.MethodNames})
+
+	s.RPCServ.RegisterName(s.Config.Name, rpcForwarder)
+
+	return
 }
 
-func (s *Service) Start(register bool) {
-	portString := fmt.Sprintf("%s:%d", s.Config.ServiceAddr.IPAddress, s.Config.ServiceAddr.Port)
+func (s *Service) listen(addr *BindAddr) {
+	var err error
+	s.rpcListener, err = addr.Listen()
+	if err != nil {
+		panic(err)
+	}
 
-	rpcServ := NewRpcServer(s, true, nil)
-	l, _ := net.Listen("tcp", portString)
+	s.Log.Item(ServiceListening{
+		Addr:          addr,
+		ServiceConfig: s.Config,
+	})
 
-	rpcServ.Listen(l)
+	for {
+		conn, err := s.rpcListener.AcceptTCP()
+		if err != nil {
+			panic(err)
+		}
+		s.connectionChan <- conn
+	}
+}
+
+// this function is the goroutine that owns this service - all thread-sensitive data needs to
+// be manipulated only through here.
+func (s *Service) mux() {
+loop:
+	for {
+		select {
+		case conn := <-s.connectionChan:
+			s.activeClients.Add(1)
+
+			// send the server handshake
+			sh := ServiceHandshake{
+				Registered: s.Registered,
+			}
+			encoder := bsonrpc.NewEncoder(conn)
+			err := encoder.Encode(sh)
+			if err != nil {
+				s.Log.Item(err)
+				s.activeClients.Done()
+				break
+			}
+			if !s.Registered {
+				conn.Close()
+				s.activeClients.Done()
+				break
+			}
+
+			// read the client handshake
+			var ch ClientHandshake
+			decoder := bsonrpc.NewDecoder(conn)
+			err = decoder.Decode(&ch)
+			if err != nil {
+				s.Log.Item(err)
+				s.activeClients.Done()
+				break
+			}
+
+			// here do stuff with the client handshake
+
+			go func() {
+				s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
+				s.activeClients.Done()
+			}()
+		case register := <-s.registeredChan:
+			if register {
+				s.register()
+			} else {
+				s.unregister()
+			}
+		case _ = <-s.doneChan:
+			go func() {
+				for _ = range s.doneChan {
+				}
+			}()
+			s.RemoveFromCluster()
+			s.doozerChan <- doozerFinish{}
+			break loop
+		}
+	}
+}
+
+type doozerSetConfig struct {
+	ConfigPath string
+	ConfigData []byte
+}
+
+type doozerRemoveFromCluster struct {
+	ConfigPath string
+}
+
+type doozerFinish struct{}
+
+func (s *Service) doozerMux() {
+loop:
+	for i := range s.doozerChan {
+		switch i := i.(type) {
+		case doozerSetConfig:
+			rev := s.doozer().GetCurrentRevision()
+			_, err := s.DoozerConn.Set(i.ConfigPath, rev, i.ConfigData)
+			if err != nil {
+				s.Log.Panic(err.Error())
+			}
+		case doozerRemoveFromCluster:
+			rev := s.doozer().GetCurrentRevision()
+			err := s.doozer().Del(i.ConfigPath, rev)
+			if err != nil {
+				s.Log.Panic(err.Error())
+			}
+		case doozerFinish:
+			break loop
+		}
+	}
+	s.doozerWaiter.Done()
+}
+
+// only call this from doozerMux
+func (s *Service) doozer() DoozerConnection {
+	if s.DoozerConn == nil {
+		s.DoozerConn = NewDoozerConnectionFromConfig(*s.Config.DoozerConfig, s.Log)
+
+		s.DoozerConn.Connect()
+	}
+
+	return s.DoozerConn
+}
+
+func (s *Service) Start(register bool) (done *sync.WaitGroup) {
+
+	go s.listen(s.Config.ServiceAddr)
 
 	// the admin server
 	if s.Config.AdminAddr != nil {
@@ -58,26 +218,25 @@ func (s *Service) Start(register bool) {
 	go watchSignals(c, s)
 
 	s.doneChan = make(chan bool, 1)
-	s.Log.Item("Starting server")
-
-	go rpcServ.Run()
 
 	go s.Delegate.Started(s) // Call user defined callback
+
+	s.doozerWaiter.Add(1)
+	go s.doozerMux()
 
 	s.UpdateCluster()
 
 	if register == true {
-		s.Register()
+		s.register()
 	}
 
-	// Endless loop to keep app from returning
-	select {
-	case _ = <-s.doneChan:
-		//NOTE: probably shouldn't call Exit() in a lib. Just let the function return?
-		//      But then, this is triggered by a kill signal, so it's more like we 
-		//      intercept the kill signal, clean up, and then die anyway.
-		syscall.Exit(0)
-	}
+	done = &sync.WaitGroup{}
+	done.Add(1)
+	go func() {
+		s.mux()
+		done.Done()
+	}()
+	return
 }
 
 func (s *Service) UpdateCluster() {
@@ -85,94 +244,58 @@ func (s *Service) UpdateCluster() {
 	if err != nil {
 		s.Log.Panic(err.Error())
 	}
+	cfgpath := s.GetConfigPath()
 
-	rev := s.doozer().GetCurrentRevision()
-
-	_, err = s.doozer().Set(s.GetConfigPath(), rev, b)
-	if err != nil {
-		s.Log.Panic(err.Error())
+	s.doozerChan <- doozerSetConfig{
+		ConfigPath: cfgpath,
+		ConfigData: b,
 	}
 }
 
 func (s *Service) RemoveFromCluster() {
-	rev := s.doozer().GetCurrentRevision()
-	path := s.GetConfigPath()
-	err := s.doozer().Del(path, rev)
-	if err != nil {
-		s.Log.Panic(err.Error())
+	s.doozerChan <- doozerRemoveFromCluster{
+		ConfigPath: s.GetConfigPath(),
 	}
 }
 
-func (s *Service) Register() {
+func (s *Service) register() {
+	// this version must be run from the runService() goroutine
+	if s.Registered {
+		return
+	}
 	s.Registered = true
 	s.UpdateCluster()
-
 	s.Delegate.Registered(s) // Call user defined callback
 }
 
-func (s *Service) Unregister() {
+func (s *Service) Register() {
+	s.registeredChan <- true
+}
+
+func (s *Service) unregister() {
+	// this version must be run from the runService() goroutine
+	if !s.Registered {
+		return
+	}
 	s.Registered = false
 	s.UpdateCluster()
-
 	s.Delegate.Unregistered(s) // Call user defined callback
 }
 
+func (s *Service) Unregister() {
+	s.registeredChan <- false
+}
+
 func (s *Service) Shutdown() {
-	s.Unregister()
 
 	// TODO: make this wait for requests to finish
-	s.RemoveFromCluster()
 	s.doneChan <- true
 
+	s.activeClients.Wait()
+	s.doozerWaiter.Wait()
+
 	s.Delegate.Stopped(s) // Call user defined callback
-}
 
-func CreateService(s ServiceInterface, c *ServiceConfig) *Service {
-	typ := reflect.TypeOf(s)
-
-	// This will set defaults
-	initializeConfig(c)
-
-	service := &Service{
-		Config:   c,
-		Delegate: s,
-		Log:      c.Log,
-		methods:  make(map[string]reflect.Value),
-	}
-
-	c.Log.Item(ServiceCreated{
-		ServiceConfig: service.Config,
-	})
-
-	service.findRPCMethods(typ)
-
-	return service
-}
-
-func (s *Service) findRPCMethods(typ reflect.Type) {
-	for i := 0; i < typ.NumMethod(); i++ {
-		m := typ.Method(i)
-
-		// Don't register callbacks
-		if m.Name == "Started" || m.Name == "Stopped" || m.Name == "Registered" || m.Name == "Unregistered" {
-			continue
-		}
-
-		// Only register exported methods
-		if m.PkgPath != "" {
-			continue
-		}
-
-		if m.Type.NumOut() != 1 && m.Type.NumOut() != 2 {
-			continue
-		}
-
-		s.methods[m.Name] = m.Func
-		//s.Log.Println("Registered RPC Method: " + m.Name)
-		s.Log.Item(RegisteredMethod{
-			Method: m.Name,
-		})
-	}
 }
 
 func initializeConfig(c *ServiceConfig) {
@@ -229,7 +352,7 @@ func (r *Service) Equal(that *Service) bool {
 }
 
 func watchSignals(c chan os.Signal, s *Service) {
-	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM)
 
 	for {
 		select {
@@ -241,14 +364,4 @@ func watchSignals(c chan os.Signal, s *Service) {
 			}
 		}
 	}
-}
-
-func (s *Service) doozer() DoozerConnection {
-	if s.DoozerConn == nil {
-		s.DoozerConn = NewDoozerConnectionFromConfig(*s.Config.DoozerConfig, s.Log)
-
-		s.DoozerConn.Connect()
-	}
-
-	return s.DoozerConn
 }
