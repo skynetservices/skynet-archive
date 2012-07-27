@@ -1,40 +1,9 @@
-package skylib
+package service
 
 import (
 	"fmt"
+	"github.com/bketelsen/skynet"
 )
-
-type DoozerConnected struct {
-	Addr string
-}
-
-func (dc DoozerConnected) String() string {
-	return fmt.Sprintf("Connected to doozer at %s", dc.Addr)
-}
-
-type DoozerDiscovered struct {
-	DoozerServer *DoozerServer
-}
-
-func (dd DoozerDiscovered) String() string {
-	return fmt.Sprintf("Discovered new doozer %s at %s", dd.DoozerServer.Key, dd.DoozerServer.Addr)
-}
-
-type DoozerRemoved struct {
-	DoozerServer *DoozerServer
-}
-
-func (dr DoozerRemoved) String() string {
-	return fmt.Sprintf("Removed doozer %s at %s", dr.DoozerServer.Key, dr.DoozerServer.Addr)
-}
-
-type DoozerLostConnection struct {
-	DoozerConfig *DoozerConfig
-}
-
-func (dlc DoozerLostConnection) String() string {
-	return fmt.Sprintf("Lost connection to doozer at %s", dlc.DoozerConfig.Uri)
-}
 
 type ServiceDiscovered struct {
 	Service *Service
@@ -53,7 +22,7 @@ func (sr ServiceRemoved) String() string {
 }
 
 type ServiceCreated struct {
-	ServiceConfig *ServiceConfig
+	ServiceConfig *skynet.ServiceConfig
 }
 
 func (sc ServiceCreated) String() string {
@@ -61,8 +30,8 @@ func (sc ServiceCreated) String() string {
 }
 
 type ServiceListening struct {
-	ServiceConfig *ServiceConfig
-	Addr          *BindAddr
+	ServiceConfig *skynet.ServiceConfig
+	Addr          *skynet.BindAddr
 }
 
 func (sc ServiceListening) String() string {
@@ -70,7 +39,7 @@ func (sc ServiceListening) String() string {
 }
 
 type AdminListening struct {
-	ServiceConfig *ServiceConfig
+	ServiceConfig *skynet.ServiceConfig
 }
 
 func (al AdminListening) String() string {
@@ -86,7 +55,7 @@ func (rm RegisteredMethods) String() string {
 }
 
 type MethodCall struct {
-	RequestInfo *RequestInfo
+	RequestInfo *skynet.RequestInfo
 	MethodName  string
 	Duration    int64
 }

@@ -1,9 +1,11 @@
-package skylib
+package client
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/4ad/doozer"
+	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/service"
 	"log"
 	"strings"
 )
@@ -15,7 +17,7 @@ type Query struct {
 	Port       string
 	Region     string
 	Registered *bool
-	DoozerConn DoozerConnection
+	DoozerConn skynet.DoozerConnection
 	DoozerRev  int64
 
 	// Internal use only
@@ -116,48 +118,48 @@ func (q *Query) FindServiceVersions() []string {
 	return q.matchingPaths()
 }
 
-func (q *Query) FindInstances() []*Service {
+func (q *Query) FindInstances() []*service.Service {
 	q.search()
 
-	results := make([]*Service, 0)
+	results := make([]*service.Service, 0)
 
 	// At this point we don't know which values were supplied 
 	// if all prefixed dir's were supplied no filtering is needed, but this may be all nodes
 	for path, _ := range q.files {
-		var service Service
+		var s service.Service
 
 		data, _, err := q.DoozerConn.Get(path, q.DoozerRev)
 		if err != nil {
 			log.Panic(err.Error())
 		}
 
-		err = json.Unmarshal(data, &service)
+		err = json.Unmarshal(data, &s)
 
-		if q.Service != "" && q.Service != service.Config.Name {
+		if q.Service != "" && q.Service != s.Config.Name {
 			continue
 		}
 
-		if q.Version != "" && q.Version != service.Config.Version {
+		if q.Version != "" && q.Version != s.Config.Version {
 			continue
 		}
 
-		if q.Region != "" && q.Region != service.Config.Region {
+		if q.Region != "" && q.Region != s.Config.Region {
 			continue
 		}
 
-		if q.Host != "" && q.Host != service.Config.ServiceAddr.IPAddress {
+		if q.Host != "" && q.Host != s.Config.ServiceAddr.IPAddress {
 			continue
 		}
 
-		if q.Port != "" && q.Port != fmt.Sprintf("%d", service.Config.ServiceAddr.Port) {
+		if q.Port != "" && q.Port != fmt.Sprintf("%d", s.Config.ServiceAddr.Port) {
 			continue
 		}
 
-		if q.Registered != nil && *q.Registered != service.Registered {
+		if q.Registered != nil && *q.Registered != s.Registered {
 			continue
 		}
 
-		results = append(results, &service)
+		results = append(results, &s)
 	}
 
 	// make sure we can garbage collect

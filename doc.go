@@ -25,4 +25,4 @@ Services -
 SkyNet uses Doozer to store configuration data about the available services.  Configuration changes are pushed to Doozer, causing connected clients to immediately become aware of changed configurations.  
 
 */
-package skylib
+package skynet

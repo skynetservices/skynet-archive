@@ -1,9 +1,10 @@
-package skylib
+package service
 
 import (
 	"code.google.com/p/gonicetrace/nicetrace"
 	"errors"
 	"fmt"
+	"github.com/bketelsen/skynet"
 	"launchpad.net/mgo/v2/bson"
 	"os"
 	"reflect"
@@ -11,14 +12,14 @@ import (
 )
 
 var (
-	RequestInfoPtrType = reflect.TypeOf(&RequestInfo{})
+	RequestInfoPtrType = reflect.TypeOf(&skynet.RequestInfo{})
 
 	anError   error
 	ErrorType = reflect.TypeOf(&anError).Elem()
 )
 
 type ServiceRPC struct {
-	log         Logger
+	log         skynet.Logger
 	delegate    ServiceDelegate
 	methods     map[string]reflect.Value
 	MethodNames []string
@@ -36,7 +37,7 @@ func init() {
 	}
 }
 
-func NewServiceRPC(sd ServiceDelegate, log Logger) (srpc *ServiceRPC) {
+func NewServiceRPC(sd ServiceDelegate, log skynet.Logger) (srpc *ServiceRPC) {
 	srpc = &ServiceRPC{
 		log:      log,
 		delegate: sd,
@@ -171,15 +172,11 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 
 type ServiceRPCIn struct {
 	Method      string
-	RequestInfo *RequestInfo
+	RequestInfo *skynet.RequestInfo
 	In          []byte
 }
 
 type ServiceRPCOut struct {
 	Out []byte
 	Err error
-}
-
-type RequestInfo struct {
-	RequestID string
 }
