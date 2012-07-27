@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,7 +22,7 @@ func main() {
 	var err error
 	config.Log = skynet.NewConsoleLogger(os.Stderr)
 
-	client := skynet.NewClient(config)
+	client := client.NewClient(config)
 
 	// This will not fail if no services currently exist, as connections are created on demand
 	// this saves from chicken and egg issues with dependencies between services

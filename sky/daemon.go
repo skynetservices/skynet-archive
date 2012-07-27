@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"io"
 	"log"
 	"os"
@@ -18,7 +19,7 @@ import (
 //
 // Daemon() will run the "SkynetDeployment" service, which can be used to remotely spawn
 // new services on the host.
-func Daemon(q *skynet.Query, argv []string) {
+func Daemon(q *client.Query, argv []string) {
 
 	config, args := skynet.GetServiceConfigFromFlags(argv...)
 

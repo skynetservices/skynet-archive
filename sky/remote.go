@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"os"
 )
 
 // Remote() uses the SkynetDaemon service to remotely manage services.
-func Remote(q *skynet.Query, args []string) {
+func Remote(q *client.Query, args []string) {
 	if len(args) == 0 {
 		remoteHelp()
 		return
@@ -41,7 +42,7 @@ func Remote(q *skynet.Query, args []string) {
 	return
 }
 
-func getDaemonServiceClient(q *skynet.Query) (client *skynet.Client, service *skynet.ServiceClient) {
+func getDaemonServiceClient(q *client.Query) (c *client.Client, service *client.ServiceClient) {
 	config := &skynet.ClientConfig{
 		DoozerConfig: &skynet.DoozerConfig{
 			Uri:          "127.0.0.1:8046",
@@ -51,20 +52,20 @@ func getDaemonServiceClient(q *skynet.Query) (client *skynet.Client, service *sk
 
 	config.Log = skynet.NewConsoleLogger(os.Stderr)
 
-	client = skynet.NewClient(config)
+	c = client.NewClient(config)
 
 	registered := true
-	query := &skynet.Query{
-		DoozerConn: client.DoozerConn,
+	query := &client.Query{
+		DoozerConn: c.DoozerConn,
 		Service:    "SkynetDaemon",
 		Host:       "127.0.0.1",
 		Registered: &registered,
 	}
-	service = client.GetServiceFromQuery(query)
+	service = c.GetServiceFromQuery(query)
 	return
 }
 
-func remoteList(q *skynet.Query) {
+func remoteList(q *client.Query) {
 	_, service := getDaemonServiceClient(q)
 
 	// This on the other hand will fail if it can't find a service to connect to
@@ -80,11 +81,11 @@ func remoteList(q *skynet.Query) {
 	fmt.Println(ret)
 }
 
-func remoteDeploy(q *skynet.Query, servicePath string, serviceArgs []string) {
+func remoteDeploy(q *client.Query, servicePath string, serviceArgs []string) {
 
 }
 
-func remoteStart(q *skynet.Query, uuid string) {
+func remoteStart(q *client.Query, uuid string) {
 	_, service := getDaemonServiceClient(q)
 
 	// This on the other hand will fail if it can't find a service to connect to

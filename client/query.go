@@ -1,9 +1,10 @@
-package skynet
+package client
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/4ad/doozer"
+	"github.com/bketelsen/skynet"
 	"log"
 	"strings"
 )
@@ -15,7 +16,7 @@ type Query struct {
 	Port       string
 	Region     string
 	Registered *bool
-	DoozerConn DoozerConnection
+	DoozerConn skynet.DoozerConnection
 	DoozerRev  int64
 
 	// Internal use only
@@ -116,15 +117,15 @@ func (q *Query) FindServiceVersions() []string {
 	return q.matchingPaths()
 }
 
-func (q *Query) FindInstances() []*Service {
+func (q *Query) FindInstances() []*skynet.Service {
 	q.search()
 
-	results := make([]*Service, 0)
+	results := make([]*skynet.Service, 0)
 
 	// At this point we don't know which values were supplied 
 	// if all prefixed dir's were supplied no filtering is needed, but this may be all nodes
 	for path, _ := range q.files {
-		var service Service
+		var service skynet.Service
 
 		data, _, err := q.DoozerConn.Get(path, q.DoozerRev)
 		if err != nil {

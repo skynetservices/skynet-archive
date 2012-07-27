@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"os"
 	"strconv"
 	"strings"
@@ -33,7 +34,7 @@ var DC skynet.DoozerConnection
 func main() {
 	flag.Parse()
 
-	query := &skynet.Query{
+	query := &client.Query{
 		DoozerConn: Doozer(),
 		Service:    *ServiceNameFlag,
 		Version:    *VersionFlag,
@@ -95,7 +96,7 @@ func Connect() skynet.DoozerConnection {
 	return conn
 }
 
-func ListInstances(q *skynet.Query) {
+func ListInstances(q *client.Query) {
 	var regFlag *bool
 
 	if *RegisteredFlag == "true" {
@@ -121,7 +122,7 @@ func ListInstances(q *skynet.Query) {
 	}
 }
 
-func ListHosts(q *skynet.Query) {
+func ListHosts(q *client.Query) {
 	results := q.FindHosts()
 
 	for _, host := range results {
@@ -129,7 +130,7 @@ func ListHosts(q *skynet.Query) {
 	}
 }
 
-func ListRegions(q *skynet.Query) {
+func ListRegions(q *client.Query) {
 	results := q.FindRegions()
 
 	for _, region := range results {
@@ -137,7 +138,7 @@ func ListRegions(q *skynet.Query) {
 	}
 }
 
-func ListServices(q *skynet.Query) {
+func ListServices(q *client.Query) {
 	results := q.FindServices()
 
 	for _, service := range results {
@@ -145,7 +146,7 @@ func ListServices(q *skynet.Query) {
 	}
 }
 
-func ListServiceVersions(q *skynet.Query) {
+func ListServiceVersions(q *client.Query) {
 	if *ServiceNameFlag == "" {
 		fmt.Println("Service name is required")
 		return
@@ -158,7 +159,7 @@ func ListServiceVersions(q *skynet.Query) {
 	}
 }
 
-func PrintTopology(q *skynet.Query) {
+func PrintTopology(q *client.Query) {
 	topology := make(map[string]map[string]map[string]map[string][]*skynet.Service)
 
 	results := q.FindInstances()
@@ -264,7 +265,7 @@ func InteractiveShell() {
 	fmt.Println("Skynet Interactive Shell")
 	prompt()
 
-	query := &skynet.Query{
+	query := &client.Query{
 		DoozerConn: doozer,
 	}
 

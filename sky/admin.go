@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"net"
 	"net/rpc"
@@ -26,15 +27,15 @@ func doUnregister(rpcClient *rpc.Client, log skynet.Logger) {
 	}
 }
 
-func Register(q *skynet.Query) {
+func Register(q *client.Query) {
 	doSomething(q, doRegister)
 }
 
-func Unregister(q *skynet.Query) {
+func Unregister(q *client.Query) {
 	doSomething(q, doUnregister)
 }
 
-func doSomething(q *skynet.Query, do func(*rpc.Client, skynet.Logger)) {
+func doSomething(q *client.Query, do func(*rpc.Client, skynet.Logger)) {
 
 	log := skynet.NewConsoleLogger(os.Stderr)
 	for _, instance := range q.FindInstances() {

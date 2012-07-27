@@ -1,9 +1,10 @@
-package skynet
+package client
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"github.com/bketelsen/skynet/util"
 	"launchpad.net/mgo/v2/bson"
@@ -20,15 +21,15 @@ var (
 )
 
 type Client struct {
-	DoozerConn DoozerConnection
+	DoozerConn skynet.DoozerConnection
 
-	Config *ClientConfig
-	Log    Logger `json:"-"`
+	Config *skynet.ClientConfig
+	Log    skynet.Logger `json:"-"`
 }
 
 type ServiceResource struct {
 	rpcClient *rpc.Client
-	service   Service
+	service   skynet.Service
 	closed    bool
 }
 
@@ -41,9 +42,9 @@ func (s ServiceResource) IsClosed() bool {
 	return s.closed
 }
 
-func (c *Client) doozer() DoozerConnection {
+func (c *Client) doozer() skynet.DoozerConnection {
 	if c.DoozerConn == nil {
-		c.DoozerConn = NewDoozerConnectionFromConfig(*c.Config.DoozerConfig, c.Config.Log)
+		c.DoozerConn = skynet.NewDoozerConnectionFromConfig(*c.Config.DoozerConfig, c.Config.Log)
 
 		c.DoozerConn.Connect()
 	}
@@ -51,9 +52,9 @@ func (c *Client) doozer() DoozerConnection {
 	return c.DoozerConn
 }
 
-func NewClient(config *ClientConfig) *Client {
+func NewClient(config *skynet.ClientConfig) *Client {
 	if config.Log == nil {
-		config.Log = NewConsoleLogger(os.Stderr)
+		config.Log = skynet.NewConsoleLogger(os.Stderr)
 	}
 
 	if config.ConnectionPoolSize == 0 {
@@ -62,7 +63,7 @@ func NewClient(config *ClientConfig) *Client {
 
 	client := &Client{
 		Config:     config,
-		DoozerConn: NewDoozerConnectionFromConfig(*config.DoozerConfig, config.Log),
+		DoozerConn: skynet.NewDoozerConnectionFromConfig(*config.DoozerConfig, config.Log),
 		Log:        config.Log,
 	}
 
@@ -81,7 +82,7 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 		Log:            c.Config.Log,
 		connectionPool: pools.NewRoundRobin(c.Config.ConnectionPoolSize, c.Config.IdleTimeout),
 		query:          q,
-		instances:      make(map[string]Service, 0),
+		instances:      make(map[string]skynet.Service, 0),
 	}
 
 	// Load initial list of instances
@@ -106,7 +107,7 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 		// Connect to random instance
 		index := (rand.Int() % len(service.instances))
 
-		var instance Service
+		var instance skynet.Service
 
 		i := 0
 
@@ -119,7 +120,7 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 			}
 		}
 
-		conn, err = net.Dial("tcp", instance.Config.ServiceAddr.IPAddress+":"+strconv.Itoa(instance.Config.ServiceAddr.Port))
+		conn, err = net.Dial("tcp", instance.Config.ServiceAddr.String())
 
 		if err != nil {
 			// TODO: handle failure here and attempt to connect to a different instance
@@ -127,7 +128,7 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 		}
 
 		// get the service handshake
-		var sh ServiceHandshake
+		var sh skynet.ServiceHandshake
 		decoder := bsonrpc.NewDecoder(conn)
 		err = decoder.Decode(&sh)
 		if err != nil {
@@ -135,7 +136,7 @@ func (c *Client) GetServiceFromQuery(q *Query) (service *ServiceClient) {
 			return nil, err
 		}
 
-		ch := ClientHandshake{}
+		ch := skynet.ClientHandshake{}
 		encoder := bsonrpc.NewEncoder(conn)
 		err = encoder.Encode(ch)
 		if err != nil {
@@ -180,10 +181,10 @@ func (c *Client) GetService(name string, version string, region string, host str
 }
 
 type ServiceClient struct {
-	Log            Logger `json:"-"`
+	Log            skynet.Logger `json:"-"`
 	connectionPool *pools.RoundRobin
 	query          *Query
-	instances      map[string]Service
+	instances      map[string]skynet.Service
 }
 
 func (c *ServiceClient) monitorInstances() {
@@ -197,7 +198,7 @@ func (c *ServiceClient) monitorInstances() {
 		rev = ev.Rev
 
 		if err == nil {
-			var service Service
+			var service skynet.Service
 
 			buf := bytes.NewBuffer(ev.Body)
 
@@ -211,13 +212,13 @@ func (c *ServiceClient) monitorInstances() {
 
 					if service.Registered == true {
 						//c.Log.Println("New Service Instance Discovered: " + key)
-						c.Log.Item(ServiceDiscovered{
+						c.Log.Item(skynet.ServiceDiscovered{
 							Service: &service,
 						})
 						c.instances[key] = service
 					} else {
 						//c.Log.Println("Service Instance Removed: " + key)
-						c.Log.Item(ServiceRemoved{
+						c.Log.Item(skynet.ServiceRemoved{
 							Service: &service,
 						})
 						delete(c.instances, key)
@@ -228,7 +229,7 @@ func (c *ServiceClient) monitorInstances() {
 	}
 }
 
-func (c *ServiceClient) Send(requestInfo *RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
+func (c *ServiceClient) Send(requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
 	// TODO: timeout logic
 	service, err := c.getConnection(0)
 	if err != nil {
@@ -237,12 +238,12 @@ func (c *ServiceClient) Send(requestInfo *RequestInfo, funcName string, in inter
 	}
 
 	if requestInfo == nil {
-		requestInfo = &RequestInfo{
-			RequestID: UUID(),
+		requestInfo = &skynet.RequestInfo{
+			RequestID: skynet.UUID(),
 		}
 	}
 
-	sin := ServiceRPCIn{
+	sin := skynet.ServiceRPCIn{
 		RequestInfo: requestInfo,
 		Method:      funcName,
 	}
@@ -252,7 +253,7 @@ func (c *ServiceClient) Send(requestInfo *RequestInfo, funcName string, in inter
 		return
 	}
 
-	sout := ServiceRPCOut{}
+	sout := skynet.ServiceRPCOut{}
 
 	// TODO: Check for connectivity issue so that we can try to get another resource out of the pool
 	err = service.rpcClient.Call(service.service.Config.Name+".Forward", sin, &sout)
@@ -304,6 +305,6 @@ func (c *ServiceClient) isClosed(service ServiceResource) bool {
 	return true
 }
 
-func getInstanceKey(service Service) string {
+func getInstanceKey(service skynet.Service) string {
 	return service.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(service.Config.ServiceAddr.Port)
 }
