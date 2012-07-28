@@ -1,4 +1,4 @@
-package skylib
+package skynet
 
 // ServiceHandshake is data sent by the service to the client immediately once the connection
 // is opened.

@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/bketelsen/skynet/skylib"
+	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"os"
 )
 
 // Remote() uses the SkynetDaemon service to remotely manage services.
-func Remote(q *skylib.Query, args []string) {
+func Remote(q *client.Query, args []string) {
 	if len(args) == 0 {
 		remoteHelp()
 		return
@@ -41,30 +42,30 @@ func Remote(q *skylib.Query, args []string) {
 	return
 }
 
-func getDaemonServiceClient(q *skylib.Query) (client *skylib.Client, service *skylib.ServiceClient) {
-	config := &skylib.ClientConfig{
-		DoozerConfig: &skylib.DoozerConfig{
+func getDaemonServiceClient(q *client.Query) (c *client.Client, service *client.ServiceClient) {
+	config := &skynet.ClientConfig{
+		DoozerConfig: &skynet.DoozerConfig{
 			Uri:          "127.0.0.1:8046",
 			AutoDiscover: true,
 		},
 	}
 
-	config.Log = skylib.NewConsoleLogger(os.Stderr)
+	config.Log = skynet.NewConsoleLogger(os.Stderr)
 
-	client = skylib.NewClient(config)
+	c = client.NewClient(config)
 
 	registered := true
-	query := &skylib.Query{
-		DoozerConn: client.DoozerConn,
+	query := &client.Query{
+		DoozerConn: c.DoozerConn,
 		Service:    "SkynetDaemon",
 		Host:       "127.0.0.1",
 		Registered: &registered,
 	}
-	service = client.GetServiceFromQuery(query)
+	service = c.GetServiceFromQuery(query)
 	return
 }
 
-func remoteList(q *skylib.Query) {
+func remoteList(q *client.Query) {
 	_, service := getDaemonServiceClient(q)
 
 	// This on the other hand will fail if it can't find a service to connect to
@@ -80,11 +81,11 @@ func remoteList(q *skylib.Query) {
 	fmt.Println(ret)
 }
 
-func remoteDeploy(q *skylib.Query, servicePath string, serviceArgs []string) {
+func remoteDeploy(q *client.Query, servicePath string, serviceArgs []string) {
 
 }
 
-func remoteStart(q *skylib.Query, uuid string) {
+func remoteStart(q *client.Query, uuid string) {
 	_, service := getDaemonServiceClient(q)
 
 	// This on the other hand will fail if it can't find a service to connect to

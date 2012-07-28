@@ -1,7 +1,8 @@
-package skylib
+package service
 
 import (
 	"encoding/json"
+	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"net"
 	"net/rpc"
@@ -24,12 +25,12 @@ type ServiceDelegate interface {
 }
 
 type Service struct {
-	Config     *ServiceConfig
-	DoozerConn DoozerConnection `json:"-"`
+	Config     *skynet.ServiceConfig
+	DoozerConn skynet.DoozerConnection `json:"-"`
 	Registered bool
 	doneChan   chan bool `json:"-"`
 
-	Log Logger `json:"-"`
+	Log skynet.Logger `json:"-"`
 
 	RPCServ *rpc.Server   `json:"-"`
 	Admin   *ServiceAdmin `json:"-"`
@@ -49,7 +50,7 @@ type Service struct {
 	rpcListener *net.TCPListener `json:"-"`
 }
 
-func CreateService(sd ServiceDelegate, c *ServiceConfig) (s *Service) {
+func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	// This will set defaults
 	initializeConfig(c)
 
@@ -77,7 +78,7 @@ func CreateService(sd ServiceDelegate, c *ServiceConfig) (s *Service) {
 	return
 }
 
-func (s *Service) listen(addr *BindAddr) {
+func (s *Service) listen(addr *skynet.BindAddr) {
 	var err error
 	s.rpcListener, err = addr.Listen()
 	if err != nil {
@@ -108,7 +109,7 @@ loop:
 			s.activeClients.Add(1)
 
 			// send the server handshake
-			sh := ServiceHandshake{
+			sh := skynet.ServiceHandshake{
 				Registered: s.Registered,
 			}
 			encoder := bsonrpc.NewEncoder(conn)
@@ -125,7 +126,7 @@ loop:
 			}
 
 			// read the client handshake
-			var ch ClientHandshake
+			var ch skynet.ClientHandshake
 			decoder := bsonrpc.NewDecoder(conn)
 			err = decoder.Decode(&ch)
 			if err != nil {
@@ -193,9 +194,9 @@ loop:
 }
 
 // only call this from doozerMux
-func (s *Service) doozer() DoozerConnection {
+func (s *Service) doozer() skynet.DoozerConnection {
 	if s.DoozerConn == nil {
-		s.DoozerConn = NewDoozerConnectionFromConfig(*s.Config.DoozerConfig, s.Log)
+		s.DoozerConn = skynet.NewDoozerConnectionFromConfig(*s.Config.DoozerConfig, s.Log)
 
 		s.DoozerConn.Connect()
 	}
@@ -298,9 +299,9 @@ func (s *Service) Shutdown() {
 
 }
 
-func initializeConfig(c *ServiceConfig) {
+func initializeConfig(c *skynet.ServiceConfig) {
 	if c.Log == nil {
-		c.Log = NewConsoleLogger(os.Stderr)
+		c.Log = skynet.NewConsoleLogger(os.Stderr)
 	}
 
 	if c.Name == "" {
@@ -324,7 +325,7 @@ func initializeConfig(c *ServiceConfig) {
 	}
 
 	if c.DoozerConfig == nil {
-		c.DoozerConfig = &DoozerConfig{
+		c.DoozerConfig = &skynet.DoozerConfig{
 			Uri:          "127.0.0.1:8046",
 			AutoDiscover: true,
 		}

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bketelsen/skynet/skylib"
+	"github.com/bketelsen/skynet"
 	"github.com/kballard/go-shellquote"
 	"go/build"
 	"os"
@@ -31,7 +31,7 @@ type SubService struct {
 	startMutex sync.Mutex
 }
 
-func NewSubService(log skylib.Logger, servicePath, args, uuid string) (ss *SubService, err error) {
+func NewSubService(log skynet.Logger, servicePath, args, uuid string) (ss *SubService, err error) {
 	ss = &SubService{
 		ServicePath: servicePath,
 		Args:        args,

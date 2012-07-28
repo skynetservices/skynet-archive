@@ -1,42 +1,44 @@
 package main
 
 import (
+	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
-	"github.com/bketelsen/skynet/skylib"
+	"github.com/bketelsen/skynet/service"
 	"net"
 	"net/rpc"
 	"os"
 )
 
-func doRegister(rpcClient *rpc.Client, log skylib.Logger) {
-	var args skylib.RegisterParams
-	var reply skylib.RegisterReturns
+func doRegister(rpcClient *rpc.Client, log skynet.Logger) {
+	var args service.RegisterParams
+	var reply service.RegisterReturns
 	err := rpcClient.Call("Admin.Register", args, &reply)
 	if err != nil {
 		log.Item(err)
 	}
 }
 
-func doUnregister(rpcClient *rpc.Client, log skylib.Logger) {
-	var args skylib.UnregisterParams
-	var reply skylib.UnregisterReturns
+func doUnregister(rpcClient *rpc.Client, log skynet.Logger) {
+	var args service.UnregisterParams
+	var reply service.UnregisterReturns
 	err := rpcClient.Call("Admin.Unregister", args, &reply)
 	if err != nil {
 		log.Item(err)
 	}
 }
 
-func Register(q *skylib.Query) {
+func Register(q *client.Query) {
 	doSomething(q, doRegister)
 }
 
-func Unregister(q *skylib.Query) {
+func Unregister(q *client.Query) {
 	doSomething(q, doUnregister)
 }
 
-func doSomething(q *skylib.Query, do func(*rpc.Client, skylib.Logger)) {
+func doSomething(q *client.Query, do func(*rpc.Client, skynet.Logger)) {
 
-	log := skylib.NewConsoleLogger(os.Stderr)
+	log := skynet.NewConsoleLogger(os.Stderr)
 	for _, instance := range q.FindInstances() {
 		conn, err := net.Dial("tcp", instance.Config.AdminAddr.String())
 		if err != nil {

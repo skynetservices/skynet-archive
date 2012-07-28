@@ -1,4 +1,4 @@
-package skylib
+package service
 
 import (
 	"fmt"
