@@ -1,6 +1,5 @@
 # Build / Test skylib
-cd skylib && go build && go test
-cd ..
+go build && go test
 
 # Build / Test sky
 cd sky && go build && go test
