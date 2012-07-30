@@ -105,20 +105,19 @@ func (c *Client) GetServiceFromQuery(q *Query) (s *ServiceClient) {
 			return nil, errors.New("No services available that match your criteria")
 		}
 
+		var key string
+		var instance service.Service
+
 		// Connect to random instance
 		index := (rand.Int() % len(s.instances))
 
-		var instance service.Service
-
-		i := 0
-
-		var key string
 		for k, v := range s.instances {
-			if i == index {
+			if index == 0 {
 				key = k
 				instance = v
 				break
 			}
+			index--
 		}
 
 		conn, err = net.Dial("tcp", instance.Config.ServiceAddr.String())
