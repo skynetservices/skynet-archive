@@ -119,32 +119,50 @@ func getDefaultEnvVar(name, def string) (v string) {
 	return
 }
 
-func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []string) {
+func flagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
+	flagset.StringVar(&dcfg.Uri, "doozer", getDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
+	flagset.StringVar(&dcfg.BootUri, "doozerboot", getDefaultEnvVar("DZNSHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
+	flagset.BoolVar(&dcfg.AutoDiscover, "autodiscover", getDefaultEnvVar("DZDISCOVER", "true") == "true", "auto discover new doozer instances")
+}
+
+func GetClientConfigFromFlags(argv ...string) (config *ClientConfig, args []string) {
+
+	config = &ClientConfig{
+		DoozerConfig: &DoozerConfig{},
+	}
+
 	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
 
-	var (
+	flagsForDoozer(config.DoozerConfig, flagset)
+	idleTimeout := flagset.Int("timeout", 0, "amount of idle time before timeout")
 
-		// bindPort       *int    = flagset.Int("port", 9999, "tcp port to listen")
-		// adminPort      *int    = flagset.Int("adminport", 9998, "tcp port to listen for admin")
-		// bindAddr       *string = flagset.String("address", "127.0.0.1", "address to bind")
-		rpcAddr        *string = flagset.String("l", getDefaultEnvVar("SKYNET_LISTEN", ":9999"), "host:port to listen on for RPC")
-		adminAddr      *string = flagset.String("admin", getDefaultEnvVar("SKYNET_ADMIN", ":9998"), "host:port to listen on for admin")
-		region         *string = flagset.String("region", getDefaultEnvVar("SKYNET_REGION", "unknown"), "region service is located in")
-		doozer         *string = flagset.String("doozer", getDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
-		doozerBoot     *string = flagset.String("doozerboot", getDefaultEnvVar("DZNSHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
-		doozerDiscover *bool   = flagset.Bool("autodiscover", getDefaultEnvVar("DZDISCOVER", "true") == "true", "auto discover new doozer instances")
-		uuid           *string = flagset.String("uuid", "", "UUID for this service")
-	)
+	flagset.Parse(argv)
+	args = flagset.Args()
+
+	config.IdleTimeout = time.Duration(*idleTimeout)
+
+	return
+}
+
+func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []string) {
+
+	config = &ServiceConfig{
+		DoozerConfig: &DoozerConfig{},
+	}
+
+	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
+
+	flagsForDoozer(config.DoozerConfig, flagset)
+	rpcAddr := flagset.String("l", getDefaultEnvVar("SKYNET_LISTEN", ":9999"), "host:port to listen on for RPC")
+	adminAddr := flagset.String("admin", getDefaultEnvVar("SKYNET_ADMIN", ":9998"), "host:port to listen on for admin")
+	flagset.StringVar(&config.UUID, "uuid", UUID(), "UUID for this service")
+	flagset.StringVar(&config.Region, "region", getDefaultEnvVar("SKYNET_REGION", "unknown"), "region service is located in")
 
 	if len(argv) == 0 {
 		argv = os.Args[1:]
 	}
 	flagset.Parse(argv)
 	args = flagset.Args()
-
-	if *uuid == "" {
-		*uuid = UUID()
-	}
 
 	rpcBA, err := BindAddrFromString(*rpcAddr)
 	if err != nil {
@@ -155,17 +173,8 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 		panic(err)
 	}
 
-	config = &ServiceConfig{
-		UUID:        *uuid,
-		Region:      *region,
-		ServiceAddr: rpcBA,
-		AdminAddr:   adminBA,
-		DoozerConfig: &DoozerConfig{
-			Uri:          *doozer,
-			BootUri:      *doozerBoot,
-			AutoDiscover: *doozerDiscover,
-		},
-	}
+	config.ServiceAddr = rpcBA
+	config.AdminAddr = adminBA
 
 	return
 }
