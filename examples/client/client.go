@@ -12,12 +12,7 @@ import (
 func main() {
 	c := make(chan os.Signal, 1)
 
-	config := &skynet.ClientConfig{
-		DoozerConfig: &skynet.DoozerConfig{
-			Uri:          "127.0.0.1:8046",
-			AutoDiscover: true,
-		},
-	}
+	config, _ := skynet.GetClientConfigFromFlags(os.Args...)
 
 	var err error
 	config.Log = skynet.NewConsoleLogger(os.Stderr)
