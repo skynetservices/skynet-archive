@@ -43,12 +43,7 @@ func Remote(q *client.Query, args []string) {
 }
 
 func getDaemonServiceClient(q *client.Query) (c *client.Client, service *client.ServiceClient) {
-	config := &skynet.ClientConfig{
-		DoozerConfig: &skynet.DoozerConfig{
-			Uri:          "127.0.0.1:8046",
-			AutoDiscover: true,
-		},
-	}
+	config, _ := skynet.GetClientConfigFromFlags(os.Args...)
 
 	config.Log = skynet.NewConsoleLogger(os.Stderr)
 
@@ -58,7 +53,7 @@ func getDaemonServiceClient(q *client.Query) (c *client.Client, service *client.
 	query := &client.Query{
 		DoozerConn: c.DoozerConn,
 		Service:    "SkynetDaemon",
-		Host:       "127.0.0.1",
+		//Host:       "127.0.0.1",
 		Registered: &registered,
 	}
 	service = c.GetServiceFromQuery(query)
