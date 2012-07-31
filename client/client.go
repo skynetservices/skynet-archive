@@ -79,25 +79,6 @@ func (c *Client) GetServiceFromQuery(q *Query) (s *ServiceClient) {
 	var conn net.Conn
 	var err error
 
-	s = &ServiceClient{
-		Log:            c.Config.Log,
-		connectionPool: pools.NewRoundRobin(c.Config.ConnectionPoolSize, c.Config.IdleTimeout),
-		query:          q,
-		instances:      make(map[string]service.Service, 0),
-	}
-
-	// Load initial list of instances
-	results := s.query.FindInstances()
-
-	if results != nil {
-		for _, instance := range results {
-			key := instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port)
-			s.instances[key] = *instance
-		}
-	}
-
-	go s.monitorInstances()
-
 	var factory func() (pools.Resource, error)
 	factory = func() (pools.Resource, error) {
 		if len(s.instances) < 1 {
@@ -159,7 +140,27 @@ func (c *Client) GetServiceFromQuery(q *Query) (s *ServiceClient) {
 		return resource, nil
 	}
 
-	s.connectionPool.Open(factory)
+	s = &ServiceClient{
+		Log: c.Config.Log,
+		// connectionPool: pools.NewRoundRobin(c.Config.ConnectionPoolSize, c.Config.IdleTimeout),
+		connectionPool: pools.NewResourcePool(factory, c.Config.ConnectionPoolSize),
+		query:          q,
+		instances:      make(map[string]service.Service, 0),
+	}
+
+	// Load initial list of instances
+	results := s.query.FindInstances()
+
+	if results != nil {
+		for _, instance := range results {
+			key := instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port)
+			s.instances[key] = *instance
+		}
+	}
+
+	go s.monitorInstances()
+
+	// s.connectionPool.Open(factory)
 
 	return s
 }
@@ -181,8 +182,9 @@ func (c *Client) GetService(name string, version string, region string, host str
 }
 
 type ServiceClient struct {
-	Log            skynet.Logger `json:"-"`
-	connectionPool *pools.RoundRobin
+	Log skynet.Logger `json:"-"`
+	//connectionPool *pools.RoundRobin
+	connectionPool *pools.ResourcePool
 	query          *Query
 	instances      map[string]service.Service
 }
@@ -266,7 +268,7 @@ func (c *ServiceClient) Send(requestInfo *skynet.RequestInfo, funcName string, i
 		return
 	}
 
-	c.connectionPool.Put(s)
+	c.connectionPool.Release(s)
 
 	return
 }
@@ -277,14 +279,14 @@ func (c *ServiceClient) getConnection(lvl int) (service ServiceResource, err err
 		return
 	}
 
-	conn, err := c.connectionPool.Get()
+	conn, err := c.connectionPool.AcquireOrCreate()
 
 	if err != nil || c.isClosed(conn.(ServiceResource)) {
 		if conn != nil {
 			s := conn.(ServiceResource)
 
 			s.closed = true
-			c.connectionPool.Put(s)
+			c.connectionPool.Release(s)
 		}
 
 		return c.getConnection(lvl + 1)
