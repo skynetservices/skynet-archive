@@ -77,9 +77,11 @@ func (f *Fibonacci) Index(ri *skynet.RequestInfo, req fibonacci.Request, resp *f
 }
 
 func (f *Fibonacci) lookupValue(ri *skynet.RequestInfo, index int, vchan chan<- uint64) {
+
+	remoteService := f.client.GetService("Fibonacci", "", "", "")
+
 	var err error
 	for {
-		remoteService := f.client.GetService("Fibonacci", "", "", "")
 		req := fibonacci.Request{
 			Index: index,
 		}
