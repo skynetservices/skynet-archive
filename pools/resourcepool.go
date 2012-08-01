@@ -11,11 +11,30 @@ type ResourcePool struct {
 	factory       Factory
 	idleResources ring
 	idleCapacity  int
-	maxCreate     int
+	maxResources  int
+	numResources  int
 
 	acqchan chan acquireMessage
 	rchan   chan releaseMessage
 	cchan   chan closeMessage
+
+	activeWaits []acquireMessage
+}
+
+func NewResourcePool(factory Factory, idleCapacity, maxResources int) (rp *ResourcePool) {
+	rp = &ResourcePool{
+		factory:      factory,
+		idleCapacity: idleCapacity,
+		maxResources: maxResources,
+
+		acqchan: make(chan acquireMessage, 1),
+		rchan:   make(chan releaseMessage, 1),
+		cchan:   make(chan closeMessage, 1),
+	}
+
+	go rp.mux()
+
+	return
 }
 
 type releaseMessage struct {
@@ -30,35 +49,33 @@ type acquireMessage struct {
 type closeMessage struct {
 }
 
-func NewResourcePool(factory Factory, idleCapacity, maxCreate int) (rp *ResourcePool) {
-	rp = &ResourcePool{
-		factory:      factory,
-		idleCapacity: idleCapacity,
-		maxCreate:    maxCreate,
-
-		acqchan: make(chan acquireMessage, 1),
-		rchan:   make(chan releaseMessage, 1),
-		cchan:   make(chan closeMessage, 1),
-	}
-
-	go rp.mux()
-
-	return
-}
-
 func (rp *ResourcePool) mux() {
 loop:
 	for {
 		select {
 		case acq := <-rp.acqchan:
-			r, err := rp.acquire()
-			if err == nil {
-				acq.rch <- r
-			} else {
-				acq.ech <- err
-			}
+			rp.acquire(acq)
 		case rel := <-rp.rchan:
-			rp.release(rel.r)
+			if len(rp.activeWaits) != 0 {
+				// someone is waiting - give them the resource if we can
+				if !rel.r.IsClosed() {
+					rp.activeWaits[0].rch <- rel.r
+				} else {
+					// if we can't, discard the released resource and create a new one
+					r, err := rp.factory()
+					if err != nil {
+						// reflect the smaller number of existant resources
+						rp.numResources--
+						rp.activeWaits[0].ech <- err
+					} else {
+						rp.activeWaits[0].rch <- r
+					}
+				}
+			} else {
+				// if no one is waiting, release it for idling or closing
+				rp.release(rel.r)
+			}
+
 		case _ = <-rp.cchan:
 			break loop
 		}
@@ -68,22 +85,37 @@ loop:
 	}
 }
 
-func (rp *ResourcePool) acquire() (resource Resource, err error) {
+func (rp *ResourcePool) acquire(acq acquireMessage) {
 	if !rp.idleResources.Empty() {
-		resource = rp.idleResources.Dequeue()
+		acq.rch <- rp.idleResources.Dequeue()
 		return
 	}
-	resource, err = rp.factory()
+	if rp.maxResources > 0 && rp.numResources >= rp.maxResources {
+		// we need to wait until something comes back in
+		rp.activeWaits = append(rp.activeWaits, acq)
+		return
+	}
+
+	r, err := rp.factory()
+	if err != nil {
+		acq.ech <- err
+	} else {
+		rp.numResources++
+		acq.rch <- r
+	}
+
 	return
 }
 
 func (rp *ResourcePool) release(resource Resource) {
 	if resource.IsClosed() {
 		// don't put it back in the pool.
+		rp.numResources--
 		return
 	}
-	if rp.idleResources.Size() == rp.idleCapacity {
+	if rp.idleCapacity != 0 && rp.idleResources.Size() == rp.idleCapacity {
 		resource.Close()
+		rp.numResources--
 		return
 	}
 
