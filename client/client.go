@@ -301,16 +301,19 @@ func (c *ServiceClient) getLightInstanceMux() (sp servicePool, ok bool) {
 	}
 
 	// first collect those that have the greatest reported number of available slots
-	mostSlots := 0
+	// mostSlots := 0
 	bestInstances := make([]servicePool, len(c.instances), 0)
 	for _, i := range c.instances {
-		if i.service.Slots > mostSlots {
-			mostSlots = i.service.Slots
-			bestInstances = bestInstances[:0]
-		}
-		if i.service.Slots < mostSlots {
-			continue
-		}
+		// let's just add them all for the moment
+		/*
+			if i.service.Slots > mostSlots {
+				mostSlots = i.service.Slots
+				bestInstances = bestInstances[:0]
+			}
+			if i.service.Slots < mostSlots {
+				continue
+			}
+		*/
 		bestInstances = append(bestInstances, i)
 	}
 
