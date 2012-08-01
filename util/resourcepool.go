@@ -6,13 +6,13 @@ type Closer interface {
 
 type ResourcePool struct {
 	factory       Factory
-	idleResources chan Closer
+	idleResources chan Resource
 }
 
 func NewResourcePool(factory Factory, idleCapacity int) (rp *ResourcePool) {
 	rp = &ResourcePool{
 		factory:       factory,
-		idleResources: make(chan Closer, idleCapacity),
+		idleResources: make(chan Resource, idleCapacity),
 	}
 
 	return
@@ -32,7 +32,7 @@ func (rp *ResourcePool) ClaimPool(o *ResourcePool) {
 }
 
 // AcquireOrCreate() will get one of the idle resources, or create a new one.
-func (rp *ResourcePool) AcquireOrCreate() (resource Closer, err error) {
+func (rp *ResourcePool) AcquireOrCreate() (resource Resource, err error) {
 	select {
 	case resource = <-rp.idleResources:
 	default:
@@ -43,7 +43,11 @@ func (rp *ResourcePool) AcquireOrCreate() (resource Closer, err error) {
 
 // Release() will release a resource for use by others. If the idle queue is
 // full, the resource will be closed.
-func (rp *ResourcePool) Release(resource Closer) {
+func (rp *ResourcePool) Release(resource Resource) {
+	if resource.IsClosed() {
+		// don't put it back in the pool.
+		return
+	}
 	select {
 	case rp.idleResources <- resource:
 	default:
