@@ -15,7 +15,9 @@ import (
 	"strings"
 )
 
-type TestService struct{}
+type TestService struct {
+	s *service.Service
+}
 
 func (s *TestService) Registered(service *service.Service)   {}
 func (s *TestService) Unregistered(service *service.Service) {}
@@ -28,7 +30,9 @@ func NewTestService() *TestService {
 }
 
 func (s *TestService) Upcase(requestInfo *skynet.RequestInfo, in map[string]interface{}, out map[string]interface{}) (err error) {
+	s.s.AdjustSlots(-1)
 	out["data"] = strings.ToUpper(in["data"].(string))
+	s.s.AdjustSlots(1)
 	return
 }
 
@@ -48,6 +52,7 @@ func main() {
 		config.Log.Item("Could not connect to mongo db for logging")
 	}
 	service := service.CreateService(testService, config)
+	testService.s = service
 
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
 	defer func() {
@@ -60,6 +65,7 @@ func main() {
 	// If we pass false here service will not be Registered
 	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
 	waiter := service.Start(true)
+	service.AdjustSlots(1)
 
 	// waiting on the sync.WaitGroup returned by service.Start() will wait for the service to finish running.
 	waiter.Wait()
