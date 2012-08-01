@@ -28,7 +28,6 @@ type Service struct {
 	Config     *skynet.ServiceConfig
 	DoozerConn skynet.DoozerConnection `json:"-"`
 	Registered bool
-	Slots      int
 	doneChan   chan bool `json:"-"`
 
 	Log skynet.Logger `json:"-"`
@@ -48,8 +47,6 @@ type Service struct {
 	doozerChan   chan interface{} `json:"-"`
 	doozerWaiter sync.WaitGroup   `json:"-"`
 
-	slotsChan chan int `json:"-"`
-
 	rpcListener *net.TCPListener `json:"-"`
 }
 
@@ -65,7 +62,6 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		connectionChan: make(chan *net.TCPConn),
 		registeredChan: make(chan bool),
 		doozerChan:     make(chan interface{}),
-		slotsChan:      make(chan int),
 	}
 
 	c.Log.Item(ServiceCreated{
@@ -80,10 +76,6 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	s.RPCServ.RegisterName(s.Config.Name, rpcForwarder)
 
 	return
-}
-
-func (s *Service) AdjustSlots(slots int) {
-	s.slotsChan <- slots
 }
 
 func (s *Service) listen(addr *skynet.BindAddr) {
@@ -113,9 +105,6 @@ func (s *Service) mux() {
 loop:
 	for {
 		select {
-		case slots := <-s.slotsChan:
-			s.Slots += slots
-			s.UpdateCluster()
 		case conn := <-s.connectionChan:
 			s.activeClients.Add(1)
 
