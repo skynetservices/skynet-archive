@@ -1,8 +1,11 @@
 package pools
 
-type Closer interface {
+type Resource interface {
 	Close()
+	IsClosed() bool
 }
+
+type Factory func() (Resource, error)
 
 type ResourcePool struct {
 	factory       Factory
