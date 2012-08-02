@@ -34,7 +34,7 @@ Vagrant::Config.run do |config|
 
   # These should all be basically the same
   (NUM_SKYNET_NODES - 1).times do |n|
-    i = n + 1
+    i = n + 2
 
     config.vm.define "skynet#{i}" do |c|
       c.vm.box = "lucid64"
