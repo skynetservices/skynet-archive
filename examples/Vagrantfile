@@ -4,9 +4,6 @@
 NUM_SKYNET_NODES = 3
 
 Vagrant::Config.run do |config|
-  #doozerd -timeout 5 -l "127.0.0.1:10000" -w "127.0.0.1:11000" -c "dzns"
- 
-
   # This will be our doozer, and dzns master
   config.vm.define :skynet1 do |c|
     c.vm.box = "lucid64"
@@ -29,6 +26,9 @@ Vagrant::Config.run do |config|
     
     # Setup Doozer Master
     c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.101:8046' -w '192.168.125.101:8080' -c 'skynet' -b 'doozer:?ca=192.168.125.101:10000' 0<&- &> /var/log/doozer.log &"
+
+    #c.vm.share_folder "skynet", "/opt/skynet", "../"
+    #c.vm.share_folder "gopath", "/opt/gopath", ENV['GOPATH']
   end
 
 
@@ -58,6 +58,10 @@ Vagrant::Config.run do |config|
       # Setup Doozer Node
       c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.10#{i}:8046' -w '192.168.125.10#{i}:8080' -c 'skynet' -b 'doozer:?ca=192.168.125.101:10000' 0<&- &> /var/log/doozer.log &"
       c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.125.101:8046' add '/ctl/cal/#{i-1}' >/dev/null &"
+
+
+      #c.vm.share_folder "skynet", "/opt/skynet", "../"
+      #c.vm.share_folder "gopath", "/opt/gopath", ENV['GOPATH']
     end
   end
 
@@ -75,7 +79,4 @@ Vagrant::Config.run do |config|
 
 
 
-
-  #config.vm.share_folder "skynet", "/opt/skynet", "../"
-  #config.vm.share_folder "gopath", "/opt/gopath", ENV['GOPATH']
 end
