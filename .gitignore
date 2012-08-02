@@ -2,3 +2,4 @@ sky/sky
 .DS_Store
 examples/service/service
 examples/client/client
+examples/.vagrant
