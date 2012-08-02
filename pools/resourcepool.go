@@ -1,5 +1,9 @@
 package pools
 
+import (
+	"errors"
+)
+
 type Resource interface {
 	Close()
 	IsClosed() bool
@@ -27,7 +31,7 @@ func NewResourcePool(factory Factory, idleCapacity, maxResources int) (rp *Resou
 		idleCapacity: idleCapacity,
 		maxResources: maxResources,
 
-		acqchan: make(chan acquireMessage, 1),
+		acqchan: make(chan acquireMessage),
 		rchan:   make(chan releaseMessage, 1),
 		cchan:   make(chan closeMessage, 1),
 	}
@@ -83,12 +87,20 @@ loop:
 	for !rp.idleResources.Empty() {
 		rp.idleResources.Dequeue().Close()
 	}
+	for _, aw := range rp.activeWaits {
+		aw.ech <- errors.New("Resource pool closed")
+	}
 }
 
 func (rp *ResourcePool) acquire(acq acquireMessage) {
-	if !rp.idleResources.Empty() {
-		acq.rch <- rp.idleResources.Dequeue()
-		return
+	for !rp.idleResources.Empty() {
+		r := rp.idleResources.Dequeue()
+		if !r.IsClosed() {
+			acq.rch <- r
+			return
+		}
+		// discard closed resources
+		rp.numResources--
 	}
 	if rp.maxResources > 0 && rp.numResources >= rp.maxResources {
 		// we need to wait until something comes back in
@@ -125,8 +137,8 @@ func (rp *ResourcePool) release(resource Resource) {
 // Acquire() will get one of the idle resources, or create a new one.
 func (rp *ResourcePool) Acquire() (resource Resource, err error) {
 	acq := acquireMessage{
-		rch: make(chan Resource, 1),
-		ech: make(chan error, 1),
+		rch: make(chan Resource),
+		ech: make(chan error),
 	}
 	rp.acqchan <- acq
 
