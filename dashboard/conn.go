@@ -22,6 +22,13 @@ func (c *connection) reader() {
 			log.Printf("reader: bad read: %s\n", err)
 			break
 		}
+
+		// Algorithm is as follows: unregister the client from the broadcast
+		// queue, then try to compile the regex. Then call logdump() to grab all 
+		// data from the log and then register back to receive future matching log
+		// messages 
+		h.unregister <- c
+
 		str := html.UnescapeString(message)
 		c.filter, err = regexp.Compile(html.UnescapeString(message))
 		if err != nil {
@@ -31,6 +38,9 @@ func (c *connection) reader() {
 			if err != nil {
 				break
 			}
+		} else {
+			dump(c.send)
+			h.register <- c
 		}
 	}
 	c.ws.Close()

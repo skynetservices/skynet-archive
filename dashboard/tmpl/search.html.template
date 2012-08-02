@@ -31,6 +31,9 @@
 		if (!msgreg.val()) {
 			return false;
 		}
+		log.children().each(function(){
+			$(this).remove()
+		});
 		conn.send(msgreg.val());
 		return false
 	});
@@ -44,7 +47,7 @@
 				$(this).css('background-color', "rgb(255, 255, 255)");
 			}
 		});
-		msg.val("");
+		//msg.val("");
 		return false
 	});
 

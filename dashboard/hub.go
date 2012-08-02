@@ -1,16 +1,9 @@
 package main
 
 type hub struct {
-	// Registered connections.
 	connections map[*connection]bool
-
-	// Inbound messages from the connections.
 	broadcast chan string
-
-	// Register requests from the connections.
 	register chan *connection
-
-	// Unregister requests from connections.
 	unregister chan *connection
 }
 
@@ -28,7 +21,6 @@ func (h *hub) run() {
 			h.connections[c] = true
 		case c := <-h.unregister:
 			delete(h.connections, c)
-			close(c.send)
 		case m := <-h.broadcast:
 			for c := range h.connections {
 				select {
