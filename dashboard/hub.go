@@ -2,9 +2,9 @@ package main
 
 type hub struct {
 	connections map[*connection]bool
-	broadcast chan string
-	register chan *connection
-	unregister chan *connection
+	broadcast   chan string
+	register    chan *connection
+	unregister  chan *connection
 }
 
 var h = hub{

@@ -9,9 +9,9 @@ import (
 )
 
 type connection struct {
-	ws *websocket.Conn
-	send chan string
-	filter *regexp.Regexp	// if set, the client only sees matches
+	ws     *websocket.Conn
+	send   chan string
+	filter *regexp.Regexp // if set, the client only sees matches
 }
 
 func (c *connection) reader() {

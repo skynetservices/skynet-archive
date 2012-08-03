@@ -52,20 +52,18 @@ func logbroadcast() {
 		logs[i] = time.Now().String() + "\t" + uuid[rand.Intn(len(uuid))] + "\t" + logs[i]
 	}
 
-	for ;; logindex++ {
+	for ; ; logindex++ {
 		if logindex >= len(logs) {
 			logindex = 0
 		}
 		h.broadcast <- logs[logindex]
-		time.Sleep(time.Duration(rand.Int63n(2500)+500) * time.Millisecond)
+		time.Sleep(time.Duration(rand.Int63n(2500)+500) * time.Millisecond) // [.5s, 3s)
 	}
 }
 
 func dump(c chan string) {
 	for i := 0; i < logindex; i++ {
 		// what if logindex wraps in the middle? this won't happen in a non-dummy log (append-only)
-		c<- logs[i]
+		c <- logs[i]
 	}
 }
-
-

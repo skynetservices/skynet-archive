@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"code.google.com/p/go.net/websocket"
 	"flag"
 	"html/template"
@@ -10,7 +11,6 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
-  "bytes"
 )
 
 var layoutTmpl *template.Template
@@ -18,15 +18,15 @@ var indexTmpl *template.Template
 var searchTmpl *template.Template
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-  buf := new(bytes.Buffer)
+	buf := new(bytes.Buffer)
 	indexTmpl.Execute(buf, r.URL.Path)
-  layoutTmpl.Execute(w, template.HTML(buf.String()))
+	layoutTmpl.Execute(w, template.HTML(buf.String()))
 }
 
 func searchHandler(w http.ResponseWriter, req *http.Request) {
-  buf := new(bytes.Buffer)
+	buf := new(bytes.Buffer)
 	searchTmpl.Execute(buf, req.Host)
-  layoutTmpl.Execute(w, template.HTML(buf.String()))
+	layoutTmpl.Execute(w, template.HTML(buf.String()))
 }
 
 var addr = flag.String("addr", ":8080", "dashboard listener address")
