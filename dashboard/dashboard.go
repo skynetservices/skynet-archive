@@ -10,17 +10,23 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+  "bytes"
 )
 
+var layoutTmpl *template.Template
 var indexTmpl *template.Template
 var searchTmpl *template.Template
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	indexTmpl.Execute(w, r.URL.Path)
+  buf := new(bytes.Buffer)
+	indexTmpl.Execute(buf, r.URL.Path)
+  layoutTmpl.Execute(w, template.HTML(buf.String()))
 }
 
-func searchHandler(c http.ResponseWriter, req *http.Request) {
-	searchTmpl.Execute(c, req.Host)
+func searchHandler(w http.ResponseWriter, req *http.Request) {
+  buf := new(bytes.Buffer)
+	searchTmpl.Execute(buf, req.Host)
+  layoutTmpl.Execute(w, template.HTML(buf.String()))
 }
 
 var addr = flag.String("addr", ":8080", "dashboard listener address")
@@ -54,12 +60,13 @@ func main() {
 	}
 
 	http.HandleFunc("/", indexHandler)
-	http.HandleFunc("/search", searchHandler)
+	http.HandleFunc("/logs/search", searchHandler)
 	http.Handle("/media/", http.StripPrefix("/media/", http.FileServer(http.Dir(*webroot+"/tmpl"))))
-	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, *webroot+"/favicon.ico") })
-	http.Handle("/ws", websocket.Handler(wsHandler))
+	http.Handle("/favicon.ico", http.FileServer(http.Dir(*webroot+"/tmpl/images")))
+	http.Handle("/logs/ws", websocket.Handler(wsHandler))
 
 	// Cache templates
+	layoutTmpl = template.Must(template.ParseFiles(*webroot + "/tmpl/layout.html.template"))
 	indexTmpl = template.Must(template.ParseFiles(*webroot + "/tmpl/index.html.template"))
 	searchTmpl = template.Must(template.ParseFiles(*webroot + "/tmpl/search.html.template"))
 

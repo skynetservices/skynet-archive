@@ -122,4 +122,94 @@ jQuery(document).ready(function ($) {
   /* CUSTOM FORMS */
   $.foundation.customForms.appendCustomMarkup();
 
+
+  /* LOGS */
+
+  var log = $("#log");
+
+  if(log) {
+    (function(log){
+      var highlight;
+      var conn;
+      var msg = $("#search-term");
+      var highlightEnabled = false;
+
+      function highlight(el, term)
+      {
+          var highlightedRegex = new RegExp('<span class="highlight">([^<]*)</span>', 'g');
+
+          // Clear old highlighting
+          var html = el.html();
+          html = html.replace(highlightedRegex, '$1');
+
+          // Ensure we are only replacing the content of tags and not tags themselves
+          if(el.children().length > 0){
+            var regex = new RegExp('(>[^<]*)(' + term + ')([^<]*)','gi');
+            el.html(html.replace(regex,'$1<span class="highlight">$2</span>$3'));
+          } else {
+            // No inner elements so we can just replace the text
+            var regex = new RegExp('(' + term + ')','gi');
+
+            el.html(html.replace(regex,'<span class="highlight">$1</span>'));
+          }
+      }
+
+      function appendLog(msg) {
+        var d = log[0]
+        var doScroll = d.scrollTop == d.scrollHeight - d.clientHeight;
+
+        if (msg.text().indexOf(highlight) >= 0) {
+          msg.css('background-color', "rgb(144, 238, 144)");
+        }
+
+        msg.appendTo(log)
+        if (doScroll) {
+          d.scrollTop = d.scrollHeight - d.clientHeight;
+        }
+      }
+
+      $("#log-search").click(function() {
+        highlightEnabled = false;
+
+        if (!conn) {
+          return false;
+        }
+        if (!msg.val()) {
+          return false;
+        }
+        log.children().each(function(){
+          $(this).remove()
+        });
+        conn.send(msg.val());
+        return false
+      });
+
+      $("#log-highlight").click(function() {
+        highlightEnabled = true;
+        highlight(log, msg.val());
+
+        return false
+      });
+
+      if (window["WebSocket"]) {
+        conn = new WebSocket("ws://" + document.location.host + "/logs/ws");
+        conn.onclose = function(evt) {
+          appendLog($("<div><b>Connection closed.</b></div>"))
+        }
+        conn.onmessage = function(evt) {
+          logMsg = $("<div/>").text(evt.data);
+          
+          if(highlightEnabled){
+            highlight(logMsg, msg.val());
+          }
+
+          appendLog(logMsg)
+        }
+      } else {
+        appendLog($("<div><b>Your browser does not support WebSockets.</b></div>"))
+      }
+    })(log);
+
+  }
+
 });

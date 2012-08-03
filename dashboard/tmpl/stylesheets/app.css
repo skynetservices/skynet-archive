@@ -1,28 +1,38 @@
-/* Artfully masterminded by ZURB  */
+body {
+  background: #69909f;
+}
 
-/* --------------------------------------------------
-   Table of Contents
------------------------------------------------------
-:: Shared Styles
-:: Page Name 1
-:: Page Name 2
-*/
+.content {
+  background: #fff;
+  min-height: 800px;
+}
+
+.nav {
+  margin: 0;
+  padding: 0;
+}
+
+.nav-bar {
+  margin: 0;
+}
+
+.logo {
+  background: url(/media/images/SkyNetLogo.png) no-repeat;
+  height: 40px;
+  margin: 10px;
+}
 
 
-/* -----------------------------------------
-   Shared Styles
------------------------------------------ */
+/* Logs */
+#log {
+	overflow: scroll;
+  height: 550px;
+}
 
+#search-container {
+  width: 275px;
+}
 
-
-/* -----------------------------------------
-   Page Name 1
------------------------------------------ */
-
-
-
-
-/* -----------------------------------------
-   Page Name 2
------------------------------------------ */
-
+#search-term {
+  width: 275px;
+}
