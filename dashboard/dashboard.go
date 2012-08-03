@@ -24,6 +24,9 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func searchHandler(w http.ResponseWriter, req *http.Request) {
+	if *debug {
+		log.Printf("%s → %s %s", req.RemoteAddr, req.Method, req.URL.Path)
+	}
 	buf := new(bytes.Buffer)
 	searchTmpl.Execute(buf, req.Host)
 	layoutTmpl.Execute(w, template.HTML(buf.String()))
@@ -54,9 +57,6 @@ func main() {
 		runtime.ReadMemStats(memstats)
 		log.Printf("memstats GC: bytes = %d footprint = %d\n", memstats.HeapAlloc, memstats.Sys)
 		log.Printf("memstats GC: %v\n", memstats.PauseNs)
-	}
-	if *debug {
-		log.Printf("preparing web server splash page...\n")
 	}
 
 	http.HandleFunc("/", indexHandler)

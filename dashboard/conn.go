@@ -22,6 +22,9 @@ func (c *connection) reader() {
 			log.Printf("reader: bad read: %s\n", err)
 			break
 		}
+		if *debug {
+			log.Printf("reader received: %s", message)
+		}
 
 		// Algorithm is as follows: unregister the client from the broadcast
 		// queue, then try to compile the regex. Then call logdump() to grab all 
@@ -48,6 +51,9 @@ func (c *connection) reader() {
 
 func (c *connection) writer() {
 	for message := range c.send {
+		if *debug {
+			log.Printf("writer received: %s", message)
+		}
 		if c.filter == nil || c.filter.MatchString(message) {
 			err := websocket.Message.Send(c.ws, message)
 			if err != nil {
