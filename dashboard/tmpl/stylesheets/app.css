@@ -16,6 +16,10 @@ body {
   margin: 0;
 }
 
+#main-nav {
+  height: 40px;
+}
+
 .logo {
   background: url(/media/images/SkyNetLogo.png) no-repeat;
   height: 40px;
@@ -35,4 +39,13 @@ body {
 
 #search-term {
   width: 275px;
+}
+
+/* Dashboard */
+dl.tabs {
+  margin-bottom: 0;
+}
+
+.nodes {
+  width: 100%;
 }

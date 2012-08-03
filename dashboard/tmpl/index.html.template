@@ -1,1 +1,190 @@
-Dashboard to go here
+<h4 class="subheader">Nodes</h4>
+<hr />
+<dl class="tabs">
+  <dd class="active"><a href="#simple1">Clearwater</a></dd>
+  <dd><a href="#simple2">Chicago</a></dd>
+  <dd><a href="#simple3">Dallas</a></dd>
+</dl>
+
+<ul class="tabs-content contained">
+  <li class="active" id="simple1Tab">
+    <dl class="sub-nav right">
+      <dt>Filter:</dt>
+      <dd class="active"><a href="#">All</a></dd>
+      <dd><a href="#">Active</a></dd>
+      <dd><a href="#">Inactive</a></dd>
+      <dd><a href="#">Overloaded</a></dd>
+    </dl>
+
+    <h5 class="subheader">localhost</h5>
+    <hr />
+    <table class="nodes">
+      <thead>
+        <th>Service</th>
+        <th>Version</th>
+        <th>Addr</th>
+        <th>Admin Addr</th>
+        <th>Active</th>
+        <th>Clients</th>
+        <th>Uptime</th>
+        <th>Avg Response Time</th>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr>
+        <tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr><tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr><tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr><tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr><tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h5 class="subheader">localhost</h5>
+    <hr />
+    <table class="nodes">
+      <thead>
+        <th>Service</th>
+        <th>Version</th>
+        <th>Addr</th>
+        <th>Admin Addr</th>
+        <th>Active</th>
+        <th>Clients</th>
+        <th>Uptime</th>
+        <th>Avg Response Time</th>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr>
+        <tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr><tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr><tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr><tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr><tr>
+          <td>Fibonacci</td>
+          <td>1.0.0</td>
+          <td>127.0.0.1:1234</td>
+          <td>127.0.0.1:1235</td>
+          <td>yes</td>
+          <td>27</td>
+          <td>6 days</td>
+          <td>1400ms</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <br /><br /><br /><br />
+  </li>
+  <li id="simple2Tab">
+    <dl class="sub-nav right">
+      <dt>Filter:</dt>
+      <dd class="active"><a href="#">All</a></dd>
+      <dd><a href="#">Active</a></dd>
+      <dd><a href="#">Inactive</a></dd>
+      <dd><a href="#">Overloaded</a></dd>
+    </dl>
+
+    <br /><br /><br /><br />
+  </li>
+  <li id="simple3Tab">
+    <dl class="sub-nav right">
+      <dt>Filter:</dt>
+      <dd class="active"><a href="#">All</a></dd>
+      <dd><a href="#">Active</a></dd>
+      <dd><a href="#">Inactive</a></dd>
+      <dd><a href="#">Overloaded</a></dd>
+    </dl>
+
+    <br /><br /><br /><br />
+  </li>
+</ul>
+  

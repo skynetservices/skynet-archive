@@ -33,7 +33,7 @@
       <div class="logo"></div>
     </div>
     <div class="twelve columns nav">
-      <ul class="nav-bar">
+      <ul id="main-nav" class="nav-bar">
         <li><a href="/">Dashboard</a></li>
         <li class="has-flyout">
           <a href="#">Logs</a>
