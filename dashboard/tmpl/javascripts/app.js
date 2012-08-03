@@ -144,8 +144,8 @@ jQuery(document).ready(function ($) {
 
           // Ensure we are only replacing the content of tags and not tags themselves
           if(el.children().length > 0){
-            var regex = new RegExp('(>[^<]*)(' + term + ')([^<]*)','gi');
-            el.html(html.replace(regex,'$1<span class="highlight">$2</span>$3'));
+            var regex = new RegExp('(' + term + ')(?![a-zA-Z]*>)','gi');
+            el.html(html.replace(regex,'<span class="highlight">$1</span>'));
           } else {
             // No inner elements so we can just replace the text
             var regex = new RegExp('(' + term + ')','gi');
