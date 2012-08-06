@@ -41,8 +41,8 @@ execute "set-go-paths" do
   gps = ENV['GOPATH'].split(':')
   gpi = 0
   gps.each do |gp|
-    gopath += ':/opt/hostgopaths/gp#{gpi}'
-    path += ':/opt/hostgopaths/gp#{gpi}/bin'
+    gopath += ":/opt/hostgopaths/gp#{gpi}"
+    path += ":/opt/hostgopaths/gp#{gpi}/bin"
     gpi += 1
   end
 
