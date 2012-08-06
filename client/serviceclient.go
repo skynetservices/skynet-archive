@@ -154,7 +154,7 @@ func getConnectionFactory(s *service.Service) (factory pools.Factory) {
 
 		resource := ServiceResource{
 			rpcClient: bsonrpc.NewClient(conn),
-			service:   *s,
+			service:   s,
 		}
 
 		return resource, nil
@@ -168,11 +168,16 @@ type servicePool struct {
 }
 
 type lightInstanceRequest struct {
-	response chan servicePool
+	exclusions map[string]bool
+	response   chan servicePool
+}
+
+func (lir lightInstanceRequest) excludes(key string) bool {
+	return lir.exclusions == nil || !lir.exclusions[key]
 }
 
 func (c *ServiceClient) mux() {
-	var spSubscribers []chan servicePool
+	var spSubscribers []lightInstanceRequest
 
 	for {
 		select {
@@ -190,7 +195,7 @@ func (c *ServiceClient) mux() {
 				}
 				// send this instance to anyone who was waiting
 				for _, sps := range spSubscribers {
-					sps <- sp
+					sps.response <- sp
 				}
 				// no one is waiting anymore
 				spSubscribers = spSubscribers[:0]
@@ -198,12 +203,12 @@ func (c *ServiceClient) mux() {
 				delete(c.instances, m.Service.Config.ServiceAddr.String())
 				c.Log.Item(m)
 			case lightInstanceRequest:
-				sp, ok := c.getLightInstanceMux()
+				sp, ok := c.getLightInstanceMux(m)
 				if ok {
 					m.response <- sp
 				} else {
 					//if one wasn't immediately available, wait for the next incoming
-					spSubscribers = append(spSubscribers, m.response)
+					spSubscribers = append(spSubscribers, m)
 				}
 			}
 		}
@@ -211,7 +216,7 @@ func (c *ServiceClient) mux() {
 }
 
 // do not call this from outside .mux()
-func (c *ServiceClient) getLightInstanceMux() (sp servicePool, ok bool) {
+func (c *ServiceClient) getLightInstanceMux(lir lightInstanceRequest) (sp servicePool, ok bool) {
 	if len(c.instances) == 0 {
 		ok = false
 		return
@@ -221,6 +226,9 @@ func (c *ServiceClient) getLightInstanceMux() (sp servicePool, ok bool) {
 	// mostSlots := 0
 	bestInstances := make([]servicePool, len(c.instances), 0)
 	for _, i := range c.instances {
+		if lir.excludes(getInstanceKey(i.service)) {
+			continue
+		}
 		// let's just add them all for the moment
 		/*
 			if i.service.Slots > mostSlots {
@@ -234,6 +242,11 @@ func (c *ServiceClient) getLightInstanceMux() (sp servicePool, ok bool) {
 		bestInstances = append(bestInstances, i)
 	}
 
+	if len(bestInstances) == 0 {
+		ok = false
+		return
+	}
+
 	// then choose one randomly
 
 	ri := rand.Intn(len(bestInstances))
@@ -243,21 +256,18 @@ func (c *ServiceClient) getLightInstanceMux() (sp servicePool, ok bool) {
 	return
 }
 
-func (c *ServiceClient) getLightInstance() (sp servicePool) {
+func (c *ServiceClient) getLightInstance(exclusions map[string]bool) (sp servicePool) {
 	response := make(chan servicePool, 1)
-	c.muxChan <- lightInstanceRequest{response}
+	c.muxChan <- lightInstanceRequest{
+		exclusions: exclusions,
+		response:   response,
+	}
 	sp = <-response
 	return
 }
 
-func (c *ServiceClient) Send(requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
-	// TODO: timeout logic
-	s, sp, err := c.getConnection(0)
-	if err != nil {
-		c.Log.Item(err)
-		return
-	}
-
+// ServiceClient.trySend() tries to make an RPC request on a particular connection to an instance
+func (c *ServiceClient) trySend(sr ServiceResource, requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
 	if requestInfo == nil {
 		requestInfo = &skynet.RequestInfo{
 			RequestID: skynet.UUID(),
@@ -277,8 +287,9 @@ func (c *ServiceClient) Send(requestInfo *skynet.RequestInfo, funcName string, i
 	sout := service.ServiceRPCOut{}
 
 	// TODO: Check for connectivity issue so that we can try to get another resource out of the pool
-	err = s.rpcClient.Call(s.service.Config.Name+".Forward", sin, &sout)
+	err = sr.rpcClient.Call(sr.service.Config.Name+".Forward", sin, &sout)
 	if err != nil {
+		sr.Close()
 		c.Log.Item(err)
 	}
 
@@ -287,33 +298,28 @@ func (c *ServiceClient) Send(requestInfo *skynet.RequestInfo, funcName string, i
 		return
 	}
 
-	sp.pool.Release(s)
-
 	return
 }
 
-func (c *ServiceClient) getConnection(lvl int) (service ServiceResource, sp servicePool, err error) {
-	if lvl > 5 {
-		err = errors.New("Unable to retrieve a valid connection to the service")
+func (c *ServiceClient) Send(requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
+	// TODO: timeout logic
+
+	sp := c.getLightInstance(nil)
+
+	r, err := sp.pool.Acquire()
+	if err != nil {
+		c.Log.Item(err)
 		return
 	}
 
-	sp = c.getLightInstance()
-
-	conn, err := sp.pool.Acquire()
-
-	if err != nil || c.isClosed(conn.(ServiceResource)) {
-		if conn != nil {
-			s := conn.(ServiceResource)
-
-			s.closed = true
-			sp.pool.Release(s)
-		}
-
-		return c.getConnection(lvl + 1)
+	sr := r.(ServiceResource)
+	err = c.trySend(sr, requestInfo, funcName, in, outPointer)
+	if err != nil {
+		c.Log.Item(err)
+		return
 	}
 
-	service = conn.(ServiceResource)
+	sp.pool.Release(sr)
 
 	return
 }

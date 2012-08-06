@@ -12,16 +12,9 @@ var (
 	ErrServiceUnregistered = errors.New("Service is unregistered")
 )
 
-type Client struct {
-	DoozerConn skynet.DoozerConnection
-
-	Config *skynet.ClientConfig
-	Log    skynet.Logger `json:"-"`
-}
-
 type ServiceResource struct {
 	rpcClient *rpc.Client
-	service   service.Service
+	service   *service.Service
 	closed    bool
 }
 
@@ -32,6 +25,13 @@ func (s ServiceResource) Close() {
 
 func (s ServiceResource) IsClosed() bool {
 	return s.closed
+}
+
+type Client struct {
+	DoozerConn skynet.DoozerConnection
+
+	Config *skynet.ClientConfig
+	Log    skynet.Logger `json:"-"`
 }
 
 func (c *Client) doozer() skynet.DoozerConnection {
@@ -89,6 +89,6 @@ func (c *Client) GetService(name string, version string, region string, host str
 	return c.GetServiceFromQuery(query)
 }
 
-func getInstanceKey(service service.Service) string {
+func getInstanceKey(service *service.Service) string {
 	return service.Config.ServiceAddr.String()
 }
