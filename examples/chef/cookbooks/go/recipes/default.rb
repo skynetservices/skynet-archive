@@ -30,9 +30,6 @@ execute "install-go" do
 end
 
 execute "set-go-paths" do
-  #ENV['GOPATH'] = '/opt/local/gopath'
-  #ENV['GOROOT'] = '/opt/local/go'
-  #ENV['PATH'] = "#{ENV['PATH']}:/opt/local/go/bin"
 
   goroot = '/opt/local/go'
   gopath = '/opt/local/gopath'
@@ -42,6 +39,10 @@ execute "set-go-paths" do
     gopath += ":#{file}"
     path += ":#{file}/bin"
   }
+
+  ENV['GOPATH'] = gopath
+  ENV['GOROOT'] = goroot
+  ENV['PATH'] = "#{ENV['PATH']}:#{path}"
 
 
   command %Q{
