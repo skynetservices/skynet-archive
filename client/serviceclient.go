@@ -13,16 +13,20 @@ import (
 	"math/rand"
 	"net"
 	"path"
+	"reflect"
 	"strings"
+	"time"
 )
 
 type ServiceClient struct {
-	Log     skynet.Logger `json:"-"`
-	cconfig *skynet.ClientConfig
-	//connectionPool *pools.RoundRobin
+	Log       skynet.Logger `json:"-"`
+	cconfig   *skynet.ClientConfig
 	query     *Query
 	instances map[string]servicePool
 	muxChan   chan interface{}
+
+	retryTimeout  time.Duration
+	giveupTimeout time.Duration
 }
 
 func newServiceClient(query *Query, c *Client) (sc *ServiceClient) {
@@ -301,7 +305,49 @@ func (c *ServiceClient) trySend(sr ServiceResource, requestInfo *skynet.RequestI
 	return
 }
 
+func cloneOutDest(outDest interface{}) (clone interface{}) {
+	outType := reflect.TypeOf(outDest)
+	switch outType.Kind() {
+	case reflect.Ptr:
+		clonePtr := reflect.New(outType.Elem())
+		clone = clonePtr.Interface()
+	case reflect.Map:
+		cloneMap := reflect.MakeMap(outType)
+		clone = cloneMap.Interface()
+	default:
+		panic("illegal out type")
+	}
+	return
+}
+
+func copyOutDest(outDest interface{}, src interface{}) {
+	outType := reflect.TypeOf(outDest)
+	outVal := reflect.ValueOf(outDest)
+	srcVal := reflect.ValueOf(src)
+	switch outType.Kind() {
+	case reflect.Ptr:
+		outVal.Elem().Set(srcVal.Elem())
+	case reflect.Map:
+		for _, key := range srcVal.MapKeys() {
+			val := srcVal.MapIndex(key)
+			outVal.SetMapIndex(key, val)
+		}
+	default:
+		panic("illegal out type")
+	}
+
+}
+
 func (c *ServiceClient) Send(requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
+	outClone := cloneOutDest(outPointer)
+
+	err = c.SendOnce(requestInfo, funcName, in, outClone)
+
+	copyOutDest(outPointer, outClone)
+
+	return
+}
+func (c *ServiceClient) SendOnce(requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
 	// TODO: timeout logic
 
 	sp := c.getLightInstance(nil)
