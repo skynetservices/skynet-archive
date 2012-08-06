@@ -30,21 +30,18 @@ execute "install-go" do
 end
 
 execute "set-go-paths" do
-  ENV['GOPATH'] = '/opt/local/gopath'
-  ENV['GOROOT'] = '/opt/local/go'
-  ENV['PATH'] = "#{ENV['PATH']}:/opt/local/go/bin"
+  #ENV['GOPATH'] = '/opt/local/gopath'
+  #ENV['GOROOT'] = '/opt/local/go'
+  #ENV['PATH'] = "#{ENV['PATH']}:/opt/local/go/bin"
 
   goroot = '/opt/local/go'
   gopath = '/opt/local/gopath'
   path = '/opt/local/go/bin:/opt/local/gopath/bin'
 
-  gps = ENV['GOPATH'].split(':')
-  gpi = 0
-  gps.each do |gp|
-    gopath += ":/opt/hostgopaths/gp#{gpi}"
-    path += ":/opt/hostgopaths/gp#{gpi}/bin"
-    gpi += 1
-  end
+  Dir[File.join('/', 'opt', 'hostgopaths', '*')].count { |file|
+    gopath += ":#{file}"
+    path += ":#{file}/bin"
+  }
 
 
   command %Q{
