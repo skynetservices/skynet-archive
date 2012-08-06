@@ -4,6 +4,19 @@
 NUM_SKYNET_NODES = 3
 
 Vagrant::Config.run do |config|
+  #doozerd -timeout 5 -l "127.0.0.1:10000" -w "127.0.0.1:11000" -c "dzns"
+
+  # bring in the host gopaths, if asked for
+  if ENV["VAGRANT_USE_HOST_GOPATH"] then
+    gps = ENV["GOPATH"].split(":")
+    gpi = 0
+    gps.each do |gp| 
+      config.vm.share_folder("gp#{gpi}", "/opt/hostgopaths/gp#{gpi}", gp)
+      gpi += 1
+    end
+  end
+
+
   # This will be our doozer, and dzns master
   config.vm.define :skynet1 do |c|
     c.vm.box = "lucid64"

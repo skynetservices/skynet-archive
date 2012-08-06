@@ -30,13 +30,24 @@ execute "install-go" do
 end
 
 execute "set-go-paths" do
-  ENV['GOPATH'] = '/opt/local/gopath'
-  ENV['GOROOT'] = '/opt/local/go'
-  ENV['PATH'] = "#{ENV['PATH']}:/opt/local/go/bin"
 
-  command %Q{
-    echo "GOPATH=/opt/local/gopath\nGOROOT=/opt/local/go\nPATH=$PATH:/opt/local/go/bin:/opt/local/gopath/bin" > /etc/profile.d/go_env.sh
+  goroot = '/opt/local/go'
+  gopath = '/opt/local/gopath'
+  path = '/opt/local/go/bin:/opt/local/gopath/bin'
+
+  Dir[File.join('/', 'opt', 'hostgopaths', '*')].count { |file|
+    gopath += ":#{file}"
+    path += ":#{file}/bin"
   }
 
-  not_if "ls /etc/profile.d/go_env.sh"
+  ENV['GOPATH'] = gopath
+  ENV['GOROOT'] = goroot
+  ENV['PATH'] = "#{ENV['PATH']}:#{path}"
+
+
+  command %Q{
+    echo "GOPATH=#{gopath}\nGOROOT=#{goroot}\nPATH=$PATH:#{path}" > /etc/profile.d/go_env.sh
+  }
+
+  #not_if "ls /etc/profile.d/go_env.sh"
 end
