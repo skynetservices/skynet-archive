@@ -6,9 +6,9 @@ import (
 	"errors"
 	"github.com/4ad/doozer"
 	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/pools"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"github.com/bketelsen/skynet/service"
-	"github.com/bketelsen/skynet/util"
 	"launchpad.net/mgo/v2/bson"
 	"math/rand"
 	"net"
@@ -264,7 +264,7 @@ func (c *ServiceClient) mux() {
 			case service.ServiceDiscovered:
 				sp := servicePool{
 					service: m.Service,
-					pool:    pools.NewResourcePool(getConnectionFactory(m.Service), c.cconfig.ConnectionPoolSize),
+					pool:    pools.NewResourcePool(getConnectionFactory(m.Service), c.cconfig.ConnectionPoolSize, c.cconfig.ConnectionPoolSize),
 				}
 				_, known := c.instances[m.Service.Config.ServiceAddr.String()]
 				c.instances[m.Service.Config.ServiceAddr.String()] = sp
@@ -301,16 +301,19 @@ func (c *ServiceClient) getLightInstanceMux() (sp servicePool, ok bool) {
 	}
 
 	// first collect those that have the greatest reported number of available slots
-	mostSlots := 0
+	// mostSlots := 0
 	bestInstances := make([]servicePool, len(c.instances), 0)
 	for _, i := range c.instances {
-		if i.service.Slots > mostSlots {
-			mostSlots = i.service.Slots
-			bestInstances = bestInstances[:0]
-		}
-		if i.service.Slots < mostSlots {
-			continue
-		}
+		// let's just add them all for the moment
+		/*
+			if i.service.Slots > mostSlots {
+				mostSlots = i.service.Slots
+				bestInstances = bestInstances[:0]
+			}
+			if i.service.Slots < mostSlots {
+				continue
+			}
+		*/
 		bestInstances = append(bestInstances, i)
 	}
 
@@ -380,7 +383,7 @@ func (c *ServiceClient) getConnection(lvl int) (service ServiceResource, sp serv
 
 	sp = c.getLightInstance()
 
-	conn, err := sp.pool.AcquireOrCreate()
+	conn, err := sp.pool.Acquire()
 
 	if err != nil || c.isClosed(conn.(ServiceResource)) {
 		if conn != nil {
