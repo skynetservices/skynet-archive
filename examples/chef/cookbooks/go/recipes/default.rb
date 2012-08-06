@@ -34,9 +34,22 @@ execute "set-go-paths" do
   ENV['GOROOT'] = '/opt/local/go'
   ENV['PATH'] = "#{ENV['PATH']}:/opt/local/go/bin"
 
+  goroot = '/opt/local/go'
+  gopath = '/opt/local/gopath'
+  path = '/opt/local/go/bin:/opt/local/gopath/bin'
+
+  gps = ENV['GOPATH'].split(':')
+  gpi = 0
+  gps.each do |gp|
+    gopath += ':/opt/hostgopaths/gp#{gpi}'
+    path += ':/opt/hostgopaths/gp#{gpi}/bin'
+    gpi += 1
+  end
+
+
   command %Q{
-    echo "GOPATH=/opt/local/gopath\nGOROOT=/opt/local/go\nPATH=$PATH:/opt/local/go/bin:/opt/local/gopath/bin" > /etc/profile.d/go_env.sh
+    echo "GOPATH=#{gopath}\nGOROOT=#{goroot}\nPATH=$PATH:#{path}" > /etc/profile.d/go_env.sh
   }
 
-  not_if "ls /etc/profile.d/go_env.sh"
+  #not_if "ls /etc/profile.d/go_env.sh"
 end
