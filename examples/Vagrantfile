@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-NUM_SKYNET_NODES = 3
+NUM_SKYNET_NODES = 5
 
 Vagrant::Config.run do |config|
   #doozerd -timeout 5 -l "127.0.0.1:10000" -w "127.0.0.1:11000" -c "dzns"
@@ -29,8 +29,10 @@ Vagrant::Config.run do |config|
       chef.add_recipe("build-essential")
       chef.add_recipe("mercurial")
       chef.add_recipe("git")
+      chef.add_recipe("bzr")
       chef.add_recipe("go")
       chef.add_recipe("doozerd")
+      chef.add_recipe("skynet-example")
     end
 
 
@@ -39,6 +41,14 @@ Vagrant::Config.run do |config|
     
     # Setup Doozer Master
     c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.101:8046' -w '192.168.125.101:8080' -c 'skynet' -b 'doozer:?ca=192.168.125.101:10000' 0<&- &> /var/log/doozer.log &"
+
+    # Start a couple skynet services
+    5.times do |n|
+      version = (n % 2) == 0 ? 1 : 2
+      region = (n % 3) == 0 ? "Chicago" : "Dallas" 
+
+      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.125.101:8046 -l 192.168.125.101:999#{n} -admin 192.168.125.101:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}.log &"
+    end
 
     #c.vm.share_folder "skynet", "/opt/skynet", "../"
     #c.vm.share_folder "gopath", "/opt/gopath", ENV['GOPATH']
@@ -60,17 +70,27 @@ Vagrant::Config.run do |config|
         chef.add_recipe("build-essential")
         chef.add_recipe("mercurial")
         chef.add_recipe("git")
+        chef.add_recipe("bzr")
         chef.add_recipe("go")
         chef.add_recipe("doozerd")
+        chef.add_recipe("skynet-example")
       end
 
       # Setup DZNS Node
       c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.10#{i}:10000' -w '192.168.125.10#{i}:11000' -a '192.168.125.101:10000' -c 'dzns' 0<&- &> /var/log/dzns.log &" 
-      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.125.101:10000' add '/ctl/cal/#{i-1}' >/dev/null &"
+      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.125.101:10000' add '/ctl/cal/#{i-1}' 0<&- &> /dev/null &"
       
       # Setup Doozer Node
       c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.10#{i}:8046' -w '192.168.125.10#{i}:8080' -c 'skynet' -b 'doozer:?ca=192.168.125.101:10000' 0<&- &> /var/log/doozer.log &"
-      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.125.101:8046' add '/ctl/cal/#{i-1}' >/dev/null &"
+      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.125.101:8046' add '/ctl/cal/#{i-1}'  0<&- &> /dev/null &"
+
+      # Start a couple skynet services
+      5.times do |n|
+        version = (n % 2) == 0 ? 1 : 2
+        region = (n % 3) == 0 ? "Chicago" : "Dallas" 
+
+        c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.125.101:8046 -l 192.168.125.10#{i}:999#{n} -admin 192.168.125.10#{i}:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}.log &"
+      end
 
 
       #c.vm.share_folder "skynet", "/opt/skynet", "../"
@@ -88,8 +108,4 @@ Vagrant::Config.run do |config|
   # Share an additional folder to the guest VM. The first argument is
   # an identifier, the second is the path on the guest to mount the
   # folder, and the third is the path on the host to the actual folder.
-  
-
-
-
 end
