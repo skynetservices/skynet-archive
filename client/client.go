@@ -1,36 +1,25 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/pools"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"github.com/bketelsen/skynet/service"
-	"github.com/bketelsen/skynet/util"
-	"launchpad.net/mgo/v2/bson"
-	"math/rand"
 	"net"
 	"net/rpc"
 	"os"
-	"strconv"
-	"strings"
+	"sync"
 )
 
 var (
 	ErrServiceUnregistered = errors.New("Service is unregistered")
+	ErrRequestTimeout      = errors.New("Service request timed out")
 )
-
-type Client struct {
-	DoozerConn skynet.DoozerConnection
-
-	Config *skynet.ClientConfig
-	Log    skynet.Logger `json:"-"`
-}
 
 type ServiceResource struct {
 	rpcClient *rpc.Client
-	service   service.Service
+	service   *service.Service
 	closed    bool
 }
 
@@ -41,6 +30,15 @@ func (s ServiceResource) Close() {
 
 func (s ServiceResource) IsClosed() bool {
 	return s.closed
+}
+
+type Client struct {
+	DoozerConn skynet.DoozerConnection
+
+	Config *skynet.ClientConfig
+	Log    skynet.Logger `json:"-"`
+
+	servicePools map[string]*servicePool
 }
 
 func (c *Client) doozer() skynet.DoozerConnection {
@@ -63,9 +61,10 @@ func NewClient(config *skynet.ClientConfig) *Client {
 	}
 
 	client := &Client{
-		Config:     config,
-		DoozerConn: skynet.NewDoozerConnectionFromConfig(*config.DoozerConfig, config.Log),
-		Log:        config.Log,
+		Config:       config,
+		DoozerConn:   skynet.NewDoozerConnectionFromConfig(*config.DoozerConfig, config.Log),
+		Log:          config.Log,
+		servicePools: map[string]*servicePool{},
 	}
 
 	client.Log.Item(config)
@@ -75,56 +74,60 @@ func NewClient(config *skynet.ClientConfig) *Client {
 	return client
 }
 
+var servicePoolMutex sync.Mutex
+
+func (c *Client) getServicePool(instance *service.Service) (sp *servicePool) {
+	servicePoolMutex.Lock()
+	defer servicePoolMutex.Unlock()
+
+	key := getInstanceKey(instance)
+
+	var ok bool
+	if sp, ok = c.servicePools[key]; ok {
+		return
+	}
+
+	sp = &servicePool{
+		service: instance,
+		pool:    pools.NewResourcePool(getConnectionFactory(instance), c.Config.ConnectionPoolSize, c.Config.ConnectionPoolSize),
+	}
+	return
+}
+
 func (c *Client) GetServiceFromQuery(q *Query) (s *ServiceClient) {
-	var conn net.Conn
-	var err error
 
-	s = &ServiceClient{
-		Log:            c.Config.Log,
-		connectionPool: pools.NewRoundRobin(c.Config.ConnectionPoolSize, c.Config.IdleTimeout),
-		query:          q,
-		instances:      make(map[string]service.Service, 0),
+	s = newServiceClient(q, c)
+
+	return s
+}
+
+// This will not fail if no services currently exist, this saves from chicken and egg issues with dependencies between services
+// TODO: We should probably determine a way of supplying secondary conditions, for example it's ok to go to a different data center only if there are no instances in our current datacenter
+func (c *Client) GetService(name string, version string, region string, host string) *ServiceClient {
+	registered := true
+	query := &Query{
+		DoozerConn: c.DoozerConn,
+		Service:    name,
+		Version:    version,
+		Host:       host,
+		Region:     region,
+		Registered: &registered,
 	}
 
-	// Load initial list of instances
-	results := s.query.FindInstances()
+	return c.GetServiceFromQuery(query)
+}
 
-	if results != nil {
-		for _, instance := range results {
-			key := instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port)
-			s.instances[key] = *instance
-		}
-	}
+func getInstanceKey(service *service.Service) string {
+	return service.Config.ServiceAddr.String()
+}
 
-	go s.monitorInstances()
-
-	var factory func() (pools.Resource, error)
+func getConnectionFactory(s *service.Service) (factory pools.Factory) {
 	factory = func() (pools.Resource, error) {
-		if len(s.instances) < 1 {
-
-			return nil, errors.New("No services available that match your criteria")
-		}
-
-		var key string
-		var instance service.Service
-
-		// Connect to random instance
-		index := (rand.Int() % len(s.instances))
-
-		for k, v := range s.instances {
-			if index == 0 {
-				key = k
-				instance = v
-				break
-			}
-			index--
-		}
-
-		conn, err = net.Dial("tcp", instance.Config.ServiceAddr.String())
+		conn, err := net.Dial("tcp", s.Config.ServiceAddr.String())
 
 		if err != nil {
 			// TODO: handle failure here and attempt to connect to a different instance
-			return nil, errors.New("Failed to connect to service: " + instance.Config.ServiceAddr.String())
+			return nil, errors.New("Failed to connect to service: " + s.Config.ServiceAddr.String())
 		}
 
 		// get the service handshake
@@ -147,164 +150,15 @@ func (c *Client) GetServiceFromQuery(q *Query) (s *ServiceClient) {
 		if !sh.Registered {
 			// this service has unregistered itself, look elsewhere
 			conn.Close()
-			delete(s.instances, key)
 			return factory()
 		}
 
 		resource := ServiceResource{
 			rpcClient: bsonrpc.NewClient(conn),
-			service:   instance,
+			service:   s,
 		}
 
 		return resource, nil
 	}
-
-	s.connectionPool.Open(factory)
-
-	return s
-}
-
-// This will not fail if no services currently exist, this saves from chicken and egg issues with dependencies between services
-// TODO: We should probably determine a way of supplying secondary conditions, for example it's ok to go to a different data center only if there are no instances in our current datacenter
-func (c *Client) GetService(name string, version string, region string, host string) *ServiceClient {
-	registered := true
-	query := &Query{
-		DoozerConn: c.DoozerConn,
-		Service:    name,
-		Version:    version,
-		Host:       host,
-		Region:     region,
-		Registered: &registered,
-	}
-
-	return c.GetServiceFromQuery(query)
-}
-
-type ServiceClient struct {
-	Log            skynet.Logger `json:"-"`
-	connectionPool *pools.RoundRobin
-	query          *Query
-	instances      map[string]service.Service
-}
-
-func (c *ServiceClient) monitorInstances() {
-	// TODO: Let's watch doozer and keep this list up to date so we don't need to search it every time we spawn a new connection
-	doozer := c.query.DoozerConn
-
-	rev := doozer.GetCurrentRevision()
-
-	for {
-		ev, err := doozer.Wait("/services/**", rev+1)
-		rev = ev.Rev
-
-		if err == nil {
-			var s service.Service
-
-			buf := bytes.NewBuffer(ev.Body)
-
-			err = json.Unmarshal(buf.Bytes(), &s)
-
-			if err == nil {
-				parts := strings.Split(ev.Path, "/")
-
-				if c.query.pathMatches(parts, ev.Path) {
-					key := s.Config.ServiceAddr.String()
-
-					if s.Registered == true {
-						//c.Log.Println("New Service Instance Discovered: " + key)
-						c.Log.Item(service.ServiceDiscovered{
-							Service: &s,
-						})
-						c.instances[key] = s
-					} else {
-						//c.Log.Println("Service Instance Removed: " + key)
-						c.Log.Item(service.ServiceRemoved{
-							Service: &s,
-						})
-						delete(c.instances, key)
-					}
-				}
-			}
-		}
-	}
-}
-
-func (c *ServiceClient) Send(requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
-	// TODO: timeout logic
-	s, err := c.getConnection(0)
-	if err != nil {
-		c.Log.Item(err)
-		return
-	}
-
-	if requestInfo == nil {
-		requestInfo = &skynet.RequestInfo{
-			RequestID: skynet.UUID(),
-		}
-	}
-
-	sin := service.ServiceRPCIn{
-		RequestInfo: requestInfo,
-		Method:      funcName,
-	}
-
-	sin.In, err = bson.Marshal(in)
-	if err != nil {
-		return
-	}
-
-	sout := service.ServiceRPCOut{}
-
-	// TODO: Check for connectivity issue so that we can try to get another resource out of the pool
-	err = s.rpcClient.Call(s.service.Config.Name+".Forward", sin, &sout)
-	if err != nil {
-		c.Log.Item(err)
-	}
-
-	err = bson.Unmarshal(sout.Out, outPointer)
-	if err != nil {
-		return
-	}
-
-	c.connectionPool.Put(s)
-
 	return
-}
-
-func (c *ServiceClient) getConnection(lvl int) (service ServiceResource, err error) {
-	if lvl > 5 {
-		err = errors.New("Unable to retrieve a valid connection to the service")
-		return
-	}
-
-	conn, err := c.connectionPool.Get()
-
-	if err != nil || c.isClosed(conn.(ServiceResource)) {
-		if conn != nil {
-			s := conn.(ServiceResource)
-
-			s.closed = true
-			c.connectionPool.Put(s)
-		}
-
-		return c.getConnection(lvl + 1)
-	}
-
-	service = conn.(ServiceResource)
-
-	return service, err
-}
-
-func (c *ServiceClient) isClosed(service ServiceResource) bool {
-	key := getInstanceKey(service.service)
-
-	if _, ok := c.instances[key]; ok {
-		return false
-	}
-
-	return true
-}
-
-func getInstanceKey(service service.Service) string {
-	return service.Config.ServiceAddr.String()
 }
