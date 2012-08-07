@@ -20,7 +20,7 @@ type ServiceClient struct {
 	cconfig *skynet.ClientConfig
 	query   *Query
 	// a list of the known instances
-	instances map[string]*service.Service
+	instances map[string]*servicePool
 	// a pool of the available instances. contains things of type servicePool
 	instancePool *pools.ResourcePool
 	muxChan      chan interface{}
@@ -36,7 +36,7 @@ func newServiceClient(query *Query, c *Client) (sc *ServiceClient) {
 		Log:          c.Config.Log,
 		cconfig:      c.Config,
 		query:        query,
-		instances:    make(map[string]*service.Service),
+		instances:    make(map[string]*servicePool),
 		instancePool: pools.NewResourcePool(func() (pools.Resource, error) { panic("unreachable") }, -1, 0),
 		muxChan:      make(chan interface{}),
 		timeoutChan:  make(chan timeoutLengths),
@@ -159,13 +159,14 @@ func (c *ServiceClient) mux() {
 				_, known := c.instances[key]
 				if !known {
 					// we got a new pool, put it into the wild
-					sp := c.client.getServicePool(m.Service)
-					c.instancePool.Release(&sp)
+					c.instances[key] = c.client.getServicePool(m.Service)
+					c.instancePool.Release(c.instances[key])
 					c.Log.Item(m)
 				}
-				c.instances[key] = m.Service
 
 			case service.ServiceRemoved:
+				key := m.Service.Config.ServiceAddr.String()
+				c.instances[key].Close()
 				delete(c.instances, m.Service.Config.ServiceAddr.String())
 				c.Log.Item(m)
 			}
@@ -259,25 +260,18 @@ func copyOutDest(outDest interface{}, src interface{}) {
 
 }
 
-func (c *ServiceClient) acquireInstancePool() (sp *servicePool) {
-	for {
-		spr, _ := c.instancePool.Acquire()
-		sp = spr.(*servicePool)
-		// TODO: check if sp's service was unregistered
-		break
-	}
-	return
-}
-
 func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
 	retry, giveup := c.GetTimeout()
 
 	attempts := make(chan sendAttempt)
 
 	instanceSend := func() {
-		sp := c.acquireInstancePool()
+		// first, get an instance that this ServiceClient isn't already using
+		spr, _ := c.instancePool.Acquire()
+		sp := spr.(*servicePool)
 		defer c.instancePool.Release(sp)
 
+		// then, get a connection to that instance
 		r, err := sp.pool.Acquire()
 		defer sp.pool.Release(r)
 		if err != nil {
@@ -287,18 +281,15 @@ func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, 
 
 		sr := r.(ServiceResource)
 
+		// make a clone of the out so we don't data race with other instanceSend()s
 		outClone := cloneOutDest(out)
 
-		at := sendAttempt{
+		attempts <- sendAttempt{
 			outClone: outClone,
 			err:      c.trySend(sr, ri, fn, in, outClone),
 			sp:       sp,
 		}
-
-		attempts <- at
 	}
-
-	go instanceSend()
 
 	var ticker <-chan time.Time
 	if retry > 0 {
@@ -356,7 +347,8 @@ func (c *ServiceClient) sendRetry(giveup time.Duration, ri *skynet.RequestInfo, 
 func (c *ServiceClient) SendOnce(giveup time.Duration, requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
 	// TODO: timeout logic
 
-	sp := c.acquireInstancePool()
+	spr, _ := c.instancePool.Acquire()
+	sp := spr.(*servicePool)
 	defer c.instancePool.Release(sp)
 
 	r, err := sp.pool.Acquire()
