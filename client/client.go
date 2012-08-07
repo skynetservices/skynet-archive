@@ -10,6 +10,7 @@ import (
 
 var (
 	ErrServiceUnregistered = errors.New("Service is unregistered")
+	ErrRequestTimeout      = errors.New("Service request timed out")
 )
 
 type ServiceResource struct {

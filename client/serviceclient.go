@@ -15,15 +15,17 @@ import (
 	"path"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 )
 
 type ServiceClient struct {
-	Log       skynet.Logger `json:"-"`
-	cconfig   *skynet.ClientConfig
-	query     *Query
-	instances map[string]servicePool
-	muxChan   chan interface{}
+	Log         skynet.Logger `json:"-"`
+	cconfig     *skynet.ClientConfig
+	query       *Query
+	instances   map[string]servicePool
+	muxChan     chan interface{}
+	timeoutChan chan timeoutLengths
 
 	retryTimeout  time.Duration
 	giveupTimeout time.Duration
@@ -31,11 +33,12 @@ type ServiceClient struct {
 
 func newServiceClient(query *Query, c *Client) (sc *ServiceClient) {
 	sc = &ServiceClient{
-		Log:       c.Config.Log,
-		cconfig:   c.Config,
-		query:     query,
-		instances: make(map[string]servicePool, 0),
-		muxChan:   make(chan interface{}),
+		Log:         c.Config.Log,
+		cconfig:     c.Config,
+		query:       query,
+		instances:   make(map[string]servicePool, 0),
+		muxChan:     make(chan interface{}),
+		timeoutChan: make(chan timeoutLengths),
 	}
 	go sc.mux()
 	go sc.monitorInstances()
@@ -180,6 +183,10 @@ func (lir lightInstanceRequest) excludes(key string) bool {
 	return lir.exclusions == nil || !lir.exclusions[key]
 }
 
+type timeoutLengths struct {
+	retry, giveup time.Duration
+}
+
 func (c *ServiceClient) mux() {
 	var spSubscribers []lightInstanceRequest
 
@@ -215,8 +222,26 @@ func (c *ServiceClient) mux() {
 					spSubscribers = append(spSubscribers, m)
 				}
 			}
+		case c.timeoutChan <- timeoutLengths{
+			retry:  c.retryTimeout,
+			giveup: c.giveupTimeout,
+		}:
+
 		}
 	}
+}
+
+func (c *ServiceClient) SetTimeout(retryTimeout, giveupTimeout time.Duration) {
+	c.muxChan <- timeoutLengths{
+		retry:  retryTimeout,
+		giveup: giveupTimeout,
+	}
+}
+
+func (c *ServiceClient) GetTimeout() (retry, giveup time.Duration) {
+	tls := <-c.timeoutChan
+	retry, giveup = tls.retry, tls.giveup
+	return
 }
 
 // do not call this from outside .mux()
@@ -226,35 +251,24 @@ func (c *ServiceClient) getLightInstanceMux(lir lightInstanceRequest) (sp servic
 		return
 	}
 
-	// first collect those that have the greatest reported number of available slots
-	// mostSlots := 0
-	bestInstances := make([]servicePool, len(c.instances), 0)
+	// filter based on the provided exclusion map
+	inclInstances := make([]servicePool, len(c.instances), 0)
 	for _, i := range c.instances {
 		if lir.excludes(getInstanceKey(i.service)) {
 			continue
 		}
-		// let's just add them all for the moment
-		/*
-			if i.service.Slots > mostSlots {
-				mostSlots = i.service.Slots
-				bestInstances = bestInstances[:0]
-			}
-			if i.service.Slots < mostSlots {
-				continue
-			}
-		*/
-		bestInstances = append(bestInstances, i)
+		inclInstances = append(inclInstances, i)
 	}
 
-	if len(bestInstances) == 0 {
+	if len(inclInstances) == 0 {
 		ok = false
 		return
 	}
 
 	// then choose one randomly
 
-	ri := rand.Intn(len(bestInstances))
-	sp = bestInstances[ri]
+	ri := rand.Intn(len(inclInstances))
+	sp = inclInstances[ri]
 	ok = true
 
 	return
@@ -338,16 +352,109 @@ func copyOutDest(outDest interface{}, src interface{}) {
 
 }
 
-func (c *ServiceClient) Send(requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
-	outClone := cloneOutDest(outPointer)
+func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
+	retry, giveup := c.GetTimeout()
 
-	err = c.SendOnce(requestInfo, funcName, in, outClone)
+	attempts := make(chan sendAttempt)
 
-	copyOutDest(outPointer, outClone)
+	// the exclSend closure will try to send the request to one of the services without outstanding attempts
+	var exclMutex sync.Mutex
+	exclusions := make(map[string]bool)
+	exclSend := func() {
+
+		exclMutex.Lock()
+		exclusionClone := make(map[string]bool)
+		for key, v := range exclusions {
+			if v {
+				exclusionClone[key] = true
+			}
+		}
+		exclMutex.Unlock()
+
+		sp := c.getLightInstance(exclusionClone)
+
+		exclMutex.Lock()
+		exclusions[getInstanceKey(sp.service)] = true
+		exclMutex.Unlock()
+
+		defer func() {
+			exclMutex.Lock()
+			exclusions[getInstanceKey(sp.service)] = false
+			exclMutex.Unlock()
+		}()
+
+		r, err := sp.pool.Acquire()
+		defer sp.pool.Release(r)
+		if err != nil {
+			c.Log.Item(err)
+			return
+		}
+
+		sr := r.(ServiceResource)
+
+		outClone := cloneOutDest(out)
+
+		at := sendAttempt{
+			outClone: outClone,
+			err:      c.trySend(sr, ri, fn, in, outClone),
+		}
+
+		attempts <- at
+
+	}
+
+	go exclSend()
+
+	var ticks <-chan time.Time
+	if retry > 0 {
+		ticks = time.NewTicker(retry).C
+	}
+	var timeout <-chan time.Time
+	if giveup > 0 {
+		timeout = time.NewTimer(giveup).C
+	}
+
+	for {
+		select {
+		case <-ticks:
+			go exclSend()
+		case <-timeout:
+			if err == nil {
+				err = ErrRequestTimeout
+			}
+			// otherwise use the last error reported from an attempt
+			return
+		case attempt := <-attempts:
+			err = attempt.err
+			if err == nil {
+				copyOutDest(out, attempt.outClone)
+				return
+			}
+		}
+	}
 
 	return
 }
-func (c *ServiceClient) SendOnce(requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
+
+type sendAttempt struct {
+	outClone interface{}
+	err      error
+}
+
+func (c *ServiceClient) sendRetry(giveup time.Duration, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}, attempts chan sendAttempt) {
+	outClone := cloneOutDest(out)
+
+	at := sendAttempt{
+		outClone: outClone,
+		err:      c.SendOnce(giveup, ri, fn, in, outClone),
+	}
+
+	attempts <- at
+
+	return
+}
+
+func (c *ServiceClient) SendOnce(giveup time.Duration, requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
 	// TODO: timeout logic
 
 	sp := c.getLightInstance(nil)
