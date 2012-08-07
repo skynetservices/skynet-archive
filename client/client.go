@@ -3,9 +3,13 @@ package client
 import (
 	"errors"
 	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/pools"
+	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"github.com/bketelsen/skynet/service"
+	"net"
 	"net/rpc"
 	"os"
+	"sync"
 )
 
 var (
@@ -33,6 +37,8 @@ type Client struct {
 
 	Config *skynet.ClientConfig
 	Log    skynet.Logger `json:"-"`
+
+	servicePools map[string]servicePool
 }
 
 func (c *Client) doozer() skynet.DoozerConnection {
@@ -55,9 +61,10 @@ func NewClient(config *skynet.ClientConfig) *Client {
 	}
 
 	client := &Client{
-		Config:     config,
-		DoozerConn: skynet.NewDoozerConnectionFromConfig(*config.DoozerConfig, config.Log),
-		Log:        config.Log,
+		Config:       config,
+		DoozerConn:   skynet.NewDoozerConnectionFromConfig(*config.DoozerConfig, config.Log),
+		Log:          config.Log,
+		servicePools: map[string]servicePool{},
 	}
 
 	client.Log.Item(config)
@@ -65,6 +72,26 @@ func NewClient(config *skynet.ClientConfig) *Client {
 	client.DoozerConn.Connect()
 
 	return client
+}
+
+var servicePoolMutex sync.Mutex
+
+func (c *Client) getServicePool(instance *service.Service) (sp servicePool) {
+	servicePoolMutex.Lock()
+	defer servicePoolMutex.Unlock()
+
+	key := getInstanceKey(instance)
+
+	var ok bool
+	if sp, ok = c.servicePools[key]; ok {
+		return
+	}
+
+	sp = servicePool{
+		service: instance,
+		pool:    pools.NewResourcePool(getConnectionFactory(instance), c.Config.ConnectionPoolSize, c.Config.ConnectionPoolSize),
+	}
+	return
 }
 
 func (c *Client) GetServiceFromQuery(q *Query) (s *ServiceClient) {
@@ -92,4 +119,46 @@ func (c *Client) GetService(name string, version string, region string, host str
 
 func getInstanceKey(service *service.Service) string {
 	return service.Config.ServiceAddr.String()
+}
+
+func getConnectionFactory(s *service.Service) (factory pools.Factory) {
+	factory = func() (pools.Resource, error) {
+		conn, err := net.Dial("tcp", s.Config.ServiceAddr.String())
+
+		if err != nil {
+			// TODO: handle failure here and attempt to connect to a different instance
+			return nil, errors.New("Failed to connect to service: " + s.Config.ServiceAddr.String())
+		}
+
+		// get the service handshake
+		var sh skynet.ServiceHandshake
+		decoder := bsonrpc.NewDecoder(conn)
+		err = decoder.Decode(&sh)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+
+		ch := skynet.ClientHandshake{}
+		encoder := bsonrpc.NewEncoder(conn)
+		err = encoder.Encode(ch)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+
+		if !sh.Registered {
+			// this service has unregistered itself, look elsewhere
+			conn.Close()
+			return factory()
+		}
+
+		resource := ServiceResource{
+			rpcClient: bsonrpc.NewClient(conn),
+			service:   s,
+		}
+
+		return resource, nil
+	}
+	return
 }

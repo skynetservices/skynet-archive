@@ -3,29 +3,28 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"github.com/4ad/doozer"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/pools"
-	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"github.com/bketelsen/skynet/service"
 	"launchpad.net/mgo/v2/bson"
-	"math/rand"
-	"net"
 	"path"
 	"reflect"
 	"strings"
-	"sync"
 	"time"
 )
 
 type ServiceClient struct {
-	Log         skynet.Logger `json:"-"`
-	cconfig     *skynet.ClientConfig
-	query       *Query
-	instances   map[string]servicePool
-	muxChan     chan interface{}
-	timeoutChan chan timeoutLengths
+	client  *Client
+	Log     skynet.Logger `json:"-"`
+	cconfig *skynet.ClientConfig
+	query   *Query
+	// a list of the known instances
+	instances map[string]*service.Service
+	// a pool of the available instances. contains things of type servicePool
+	instancePool *pools.ResourcePool
+	muxChan      chan interface{}
+	timeoutChan  chan timeoutLengths
 
 	retryTimeout  time.Duration
 	giveupTimeout time.Duration
@@ -33,12 +32,14 @@ type ServiceClient struct {
 
 func newServiceClient(query *Query, c *Client) (sc *ServiceClient) {
 	sc = &ServiceClient{
-		Log:         c.Config.Log,
-		cconfig:     c.Config,
-		query:       query,
-		instances:   make(map[string]servicePool, 0),
-		muxChan:     make(chan interface{}),
-		timeoutChan: make(chan timeoutLengths),
+		client:       c,
+		Log:          c.Config.Log,
+		cconfig:      c.Config,
+		query:        query,
+		instances:    make(map[string]*service.Service),
+		instancePool: pools.NewResourcePool(func() (pools.Resource, error) { panic("unreachable") }, -1, 0),
+		muxChan:      make(chan interface{}),
+		timeoutChan:  make(chan timeoutLengths),
 	}
 	go sc.mux()
 	go sc.monitorInstances()
@@ -127,60 +128,20 @@ func (c *ServiceClient) monitorInstances() {
 	}
 }
 
-func getConnectionFactory(s *service.Service) (factory pools.Factory) {
-	factory = func() (pools.Resource, error) {
-		conn, err := net.Dial("tcp", s.Config.ServiceAddr.String())
-
-		if err != nil {
-			// TODO: handle failure here and attempt to connect to a different instance
-			return nil, errors.New("Failed to connect to service: " + s.Config.ServiceAddr.String())
-		}
-
-		// get the service handshake
-		var sh skynet.ServiceHandshake
-		decoder := bsonrpc.NewDecoder(conn)
-		err = decoder.Decode(&sh)
-		if err != nil {
-			conn.Close()
-			return nil, err
-		}
-
-		ch := skynet.ClientHandshake{}
-		encoder := bsonrpc.NewEncoder(conn)
-		err = encoder.Encode(ch)
-		if err != nil {
-			conn.Close()
-			return nil, err
-		}
-
-		if !sh.Registered {
-			// this service has unregistered itself, look elsewhere
-			conn.Close()
-			return factory()
-		}
-
-		resource := ServiceResource{
-			rpcClient: bsonrpc.NewClient(conn),
-			service:   s,
-		}
-
-		return resource, nil
-	}
-	return
-}
-
 type servicePool struct {
 	service *service.Service
 	pool    *pools.ResourcePool
+	closed  bool
 }
 
-type lightInstanceRequest struct {
-	exclusions map[string]bool
-	response   chan servicePool
+// this is here to make it a pools.Resource
+func (sp *servicePool) Close() {
+	sp.closed = true
 }
 
-func (lir lightInstanceRequest) excludes(key string) bool {
-	return lir.exclusions == nil || !lir.exclusions[key]
+// this is here to make it a pools.Resource
+func (sp *servicePool) IsClosed() bool {
+	return sp.closed
 }
 
 type timeoutLengths struct {
@@ -188,39 +149,25 @@ type timeoutLengths struct {
 }
 
 func (c *ServiceClient) mux() {
-	var spSubscribers []lightInstanceRequest
 
 	for {
 		select {
 		case mi := <-c.muxChan:
 			switch m := mi.(type) {
 			case service.ServiceDiscovered:
-				sp := servicePool{
-					service: m.Service,
-					pool:    pools.NewResourcePool(getConnectionFactory(m.Service), c.cconfig.ConnectionPoolSize, c.cconfig.ConnectionPoolSize),
-				}
-				_, known := c.instances[m.Service.Config.ServiceAddr.String()]
-				c.instances[m.Service.Config.ServiceAddr.String()] = sp
+				key := m.Service.Config.ServiceAddr.String()
+				_, known := c.instances[key]
 				if !known {
+					// we got a new pool, put it into the wild
+					sp := c.client.getServicePool(m.Service)
+					c.instancePool.Release(&sp)
 					c.Log.Item(m)
 				}
-				// send this instance to anyone who was waiting
-				for _, sps := range spSubscribers {
-					sps.response <- sp
-				}
-				// no one is waiting anymore
-				spSubscribers = spSubscribers[:0]
+				c.instances[key] = m.Service
+
 			case service.ServiceRemoved:
 				delete(c.instances, m.Service.Config.ServiceAddr.String())
 				c.Log.Item(m)
-			case lightInstanceRequest:
-				sp, ok := c.getLightInstanceMux(m)
-				if ok {
-					m.response <- sp
-				} else {
-					//if one wasn't immediately available, wait for the next incoming
-					spSubscribers = append(spSubscribers, m)
-				}
 			}
 		case c.timeoutChan <- timeoutLengths{
 			retry:  c.retryTimeout,
@@ -241,46 +188,6 @@ func (c *ServiceClient) SetTimeout(retryTimeout, giveupTimeout time.Duration) {
 func (c *ServiceClient) GetTimeout() (retry, giveup time.Duration) {
 	tls := <-c.timeoutChan
 	retry, giveup = tls.retry, tls.giveup
-	return
-}
-
-// do not call this from outside .mux()
-func (c *ServiceClient) getLightInstanceMux(lir lightInstanceRequest) (sp servicePool, ok bool) {
-	if len(c.instances) == 0 {
-		ok = false
-		return
-	}
-
-	// filter based on the provided exclusion map
-	inclInstances := make([]servicePool, len(c.instances), 0)
-	for _, i := range c.instances {
-		if lir.excludes(getInstanceKey(i.service)) {
-			continue
-		}
-		inclInstances = append(inclInstances, i)
-	}
-
-	if len(inclInstances) == 0 {
-		ok = false
-		return
-	}
-
-	// then choose one randomly
-
-	ri := rand.Intn(len(inclInstances))
-	sp = inclInstances[ri]
-	ok = true
-
-	return
-}
-
-func (c *ServiceClient) getLightInstance(exclusions map[string]bool) (sp servicePool) {
-	response := make(chan servicePool, 1)
-	c.muxChan <- lightInstanceRequest{
-		exclusions: exclusions,
-		response:   response,
-	}
-	sp = <-response
 	return
 }
 
@@ -352,36 +259,24 @@ func copyOutDest(outDest interface{}, src interface{}) {
 
 }
 
+func (c *ServiceClient) acquireInstancePool() (sp *servicePool) {
+	for {
+		spr, _ := c.instancePool.Acquire()
+		sp = spr.(*servicePool)
+		// TODO: check if sp's service was unregistered
+		break
+	}
+	return
+}
+
 func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
 	retry, giveup := c.GetTimeout()
 
 	attempts := make(chan sendAttempt)
 
-	// the exclSend closure will try to send the request to one of the services without outstanding attempts
-	var exclMutex sync.Mutex
-	exclusions := make(map[string]bool)
-	exclSend := func() {
-
-		exclMutex.Lock()
-		exclusionClone := make(map[string]bool)
-		for key, v := range exclusions {
-			if v {
-				exclusionClone[key] = true
-			}
-		}
-		exclMutex.Unlock()
-
-		sp := c.getLightInstance(exclusionClone)
-
-		exclMutex.Lock()
-		exclusions[getInstanceKey(sp.service)] = true
-		exclMutex.Unlock()
-
-		defer func() {
-			exclMutex.Lock()
-			exclusions[getInstanceKey(sp.service)] = false
-			exclMutex.Unlock()
-		}()
+	instanceSend := func() {
+		sp := c.acquireInstancePool()
+		defer c.instancePool.Release(sp)
 
 		r, err := sp.pool.Acquire()
 		defer sp.pool.Release(r)
@@ -397,27 +292,30 @@ func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, 
 		at := sendAttempt{
 			outClone: outClone,
 			err:      c.trySend(sr, ri, fn, in, outClone),
+			sp:       sp,
 		}
 
 		attempts <- at
-
 	}
 
-	go exclSend()
+	go instanceSend()
 
-	var ticks <-chan time.Time
+	var ticker <-chan time.Time
 	if retry > 0 {
-		ticks = time.NewTicker(retry).C
+		ticker = time.NewTicker(retry).C
 	}
+
 	var timeout <-chan time.Time
 	if giveup > 0 {
 		timeout = time.NewTimer(giveup).C
 	}
 
+	go instanceSend()
+
 	for {
 		select {
-		case <-ticks:
-			go exclSend()
+		case <-ticker:
+			go instanceSend()
 		case <-timeout:
 			if err == nil {
 				err = ErrRequestTimeout
@@ -439,6 +337,7 @@ func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, 
 type sendAttempt struct {
 	outClone interface{}
 	err      error
+	sp       *servicePool
 }
 
 func (c *ServiceClient) sendRetry(giveup time.Duration, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}, attempts chan sendAttempt) {
@@ -457,7 +356,8 @@ func (c *ServiceClient) sendRetry(giveup time.Duration, ri *skynet.RequestInfo, 
 func (c *ServiceClient) SendOnce(giveup time.Duration, requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
 	// TODO: timeout logic
 
-	sp := c.getLightInstance(nil)
+	sp := c.acquireInstancePool()
+	defer c.instancePool.Release(sp)
 
 	r, err := sp.pool.Acquire()
 	if err != nil {
@@ -480,6 +380,7 @@ func (c *ServiceClient) SendOnce(giveup time.Duration, requestInfo *skynet.Reque
 func (c *ServiceClient) isClosed(service ServiceResource) bool {
 	key := getInstanceKey(service.service)
 
+	// TODO: this is unsafe
 	if _, ok := c.instances[key]; ok {
 		return false
 	}

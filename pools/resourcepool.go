@@ -102,7 +102,7 @@ func (rp *ResourcePool) acquire(acq acquireMessage) {
 		// discard closed resources
 		rp.numResources--
 	}
-	if rp.maxResources > 0 && rp.numResources >= rp.maxResources {
+	if rp.maxResources != -1 && rp.numResources >= rp.maxResources {
 		// we need to wait until something comes back in
 		rp.activeWaits = append(rp.activeWaits, acq)
 		return
@@ -125,7 +125,7 @@ func (rp *ResourcePool) release(resource Resource) {
 		rp.numResources--
 		return
 	}
-	if rp.idleCapacity != 0 && rp.idleResources.Size() == rp.idleCapacity {
+	if rp.idleCapacity != -1 && rp.idleResources.Size() == rp.idleCapacity {
 		resource.Close()
 		rp.numResources--
 		return
