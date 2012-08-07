@@ -26,11 +26,13 @@ Vagrant::Config.run do |config|
       # This path will be expanded relative to the project directory
       chef.cookbooks_path = "chef/cookbooks"
 
+      chef.add_recipe("apt")
       chef.add_recipe("build-essential")
       chef.add_recipe("mercurial")
       chef.add_recipe("git")
       chef.add_recipe("bzr")
       chef.add_recipe("go")
+      chef.add_recipe("mongodb")
       chef.add_recipe("doozerd")
       chef.add_recipe("skynet-example")
     end
