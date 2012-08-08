@@ -25,6 +25,10 @@ type ResourcePool struct {
 	activeWaits []acquireMessage
 }
 
+func NewSourcelessPool() (rp *ResourcePool) {
+	return NewResourcePool(func() (Resource, error) { return nil, nil }, -1, 0)
+}
+
 func NewResourcePool(factory Factory, idleCapacity, maxResources int) (rp *ResourcePool) {
 	rp = &ResourcePool{
 		factory:      factory,
