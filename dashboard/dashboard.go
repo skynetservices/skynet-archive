@@ -46,7 +46,7 @@ var webroot = flag.String("webroot", ".", "root of templates and javascript libr
 var mems = flag.Bool("memstats", false, "write mem stats to stderr")
 var memstats *runtime.MemStats
 
-var DC skynet.DoozerConnection
+var DC *skynet.DoozerConnection
 
 func main() {
 	flag.Parse()
@@ -97,7 +97,7 @@ func main() {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
-func Doozer() skynet.DoozerConnection {
+func Doozer() *skynet.DoozerConnection {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Failed to connect to Doozer")
