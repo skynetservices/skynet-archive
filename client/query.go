@@ -175,9 +175,8 @@ func (q *Query) matchingPaths() []string {
 	unique := make(map[string]string, 0)
 
 	for path, dir := range q.paths {
-		parts := strings.Split(path, "/")
 
-		if !q.pathMatches(parts, path) {
+		if !q.PathMatches(path) {
 			continue
 		}
 
@@ -196,7 +195,10 @@ func (q *Query) matchingPaths() []string {
 	return results
 }
 
-func (q *Query) pathMatches(parts []string, path string) bool {
+func (q *Query) PathMatches(path string) bool {
+  parts := strings.Split(path, "/")
+
+
 	if len(parts) >= 3 && q.Service != "" && parts[2] != q.Service {
 		return false
 	}

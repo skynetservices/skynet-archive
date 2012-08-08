@@ -1,0 +1,51 @@
+body {
+  background: #69909f;
+}
+
+.content {
+  background: #fff;
+  min-height: 800px;
+}
+
+.nav {
+  margin: 0;
+  padding: 0;
+}
+
+.nav-bar {
+  margin: 0;
+}
+
+#main-nav {
+  height: 40px;
+}
+
+.logo {
+  background: url(/media/images/SkyNetLogo.png) no-repeat;
+  height: 40px;
+  margin: 10px;
+}
+
+
+/* Logs */
+#log {
+	overflow: scroll;
+  height: 550px;
+}
+
+#search-container {
+  width: 275px;
+}
+
+#search-term {
+  width: 275px;
+}
+
+/* Dashboard */
+dl.tabs {
+  margin-bottom: 0;
+}
+
+.nodes {
+  width: 100%;
+}
