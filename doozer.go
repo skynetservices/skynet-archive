@@ -67,7 +67,7 @@ func NewDoozerConnectionFromConfig(config DoozerConfig, logger Logger) (d *Dooze
 		Log:           logger,
 		instancesChan: make(chan interface{}, 1),
 		connChan:      make(chan doozerconn),
-		dialChan:      make(chan dialInstance, 1),
+		dialChan:      make(chan dialInstance),
 	}
 
 	return
