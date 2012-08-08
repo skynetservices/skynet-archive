@@ -118,12 +118,12 @@ func (c *ServiceClient) monitorInstances() {
 		if c.query.pathMatches(parts, ev.Path) {
 			//key := s.Config.ServiceAddr.String()
 
-			if s.Registered == true {
-				c.muxChan <- service.ServiceDiscovered{
+			if ev.IsDel() || s.Registered == false {
+				c.muxChan <- service.ServiceRemoved{
 					Service: &s,
 				}
 			} else {
-				c.muxChan <- service.ServiceRemoved{
+				c.muxChan <- service.ServiceDiscovered{
 					Service: &s,
 				}
 			}
