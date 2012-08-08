@@ -5,7 +5,6 @@ import (
 	"github.com/bketelsen/skynet/service"
 	"encoding/json"
 	"bytes"
-	"path"
   "fmt"
 )
 
@@ -15,6 +14,7 @@ type InstanceMonitor struct {
   addChan chan instance
   removeChan chan string
   listChan chan *InstanceListener
+  instances map[string]service.Service
 }
 
 type instance struct {
@@ -40,6 +40,9 @@ func NewInstanceMonitor(doozer skynet.DoozerConnection) ( im *InstanceMonitor){
   im = &InstanceMonitor{
     doozer: doozer,
     clients: make(map[string]*InstanceListener, 0),
+    addChan: make(chan instance),
+    removeChan: make(chan string),
+    instances: make(map[string]service.Service, 0),
   }
 
   go im.mux()
@@ -52,15 +55,18 @@ func (im *InstanceMonitor) mux(){
   for {
     select {
       case instance := <-im.addChan:
-        fmt.Println("received add in mux")
         for _, c := range im.clients {
+          im.instances[instance.path] = instance.service
+
           if c.query.PathMatches(instance.path){
+
             c.AddChan <- instance.service
           }
         }
 
       case path := <-im.removeChan:
-        fmt.Println("received remove in mux")
+        delete(im.instances, path)
+
         for _, c := range im.clients {
           if c.query.PathMatches(path){
             c.RemoveChan <- path
@@ -76,13 +82,12 @@ func (im *InstanceMonitor) mux(){
 func (im *InstanceMonitor) monitorInstances() {
 	rev := im.doozer.GetCurrentRevision()
 
-	watchPath := path.Join("/services", "**")
+	watchPath := "/services"
 
-  /*
   // Build initial list of instances
 	var ifc instanceFileCollector
 	errch := make(chan error)
-	doozer.Walk(rev, watchPath, &ifc, errch)
+	im.doozer.Walk(rev, watchPath, &ifc, errch)
 
 	select {
     case err := <-errch:
@@ -91,12 +96,12 @@ func (im *InstanceMonitor) monitorInstances() {
 	}
 
 	for _, file := range ifc.files {
-		buf, _, err := doozer.Get(file, rev)
+		buf, _, err := im.doozer.Get(file, rev)
 		if err != nil {
       fmt.Println(err)
-    default:
-			continue
-		}
+      continue
+    }
+
 		var s service.Service
 		err = json.Unmarshal(buf, &s)
 		if err != nil {
@@ -104,10 +109,8 @@ func (im *InstanceMonitor) monitorInstances() {
 			continue
 		}
 
-    for _, c := range im.clients {
-    }
+    im.instances[file] = s
 	}
-  */
 
   // Watch for changes
 	for {
@@ -121,7 +124,6 @@ func (im *InstanceMonitor) monitorInstances() {
 		}
 
     if ev.IsDel() {
-      fmt.Println("sending remove to mux")
       im.removeChan <- ev.Path
     } else {
       buf := bytes.NewBuffer(ev.Body)
@@ -133,7 +135,6 @@ func (im *InstanceMonitor) monitorInstances() {
         continue
       }
 
-      fmt.Println("sending add to mux")
       im.addChan <- instance {path: ev.Path, service: s}
     }
 	}
