@@ -10,6 +10,10 @@ import (
 func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor){
   l := im.Listen(skynet.UUID(), &client.Query{})
 
+  b, _ := json.Marshal(l.Instances)
+  ws.Write(b)
+
+
   // TODO: make sure this goes out of scope when the user closes the socket or times out (send heartbeat?)
   // Close the websocket, and remove the listener from the InstanceMonitor: l.Close()
   for {

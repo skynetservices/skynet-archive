@@ -30,6 +30,8 @@ type InstanceListener struct {
   id string
 
   Instances map[string]service.Service
+
+  doneChan chan bool
 }
 
 func (l *InstanceListener) Close(){
@@ -42,6 +44,7 @@ func NewInstanceMonitor(doozer skynet.DoozerConnection) ( im *InstanceMonitor){
     clients: make(map[string]*InstanceListener, 0),
     addChan: make(chan instance),
     removeChan: make(chan string),
+    listChan: make(chan *InstanceListener),
     instances: make(map[string]service.Service, 0),
   }
 
@@ -73,8 +76,14 @@ func (im *InstanceMonitor) mux(){
           }
         }
 
-      //case listener := <-im.listChan:
-      // Set listeners list
+      case listener := <-im.listChan:
+        for path, s := range im.instances {
+          if listener.query.PathMatches(path) {
+            listener.Instances[path] = s
+          }
+        }
+
+        listener.doneChan <- true
     }
   }
 }
@@ -149,7 +158,11 @@ func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
     monitor: im,
     id: id,
     Instances: make(map[string]service.Service),
+    doneChan: make(chan bool),
   }
+
+  im.listChan <- l
+  <-l.doneChan
 
   im.clients[id] = l
 
