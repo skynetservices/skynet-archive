@@ -157,6 +157,7 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 	adminAddr := flagset.String("admin", getDefaultEnvVar("SKYNET_ADMIN", ":9998"), "host:port to listen on for admin")
 	flagset.StringVar(&config.UUID, "uuid", UUID(), "UUID for this service")
 	flagset.StringVar(&config.Region, "region", getDefaultEnvVar("SKYNET_REGION", "unknown"), "region service is located in")
+	flagset.StringVar(&config.Version, "version", "unknown", "version of service")
 
 	if len(argv) == 0 {
 		argv = os.Args[1:]

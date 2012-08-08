@@ -174,13 +174,14 @@ jQuery(document).ready(function ($) {
         if (!conn) {
           return false;
         }
-        if (!msg.val()) {
-          return false;
-        }
         log.children().each(function(){
           $(this).remove()
         });
-        conn.send(msg.val());
+        var selected;
+        $("#database-collection option:selected").each(function () {
+            selected = $(this).text();
+        });
+        conn.send( JSON.stringify({ filter: msg.val(), collection: selected }));
         return false
       });
 
@@ -197,7 +198,7 @@ jQuery(document).ready(function ($) {
           appendLog($("<div><b>Connection closed.</b></div>"))
         }
         conn.onmessage = function(evt) {
-          logMsg = $("<div/>").text(evt.data);
+          logMsg = $("<div/>").text(evt.data);    // expecting {data:...}
           
           if(highlightEnabled){
             highlight(logMsg, msg.val());

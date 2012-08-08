@@ -7,10 +7,11 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
-	"runtime"
-	"runtime/pprof"
+)
+
+import (
+	"labix.org/v2/mgo"
 )
 
 var layoutTmpl *template.Template
@@ -18,17 +19,62 @@ var indexTmpl *template.Template
 var searchTmpl *template.Template
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
+	if *debug {
+		log.Printf("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path)
+	}
 	buf := new(bytes.Buffer)
 	indexTmpl.Execute(buf, r.URL.Path)
 	layoutTmpl.Execute(w, template.HTML(buf.String()))
 }
 
-func searchHandler(w http.ResponseWriter, req *http.Request) {
+var session *mgo.Session
+
+func searchHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
 	if *debug {
-		log.Printf("%s → %s %s", req.RemoteAddr, req.Method, req.URL.Path)
+		log.Printf("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 	}
+
+	sdata := make([]string, 0)
+
+	if session == nil {
+		session, err = mgo.Dial(*mgoserver)
+		if err != nil {
+			log.Printf("searchHandler: can't connect to mongodb server %s: %s\n", *mgoserver, err)
+			// TODO: proper error pages?
+			w.Write([]byte("<html><body>Error establishing MongoDB connection</body></html>"))
+			return
+		}
+	}
+
+	var dbs []string
+	if *mgodb != "" {
+		// Only connect to the supplied database
+		dbs = []string{*mgodb}
+	} else {
+		dbs, err = session.DatabaseNames()
+		if err != nil {
+			log.Printf("searchHandler: unable to obtain database list: %s\n", err)
+			// TODO: proper error pages?
+			w.Write([]byte("<html><body>Unable to obtain database list</body></html>"))
+			return
+		}
+	}
+
+	for _, db := range dbs {
+		ndb := session.DB(db)
+		colls, err := ndb.CollectionNames()
+		if err != nil {
+			log.Printf("searchHandler: can't get collection names for %s: %s", db, err)
+			continue
+		}
+		for _, coll := range colls {
+			sdata = append(sdata, db+":"+coll)
+		}
+	}
+
 	buf := new(bytes.Buffer)
-	searchTmpl.Execute(buf, req.Host)
+	searchTmpl.Execute(buf, sdata)
 	layoutTmpl.Execute(w, template.HTML(buf.String()))
 }
 
@@ -36,29 +82,19 @@ var addr = flag.String("addr", ":8080", "dashboard listener address")
 var debug = flag.Bool("d", false, "print debug info")
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 var webroot = flag.String("webroot", ".", "root of templates and javascript libraries")
-var mems = flag.Bool("memstats", false, "write mem stats to stderr")
-var memstats *runtime.MemStats
+var mgoserver = flag.String("mgoserver", "", "comma-separated list of urls of mongodb servers")
+var mgodb = flag.String("mgodb", "", "mongodb database")
 
 func main() {
+	var err error
+
 	flag.Parse()
 
-	if *mems {
-		memstats = new(runtime.MemStats)
-	}
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			log.Fatal(err)
+	if *mgoserver == "" {
+		if *mgoserver = os.Getenv("SKYNET_MGOSERVER"); *mgoserver == "" {
+			log.Fatal("no mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)")
 		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
 	}
-	if *mems {
-		runtime.ReadMemStats(memstats)
-		log.Printf("memstats GC: bytes = %d footprint = %d\n", memstats.HeapAlloc, memstats.Sys)
-		log.Printf("memstats GC: %v\n", memstats.PauseNs)
-	}
-
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/logs/search", searchHandler)
 	http.Handle("/media/", http.StripPrefix("/media/", http.FileServer(http.Dir(*webroot+"/tmpl"))))
@@ -70,12 +106,7 @@ func main() {
 	indexTmpl = template.Must(template.ParseFiles(*webroot + "/tmpl/index.html.template"))
 	searchTmpl = template.Must(template.ParseFiles(*webroot + "/tmpl/search.html.template"))
 
-	// Start logging service hub
-	go h.run()
-	// Start dummy log fetcher
-	go logbroadcast()
-
-	err := http.ListenAndServe(*addr, nil)
+	err = http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}

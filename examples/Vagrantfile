@@ -1,0 +1,95 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+NUM_SKYNET_NODES = 3
+
+Vagrant::Config.run do |config|
+  #doozerd -timeout 5 -l "127.0.0.1:10000" -w "127.0.0.1:11000" -c "dzns"
+
+  # bring in the host gopaths, if asked for
+  if ENV["VAGRANT_USE_HOST_GOPATH"] then
+    gps = ENV["GOPATH"].split(":")
+    gpi = 0
+    gps.each do |gp| 
+      config.vm.share_folder("gp#{gpi}", "/opt/hostgopaths/gp#{gpi}", gp)
+      gpi += 1
+    end
+  end
+
+
+  # This will be our doozer, and dzns master
+  config.vm.define :skynet1 do |c|
+    c.vm.box = "lucid64"
+    c.vm.network :hostonly, "192.168.125.101"
+
+    c.vm.provision :chef_solo do |chef|
+      # This path will be expanded relative to the project directory
+      chef.cookbooks_path = "chef/cookbooks"
+
+      chef.add_recipe("build-essential")
+      chef.add_recipe("mercurial")
+      chef.add_recipe("git")
+      chef.add_recipe("go")
+      chef.add_recipe("doozerd")
+    end
+
+
+    # Setup DZNS Master
+    c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.101:10000' -w '192.168.125.101:11000' -c 'dzns' 0<&- &> /var/log/dzns.log &" 
+    
+    # Setup Doozer Master
+    c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.101:8046' -w '192.168.125.101:8080' -c 'skynet' -b 'doozer:?ca=192.168.125.101:10000' 0<&- &> /var/log/doozer.log &"
+
+    #c.vm.share_folder "skynet", "/opt/skynet", "../"
+    #c.vm.share_folder "gopath", "/opt/gopath", ENV['GOPATH']
+  end
+
+
+  # These should all be basically the same
+  (NUM_SKYNET_NODES - 1).times do |n|
+    i = n + 2
+
+    config.vm.define "skynet#{i}" do |c|
+      c.vm.box = "lucid64"
+      c.vm.network :hostonly, "192.168.125.10#{i}"
+
+      c.vm.provision :chef_solo do |chef|
+        # This path will be expanded relative to the project directory
+        chef.cookbooks_path = "chef/cookbooks"
+
+        chef.add_recipe("build-essential")
+        chef.add_recipe("mercurial")
+        chef.add_recipe("git")
+        chef.add_recipe("go")
+        chef.add_recipe("doozerd")
+      end
+
+      # Setup DZNS Node
+      c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.10#{i}:10000' -w '192.168.125.10#{i}:11000' -a '192.168.125.101:10000' -c 'dzns' 0<&- &> /var/log/dzns.log &" 
+      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.125.101:10000' add '/ctl/cal/#{i-1}' >/dev/null &"
+      
+      # Setup Doozer Node
+      c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.10#{i}:8046' -w '192.168.125.10#{i}:8080' -c 'skynet' -b 'doozer:?ca=192.168.125.101:10000' 0<&- &> /var/log/doozer.log &"
+      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.125.101:8046' add '/ctl/cal/#{i-1}' >/dev/null &"
+
+
+      #c.vm.share_folder "skynet", "/opt/skynet", "../"
+      #c.vm.share_folder "gopath", "/opt/gopath", ENV['GOPATH']
+    end
+  end
+
+  # config.vm.box_url = "http://domain.com/path/to/above.box"
+  # config.vm.network :hostonly, "192.168.33.10"
+
+  # Forward a port from the guest to the host, which allows for outside
+  # computers to access the VM, whereas host only networking does not.
+  # config.vm.forward_port 80, 8080
+
+  # Share an additional folder to the guest VM. The first argument is
+  # an identifier, the second is the path on the guest to mount the
+  # folder, and the third is the path on the host to the actual folder.
+  
+
+
+
+end
