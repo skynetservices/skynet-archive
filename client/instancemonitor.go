@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"bytes"
   "fmt"
+  "path"
 )
 
 type InstanceMonitor struct {
@@ -59,10 +60,10 @@ func (im *InstanceMonitor) mux(){
     select {
       case instance := <-im.addChan:
         for _, c := range im.clients {
+
           im.instances[instance.path] = instance.service
 
           if c.query.PathMatches(instance.path){
-
             c.AddChan <- instance.service
           }
         }
@@ -91,12 +92,10 @@ func (im *InstanceMonitor) mux(){
 func (im *InstanceMonitor) monitorInstances() {
 	rev := im.doozer.GetCurrentRevision()
 
-	watchPath := "/services"
-
   // Build initial list of instances
 	var ifc instanceFileCollector
 	errch := make(chan error)
-	im.doozer.Walk(rev, watchPath, &ifc, errch)
+	im.doozer.Walk(rev, "/services", &ifc, errch)
 
 	select {
     case err := <-errch:
@@ -122,6 +121,9 @@ func (im *InstanceMonitor) monitorInstances() {
 	}
 
   // Watch for changes
+
+	watchPath := path.Join("/services", "**")
+
 	for {
 		ev, err := im.doozer.Wait(watchPath, rev+1)
 		rev = ev.Rev
@@ -143,6 +145,7 @@ func (im *InstanceMonitor) monitorInstances() {
         fmt.Println("error unmarshalling service")
         continue
       }
+
 
       im.addChan <- instance {path: ev.Path, service: s}
     }
