@@ -123,11 +123,43 @@ jQuery(document).ready(function ($) {
   $.foundation.customForms.appendCustomMarkup();
 
 
+  /* Node List */
+  var instanceList = $("#instance-list");
+
+  if(instanceList.size() > 0){
+    if (window["WebSocket"]) {
+      conn = new WebSocket("ws://" + document.location.host + "/instances/ws");
+
+      conn.onopen = function(evt){
+        conn.send("foo");
+        conn.send("foo");
+        conn.send("foo");
+        conn.send("foo");
+      };
+
+      conn.onclose = function(evt) {
+        // TODO: Handle this properly
+        console.log("closed");
+      };
+
+      conn.onmessage = function(evt) {
+        // TODO: Handle this properly
+        console.log(evt.data);
+      };
+
+    } else {
+      // TODO: Handle this properly
+      console.log("no support for WebSocket");
+    }
+
+  }
+
+
   /* LOGS */
 
   var log = $("#log");
 
-  if(log) {
+  if(log.size() > 0) {
     (function(log){
       var highlight;
       var conn;

@@ -13,16 +13,8 @@ import (
 	"syscall"
 )
 
-func getDefaultEnvVar(name, def string) (v string) {
-	v = os.Getenv(name)
-	if v == "" {
-		v = def
-	}
-	return
-}
-
 var (
-	DoozerHost      *string = flag.String("doozer", getDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
+	DoozerHost      *string = flag.String("doozer", skynet.GetDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
 	VersionFlag     *string = flag.String("version", "", "service version")
 	ServiceNameFlag *string = flag.String("service", "", "service name")
 	HostFlag        *string = flag.String("host", "", "host")

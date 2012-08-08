@@ -6,6 +6,6 @@ version           "1.0.0"
 
 recipe "go", "Installs go"
 
-%w{ debian ubuntu }.each do |os|
+%w{ fedora redhat centos ubuntu debian }.each do |os|
   supports os
 end

@@ -172,15 +172,18 @@ func (q *Query) FindInstances() []*service.Service {
 
 func (q *Query) matchingPaths() []string {
 	results := make([]string, 0)
+  unique := make(map[string]string, 0)
 
 	for path, dir := range q.paths {
-		parts := strings.Split(path, "/")
 
-		if !q.pathMatches(parts, path) {
+		if !q.PathMatches(path) {
 			continue
 		}
 
-		results = append(results, dir.Name)
+    if _, ok := unique[dir.Name]; !ok {
+      unique[dir.Name] = dir.Name
+      results = append(results, dir.Name)
+    }
 	}
 
 	// reset internal variables also make sure we can garbage collect
@@ -192,7 +195,10 @@ func (q *Query) matchingPaths() []string {
 	return results
 }
 
-func (q *Query) pathMatches(parts []string, path string) bool {
+func (q *Query) PathMatches(path string) bool {
+  parts := strings.Split(path, "/")
+
+
 	if len(parts) >= 3 && q.Service != "" && parts[2] != q.Service {
 		return false
 	}

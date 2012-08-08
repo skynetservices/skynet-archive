@@ -57,6 +57,7 @@
   <script src="/media/javascripts/jquery.customforms.js"></script>
   <script src="/media/javascripts/jquery.placeholder.min.js"></script>
   <script src="/media/javascripts/jquery.tooltips.js"></script>
+  <script src="/media/javascripts/mustache.js"></script>
   <script src="/media/javascripts/app.js"></script>
 </body>
 </html>
