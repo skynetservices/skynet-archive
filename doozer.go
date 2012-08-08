@@ -19,17 +19,6 @@ type DoozerConfig struct {
 	AutoDiscover bool
 }
 
-type DoozerConnection interface {
-	Connect()
-	GetCurrentRevision() (rev int64)
-	Set(file string, rev int64, body []byte) (newRev int64, err error)
-	Del(path string, rev int64) (err error)
-	Get(file string, rev int64) (data []byte, revision int64, err error)
-	Wait(glob string, rev int64) (ev doozer.Event, err error)
-	Walk(rev int64, root string, v doozer.Visitor, errors chan<- error)
-	Rev() (rev int64, err error)
-}
-
 // Used as interface to doozer.Conn so that we can stub for tests
 type doozerconn interface {
 	Set(file string, rev int64, body []byte) (newRev int64, err error)
@@ -41,7 +30,7 @@ type doozerconn interface {
 	Getdir(dir string, rev int64, off, lim int) (names []string, err error)
 }
 
-type doozerConnection struct {
+type DoozerConnection struct {
 	Config     *DoozerConfig
 	Connection doozerconn
 	Log        Logger
@@ -52,12 +41,12 @@ type doozerConnection struct {
 	currentInstance string
 }
 
-func NewDoozerConnection(uri string, boot string, discover bool, logger Logger) DoozerConnection {
+func NewDoozerConnection(uri string, boot string, discover bool, logger Logger) *DoozerConnection {
 	if logger == nil {
 		logger = NewConsoleLogger(os.Stderr)
 	}
 
-	return &doozerConnection{
+	return &DoozerConnection{
 		Config: &DoozerConfig{
 			Uri:          uri,
 			BootUri:      boot,
@@ -68,18 +57,18 @@ func NewDoozerConnection(uri string, boot string, discover bool, logger Logger) 
 	}
 }
 
-func NewDoozerConnectionFromConfig(config DoozerConfig, logger Logger) DoozerConnection {
+func NewDoozerConnectionFromConfig(config DoozerConfig, logger Logger) *DoozerConnection {
 	if logger == nil {
 		logger = NewConsoleLogger(os.Stderr)
 	}
 
-	return &doozerConnection{
+	return &DoozerConnection{
 		Config: &config,
 		Log:    logger,
 	}
 }
 
-func (d *doozerConnection) Connect() {
+func (d *DoozerConnection) Connect() {
 	if d.Config == nil || (d.Config.Uri == "" && d.Config.BootUri == "") {
 		d.Log.Panic("You must supply a doozer server and/or boot uri")
 	}
@@ -106,7 +95,7 @@ func (d *doozerConnection) Connect() {
 	}
 }
 
-func (d *doozerConnection) dial(server string, boot string) (bool, error) {
+func (d *DoozerConnection) dial(server string, boot string) (bool, error) {
 	var err error
 
 	d.Connection, err = doozer.Dial(server)
@@ -123,7 +112,7 @@ func (d *doozerConnection) dial(server string, boot string) (bool, error) {
 	return true, nil
 }
 
-func (d *doozerConnection) GetCurrentRevision() (rev int64) {
+func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
 	defer func() {
 		if err := recover(); err != nil {
 			d.recoverFromError(err)
@@ -141,7 +130,7 @@ func (d *doozerConnection) GetCurrentRevision() (rev int64) {
 	return revision
 }
 
-func (d *doozerConnection) Set(file string, rev int64, body []byte) (newRev int64, err error) {
+func (d *DoozerConnection) Set(file string, rev int64, body []byte) (newRev int64, err error) {
 	defer func() {
 		if err := recover(); err != nil {
 			d.recoverFromError(err)
@@ -153,7 +142,7 @@ func (d *doozerConnection) Set(file string, rev int64, body []byte) (newRev int6
 	return d.Connection.Set(file, rev, body)
 }
 
-func (d *doozerConnection) Del(path string, rev int64) (err error) {
+func (d *DoozerConnection) Del(path string, rev int64) (err error) {
 	defer func() {
 		if err := recover(); err != nil {
 			d.recoverFromError(err)
@@ -165,7 +154,7 @@ func (d *doozerConnection) Del(path string, rev int64) (err error) {
 	return d.Connection.Del(path, rev)
 }
 
-func (d *doozerConnection) Get(file string, rev int64) (data []byte, revision int64, err error) {
+func (d *DoozerConnection) Get(file string, rev int64) (data []byte, revision int64, err error) {
 	defer func() {
 		if err := recover(); err != nil {
 			d.recoverFromError(err)
@@ -177,7 +166,7 @@ func (d *doozerConnection) Get(file string, rev int64) (data []byte, revision in
 	return d.Connection.Get(file, &rev)
 }
 
-func (d *doozerConnection) Rev() (rev int64, err error) {
+func (d *DoozerConnection) Rev() (rev int64, err error) {
 	defer func() {
 		if err := recover(); err != nil {
 			d.recoverFromError(err)
@@ -189,7 +178,7 @@ func (d *doozerConnection) Rev() (rev int64, err error) {
 	return d.Connection.Rev()
 }
 
-func (d *doozerConnection) getDoozerInstances() {
+func (d *DoozerConnection) getDoozerInstances() {
 	d.doozerInstances = make(map[string]*DoozerServer)
 
 	rev := d.GetCurrentRevision()
@@ -206,7 +195,7 @@ func (d *doozerConnection) getDoozerInstances() {
 	}
 }
 
-func (d *doozerConnection) recoverFromError(err interface{}) {
+func (d *DoozerConnection) recoverFromError(err interface{}) {
 	if err == "EOF" {
 		// d.Log.Println("Lost connection to Doozer: Reconnecting...")
 		d.Log.Item(DoozerLostConnection{
@@ -241,7 +230,7 @@ func (d *doozerConnection) recoverFromError(err interface{}) {
 
 // TODO: Need to track last known revision, so when we are monitor for changes to the doozer cluster
 // we can replay changes that took place while we were looking for a new connection instead of using the latest GetCurrentRevision()
-func (d *doozerConnection) monitorCluster() {
+func (d *DoozerConnection) monitorCluster() {
 	defer func() {
 		if err := recover(); err != nil {
 			d.recoverFromError(err)
@@ -284,7 +273,7 @@ func (d *doozerConnection) monitorCluster() {
 	}
 }
 
-func (d *doozerConnection) Wait(glob string, rev int64) (ev doozer.Event, err error) {
+func (d *DoozerConnection) Wait(glob string, rev int64) (ev doozer.Event, err error) {
 	defer func() {
 		if err := recover(); err != nil {
 			d.recoverFromError(err)
@@ -298,13 +287,13 @@ func (d *doozerConnection) Wait(glob string, rev int64) (ev doozer.Event, err er
 	return ev, err
 }
 
-func (d *doozerConnection) Walk(rev int64, root string, v doozer.Visitor, errors chan<- error) {
+func (d *DoozerConnection) Walk(rev int64, root string, v doozer.Visitor, errors chan<- error) {
 	// TODO: we need to recover from failure here, but we need to make caller aware so they don't duplicate entries when we start the walk over again
 
 	doozer.Walk(d.Connection.(*doozer.Conn), rev, root, v, errors)
 }
 
-func (d *doozerConnection) getDoozerServer(key string) *DoozerServer {
+func (d *DoozerConnection) getDoozerServer(key string) *DoozerServer {
 	rev := d.GetCurrentRevision()
 	data, _, err := d.Get("/ctl/node/"+key+"/addr", rev)
 	buf := bytes.NewBuffer(data)

@@ -33,7 +33,7 @@ func (s ServiceResource) IsClosed() bool {
 }
 
 type Client struct {
-	DoozerConn skynet.DoozerConnection
+	DoozerConn *skynet.DoozerConnection
 
 	Config *skynet.ClientConfig
 	Log    skynet.Logger `json:"-"`
@@ -41,7 +41,7 @@ type Client struct {
 	servicePools map[string]*servicePool
 }
 
-func (c *Client) doozer() skynet.DoozerConnection {
+func (c *Client) doozer() *skynet.DoozerConnection {
 	if c.DoozerConn == nil {
 		c.DoozerConn = skynet.NewDoozerConnectionFromConfig(*c.Config.DoozerConfig, c.Config.Log)
 
