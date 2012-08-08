@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/4ad/doozer"
 	"os"
+	"path"
 	"sync"
 )
 
@@ -95,23 +96,6 @@ func (d *DoozerConnection) Connect() {
 	}
 }
 
-func (d *DoozerConnection) dial(server string, boot string) (bool, error) {
-	var err error
-
-	d.Connection, err = doozer.Dial(server)
-	if err != nil {
-		return false, err
-	}
-
-	d.currentInstance = server
-	//d.Log.Println("Connected to Doozer Instance: " + server)
-	d.Log.Item(DoozerConnected{
-		Addr: server,
-	})
-
-	return true, nil
-}
-
 func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -176,6 +160,43 @@ func (d *DoozerConnection) Rev() (rev int64, err error) {
 	}()
 
 	return d.Connection.Rev()
+}
+
+func (d *DoozerConnection) Wait(glob string, rev int64) (ev doozer.Event, err error) {
+	defer func() {
+		if err := recover(); err != nil {
+			d.recoverFromError(err)
+
+			ev, err = d.Wait(glob, rev)
+		}
+	}()
+
+	ev, err = d.Connection.Wait(glob, rev)
+
+	return ev, err
+}
+
+func (d *DoozerConnection) Walk(rev int64, root string, v doozer.Visitor, errors chan<- error) {
+	// TODO: we need to recover from failure here, but we need to make caller aware so they don't duplicate entries when we start the walk over again
+
+	doozer.Walk(d.Connection.(*doozer.Conn), rev, root, v, errors)
+}
+
+func (d *DoozerConnection) dial(server string, boot string) (bool, error) {
+	var err error
+
+	d.Connection, err = doozer.Dial(server)
+	if err != nil {
+		return false, err
+	}
+
+	d.currentInstance = server
+	//d.Log.Println("Connected to Doozer Instance: " + server)
+	d.Log.Item(DoozerConnected{
+		Addr: server,
+	})
+
+	return true, nil
 }
 
 func (d *DoozerConnection) getDoozerInstances() {
@@ -249,7 +270,7 @@ func (d *DoozerConnection) monitorCluster() {
 		}
 
 		buf := bytes.NewBuffer(ev.Body)
-		id := basename(ev.Path)
+		id := path.Base(ev.Path)
 		rev = ev.Rev
 
 		if buf.String() == "" && d.doozerInstances[id] != nil {
@@ -273,26 +294,6 @@ func (d *DoozerConnection) monitorCluster() {
 	}
 }
 
-func (d *DoozerConnection) Wait(glob string, rev int64) (ev doozer.Event, err error) {
-	defer func() {
-		if err := recover(); err != nil {
-			d.recoverFromError(err)
-
-			ev, err = d.Wait(glob, rev)
-		}
-	}()
-
-	ev, err = d.Connection.Wait(glob, rev)
-
-	return ev, err
-}
-
-func (d *DoozerConnection) Walk(rev int64, root string, v doozer.Visitor, errors chan<- error) {
-	// TODO: we need to recover from failure here, but we need to make caller aware so they don't duplicate entries when we start the walk over again
-
-	doozer.Walk(d.Connection.(*doozer.Conn), rev, root, v, errors)
-}
-
 func (d *DoozerConnection) getDoozerServer(key string) *DoozerServer {
 	rev := d.GetCurrentRevision()
 	data, _, err := d.Get("/ctl/node/"+key+"/addr", rev)
@@ -306,13 +307,4 @@ func (d *DoozerConnection) getDoozerServer(key string) *DoozerServer {
 	}
 
 	return nil
-}
-
-func basename(path string) string {
-	for i := len(path) - 1; i >= 0; i-- {
-		if path[i] == '/' {
-			return path[i+1:]
-		}
-	}
-	return path
 }
