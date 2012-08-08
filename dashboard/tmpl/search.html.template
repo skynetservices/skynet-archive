@@ -1,0 +1,11 @@
+<fieldset>
+  <div id="search-container" class="right">
+    <input type="text" id="search-term"/>
+
+    <ul class="button-group radius right">
+      <li><a id="log-search" href="#" class="small button radius success">Search</a></li>
+      <li><a id="log-highlight" href="#" class="small button radius">Highlight</a></li>
+    </ul>
+  </div>
+</fieldset>
+<div id="log" class="panel secondary"></div>
