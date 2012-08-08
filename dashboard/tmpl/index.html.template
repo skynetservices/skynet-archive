@@ -6,7 +6,7 @@
   <dd><a href="#simple3">Dallas</a></dd>
 </dl>
 
-<ul class="tabs-content contained">
+<ul id="instance-list" class="tabs-content contained">
   <li class="active" id="simple1Tab">
     <dl class="sub-nav right">
       <dt>Filter:</dt>

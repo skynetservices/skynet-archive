@@ -10,7 +10,6 @@ import (
 	"launchpad.net/mgo/v2/bson"
 	"path"
 	"reflect"
-	"strings"
 	"time"
 )
 
@@ -110,11 +109,7 @@ func (c *ServiceClient) monitorInstances() {
 			continue
 		}
 
-		parts := strings.Split(ev.Path, "/")
-
-		if c.query.pathMatches(parts, ev.Path) {
-			//key := s.Config.ServiceAddr.String()
-
+		if c.query.PathMatches(ev.Path) {
 			if s.Registered == true {
 				c.muxChan <- service.ServiceDiscovered{
 					Service: &s,

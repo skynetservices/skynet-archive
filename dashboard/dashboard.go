@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"code.google.com/p/go.net/websocket"
 	"flag"
 	"html/template"
@@ -33,11 +35,18 @@ func searchHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 var addr = flag.String("addr", ":8080", "dashboard listener address")
+
+var doozer = flag.String("doozer", skynet.GetDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
+var doozerboot = flag.String("doozerboot", skynet.GetDefaultEnvVar("DZNSHOST", ""), "initial doozer instance to connect to")
+var autodiscover = flag.Bool("autodiscover", skynet.GetDefaultEnvVar("DZDISCOVER", "true") == "true", "auto discover new doozer instances")
+
 var debug = flag.Bool("d", false, "print debug info")
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 var webroot = flag.String("webroot", ".", "root of templates and javascript libraries")
 var mems = flag.Bool("memstats", false, "write mem stats to stderr")
 var memstats *runtime.MemStats
+
+var DC skynet.DoozerConnection
 
 func main() {
 	flag.Parse()
@@ -59,11 +68,19 @@ func main() {
 		log.Printf("memstats GC: %v\n", memstats.PauseNs)
 	}
 
+  DC = Doozer() 
+
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/logs/search", searchHandler)
 	http.Handle("/media/", http.StripPrefix("/media/", http.FileServer(http.Dir(*webroot+"/tmpl"))))
 	http.Handle("/favicon.ico", http.FileServer(http.Dir(*webroot+"/tmpl/images")))
 	http.Handle("/logs/ws", websocket.Handler(wsHandler))
+
+  im := client.NewInstanceMonitor(DC)
+
+	http.Handle("/instances/ws", websocket.Handler(func (ws *websocket.Conn){
+    NewInstanceSocket(ws, im)
+  }))
 
 	// Cache templates
 	layoutTmpl = template.Must(template.ParseFiles(*webroot + "/tmpl/layout.html.template"))
@@ -79,4 +96,17 @@ func main() {
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+func Doozer() skynet.DoozerConnection {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Failed to connect to Doozer")
+			os.Exit(1)
+		}
+	}()
+
+	conn := skynet.NewDoozerConnection(*doozer, *doozerboot, true, nil) // nil as the last param will default to a Stdout logger
+	conn.Connect()
+
+	return conn
 }

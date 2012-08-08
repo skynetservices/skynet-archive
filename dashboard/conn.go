@@ -63,6 +63,7 @@ func (c *connection) writer() {
 	}
 	c.ws.Close()
 }
+
 func wsHandler(ws *websocket.Conn) {
 	c := &connection{send: make(chan string, 256), ws: ws, filter: nil}
 	h.register <- c
