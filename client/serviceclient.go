@@ -9,10 +9,13 @@ import (
 	"github.com/bketelsen/skynet/service"
 	"launchpad.net/mgo/v2/bson"
 	"path"
-	"reflect"
 	"strings"
 	"time"
 )
+
+type serviceError struct {
+	error
+}
 
 type ServiceClient struct {
 	client  *Client
@@ -198,7 +201,7 @@ func (c *ServiceClient) GetTimeout() (retry, giveup time.Duration) {
 }
 
 // ServiceClient.sendToInstance() tries to make an RPC request on a particular connection to an instance
-func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.RequestInfo, funcName string, in interface{}, outPointer interface{}) (err error) {
+func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.RequestInfo, funcName string, in interface{}) (result []byte, err error) {
 	if requestInfo == nil {
 		requestInfo = &skynet.RequestInfo{
 			RequestID: skynet.UUID(),
@@ -217,55 +220,28 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.R
 
 	sout := service.ServiceRPCOut{}
 
-	// TODO: Check for connectivity issue so that we can try to get another resource out of the pool
 	err = sr.rpcClient.Call(sr.service.Config.Name+".Forward", sin, &sout)
 	if err != nil {
 		sr.Close()
 		c.Log.Item(err)
 	}
 
-	err = bson.Unmarshal(sout.Out, outPointer)
-	if err != nil {
-		return
+	if sout.Err != nil {
+		err = serviceError{sout.Err}
 	}
+
+	result = sout.Out
 
 	return
 }
 
-func cloneOutDest(outDest interface{}) (clone interface{}) {
-	outType := reflect.TypeOf(outDest)
-	switch outType.Kind() {
-	case reflect.Ptr:
-		clonePtr := reflect.New(outType.Elem())
-		clone = clonePtr.Interface()
-	case reflect.Map:
-		cloneMap := reflect.MakeMap(outType)
-		clone = cloneMap.Interface()
-	default:
-		panic("illegal out type")
-	}
-	return
+type sendAttempt struct {
+	result []byte
+	err    error
 }
 
-func copyOutDest(outDest interface{}, src interface{}) {
-	outType := reflect.TypeOf(outDest)
-	outVal := reflect.ValueOf(outDest)
-	srcVal := reflect.ValueOf(src)
-	switch outType.Kind() {
-	case reflect.Ptr:
-		outVal.Elem().Set(srcVal.Elem())
-	case reflect.Map:
-		for _, key := range srcVal.MapKeys() {
-			val := srcVal.MapIndex(key)
-			outVal.SetMapIndex(key, val)
-		}
-	default:
-		panic("illegal out type")
-	}
-
-}
-
-func (c *ServiceClient) trySend(attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
+func (c *ServiceClient) attemptSend(attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
+	// first find an available instance
 	spr, _ := c.instancePool.Acquire()
 	sp := spr.(*servicePool)
 	defer c.instancePool.Release(sp)
@@ -281,19 +257,34 @@ func (c *ServiceClient) trySend(attempts chan sendAttempt, ri *skynet.RequestInf
 
 	sr := r.(ServiceResource)
 
-	// make a clone of the out so we don't data race with other instanceSend()s
-	outClone := cloneOutDest(out)
+	result, err := c.sendToInstance(sr, ri, fn, in)
 
 	attempts <- sendAttempt{
-		outClone: outClone,
-		err:      c.sendToInstance(sr, ri, fn, in, outClone),
-		sp:       sp,
+		result: result,
+		err:    err,
 	}
 }
 
+/*
+ServiceClient.SendOnce() will send a request to one of the available instances. In intervals of retry time,
+it will send additional requests to other known instances. If no response is heard after
+the giveup time has passed, it will return an error.
+*/
 func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
 	retry, giveup := c.GetTimeout()
+	return c.send(retry, giveup, ri, fn, in, out)
+}
 
+/*
+ServiceClient.SendOnce() will send a request to one of the available instances. If no response is heard after
+the giveup time has passed, it will return an error.
+*/
+func (c *ServiceClient) SendOnce(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
+	_, giveup := c.GetTimeout()
+	return c.send(0, giveup, ri, fn, in, out)
+}
+
+func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
 	attempts := make(chan sendAttempt)
 
 	var ticker <-chan time.Time
@@ -306,12 +297,12 @@ func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, 
 		timeout = time.NewTimer(giveup).C
 	}
 
-	go c.trySend(attempts, ri, fn, in, out)
+	go c.attemptSend(attempts, ri, fn, in, out)
 
 	for {
 		select {
 		case <-ticker:
-			go c.trySend(attempts, ri, fn, in, out)
+			go c.attemptSend(attempts, ri, fn, in, out)
 		case <-timeout:
 			if err == nil {
 				err = ErrRequestTimeout
@@ -320,62 +311,20 @@ func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, 
 			return
 		case attempt := <-attempts:
 			err = attempt.err
-			if err == nil {
-				copyOutDest(out, attempt.outClone)
-				return
+			if err != nil {
+				if _, ok := err.(serviceError); !ok {
+					// error during transmition, abort this attempt
+					if giveup == 0 {
+						return
+					}
+					continue
+				}
 			}
-		}
-	}
 
-	return
-}
-
-type sendAttempt struct {
-	outClone interface{}
-	err      error
-	sp       *servicePool
-}
-
-/*
-ServiceClient.SendOnce() will send a request to one of the available instances. If no response is heard after
-the giveup time has passed, it will return an error.
-*/
-func (c *ServiceClient) SendOnce(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
-	_, giveup := c.GetTimeout()
-
-	attempts := make(chan sendAttempt)
-
-	var timeout <-chan time.Time
-	if giveup > 0 {
-		timeout = time.NewTimer(giveup).C
-	}
-
-	go c.trySend(attempts, ri, fn, in, out)
-
-	for {
-		select {
-		case <-timeout:
-			if err == nil {
-				err = ErrRequestTimeout
-			}
-			return
-		case attempt := <-attempts:
-			err = attempt.err
-			copyOutDest(out, attempt.outClone)
+			err = bson.Unmarshal(attempt.result, out)
 			return
 		}
 	}
 
 	return
-}
-
-func (c *ServiceClient) isClosed(service ServiceResource) bool {
-	key := getInstanceKey(service.service)
-
-	// TODO: this is unsafe
-	if _, ok := c.instances[key]; ok {
-		return false
-	}
-
-	return true
 }
