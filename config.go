@@ -111,7 +111,7 @@ type ClientConfig struct {
 	IdleTimeout        time.Duration
 }
 
-func getDefaultEnvVar(name, def string) (v string) {
+func GetDefaultEnvVar(name, def string) (v string) {
 	v = os.Getenv(name)
 	if v == "" {
 		v = def
@@ -120,9 +120,9 @@ func getDefaultEnvVar(name, def string) (v string) {
 }
 
 func flagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
-	flagset.StringVar(&dcfg.Uri, "doozer", getDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
-	flagset.StringVar(&dcfg.BootUri, "doozerboot", getDefaultEnvVar("DZNSHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
-	flagset.BoolVar(&dcfg.AutoDiscover, "autodiscover", getDefaultEnvVar("DZDISCOVER", "true") == "true", "auto discover new doozer instances")
+	flagset.StringVar(&dcfg.Uri, "doozer", GetDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
+	flagset.StringVar(&dcfg.BootUri, "doozerboot", GetDefaultEnvVar("DZNSHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
+	flagset.BoolVar(&dcfg.AutoDiscover, "autodiscover", GetDefaultEnvVar("DZDISCOVER", "true") == "true", "auto discover new doozer instances")
 }
 
 func GetClientConfigFromFlags(argv ...string) (config *ClientConfig, args []string) {
@@ -153,10 +153,10 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
 
 	flagsForDoozer(config.DoozerConfig, flagset)
-	rpcAddr := flagset.String("l", getDefaultEnvVar("SKYNET_LISTEN", ":9999"), "host:port to listen on for RPC")
-	adminAddr := flagset.String("admin", getDefaultEnvVar("SKYNET_ADMIN", ":9998"), "host:port to listen on for admin")
+	rpcAddr := flagset.String("l", GetDefaultEnvVar("SKYNET_LISTEN", ":9999"), "host:port to listen on for RPC")
+	adminAddr := flagset.String("admin", GetDefaultEnvVar("SKYNET_ADMIN", ":9998"), "host:port to listen on for admin")
 	flagset.StringVar(&config.UUID, "uuid", UUID(), "UUID for this service")
-	flagset.StringVar(&config.Region, "region", getDefaultEnvVar("SKYNET_REGION", "unknown"), "region service is located in")
+	flagset.StringVar(&config.Region, "region", GetDefaultEnvVar("SKYNET_REGION", "unknown"), "region service is located in")
 	flagset.StringVar(&config.Version, "version", "unknown", "version of service")
 
 	if len(argv) == 0 {

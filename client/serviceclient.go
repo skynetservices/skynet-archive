@@ -9,7 +9,6 @@ import (
 	"github.com/bketelsen/skynet/service"
 	"launchpad.net/mgo/v2/bson"
 	"path"
-	"strings"
 	"time"
 )
 
@@ -113,11 +112,7 @@ func (c *ServiceClient) monitorInstances() {
 			continue
 		}
 
-		parts := strings.Split(ev.Path, "/")
-
-		if c.query.pathMatches(parts, ev.Path) {
-			//key := s.Config.ServiceAddr.String()
-
+		if c.query.PathMatches(ev.Path) {
 			if ev.IsDel() || s.Registered == false {
 				c.muxChan <- service.ServiceRemoved{
 					Service: &s,
