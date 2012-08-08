@@ -2,10 +2,10 @@ package main
 
 import (
 	"bytes"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/client"
 	"code.google.com/p/go.net/websocket"
 	"flag"
+	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"html/template"
 	"log"
 	"net/http"
@@ -68,7 +68,7 @@ func main() {
 		log.Printf("memstats GC: %v\n", memstats.PauseNs)
 	}
 
-  DC = Doozer() 
+	DC = Doozer()
 
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/logs/search", searchHandler)
@@ -76,11 +76,11 @@ func main() {
 	http.Handle("/favicon.ico", http.FileServer(http.Dir(*webroot+"/tmpl/images")))
 	http.Handle("/logs/ws", websocket.Handler(wsHandler))
 
-  im := client.NewInstanceMonitor(DC)
+	im := client.NewInstanceMonitor(DC)
 
-	http.Handle("/instances/ws", websocket.Handler(func (ws *websocket.Conn){
-    NewInstanceSocket(ws, im)
-  }))
+	http.Handle("/instances/ws", websocket.Handler(func(ws *websocket.Conn) {
+		NewInstanceSocket(ws, im)
+	}))
 
 	// Cache templates
 	layoutTmpl = template.Must(template.ParseFiles(*webroot + "/tmpl/layout.html.template"))
