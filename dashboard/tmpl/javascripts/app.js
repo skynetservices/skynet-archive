@@ -128,17 +128,23 @@ jQuery(document).ready(function ($) {
 
   if(instanceList.size() > 0){
     if (window["WebSocket"]) {
-      conn = new WebSocket("ws://" + document.location.host + "/instances/ws");
+      var ticker;
+      var conn = new WebSocket("ws://" + document.location.host + "/instances/ws");
 
       conn.onopen = function(evt){
-        conn.send("foo");
-        conn.send("foo");
-        conn.send("foo");
-        conn.send("foo");
+        ticker = window.setInterval(function(){
+          conn.send("heartbeat");  
+        }, 5000);
       };
 
       conn.onclose = function(evt) {
+        if(ticker){
+          window.clearInterval(ticker);
+          ticker = null;
+        }
+
         // TODO: Handle this properly
+        // we need to recreate/connect to the websocket so this page stays live
         console.log("closed");
       };
 

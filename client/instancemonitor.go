@@ -27,11 +27,14 @@ type InstanceListener struct {
   NotificationChan chan InstanceListenerNotification
 	monitor    *InstanceMonitor
 	id         string
+  callback InstanceListenerCallback
 
 	Instances map[string]service.Service
 
 	doneChan chan bool
 }
+
+type InstanceListenerCallback func(n InstanceListenerNotification)
 
 type InstanceListenerNotification struct {
   Path string
@@ -81,7 +84,7 @@ func (im *InstanceMonitor) mux() {
 
 			for _, c := range im.clients {
 				if c.query.PathMatches(notification.Path) {
-					c.NotificationChan <- notification
+					c.callback(notification)
 				}
 			}
 
@@ -174,14 +177,14 @@ func (im *InstanceMonitor) monitorInstances() {
 
 }
 
-func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
+func (im *InstanceMonitor) Listen(id string, q *Query, cb InstanceListenerCallback) (l *InstanceListener) {
 	l = &InstanceListener{
 		query:      q,
-		NotificationChan: make(chan InstanceListenerNotification),
 		monitor:    im,
 		id:         id,
 		Instances:  make(map[string]service.Service),
 		doneChan:   make(chan bool),
+    callback: cb,
 	}
 
 	im.listChan <- l
