@@ -20,7 +20,7 @@ type Logger interface {
 	Panic(item interface{})
 	// these functions exists only to catch things that are not transitioned
 	Println(items ...interface{})
-	Printf(format string,items ...interface{})
+	Printf(format string, items ...interface{})
 }
 
 func MakeJObj(item interface{}) (jobj map[string]interface{}) {

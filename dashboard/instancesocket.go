@@ -72,14 +72,14 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 				closeChan <- true
 			}
 		case data := <-readChan:
-      lastHeartbeat = time.Now()
+			lastHeartbeat = time.Now()
 
 			switch data {
 			case "list":
 				b, _ := json.Marshal(SocketResponse{Action: "list", Data: l.Instances})
 				ws.Write(b)
 			case "heartbeat":
-        // this is here more for documentation purposes, setting the lastHeartbeat on read handles the logic here
+				// this is here more for documentation purposes, setting the lastHeartbeat on read handles the logic here
 			}
 		}
 	}

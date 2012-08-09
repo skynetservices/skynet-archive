@@ -37,17 +37,17 @@ func main() {
 
 	config, _ := skynet.GetServiceConfigFromFlags()
 
-  if config.Name == "" {
-    config.Name = "TestService"
-  }
+	if config.Name == "" {
+		config.Name = "TestService"
+	}
 
-  if config.Version == "" {
-    config.Version = "1"
-  }
+	if config.Version == "" {
+		config.Version = "1"
+	}
 
-  if config.Region == "unknown" {
-    config.Region = "Clearwater"
-  }
+	if config.Region == "unknown" {
+		config.Region = "Clearwater"
+	}
 
 	var err error
 	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
