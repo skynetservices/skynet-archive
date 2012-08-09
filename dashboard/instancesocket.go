@@ -22,14 +22,17 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 	// Close the websocket, and remove the listener from the InstanceMonitor: l.Close()
 	for {
 		select {
-		case service := <-l.AddChan:
+    case notification := <-l.NotificationChan:
+      var b []byte
+      switch notification.Type {
+        case client.InstanceListenerAddNotification:
+          b, _ = json.Marshal(SocketResponse{Action: "added", Data: notification.Service})
+        case client.InstanceListenerUpdateNotification:
+          b, _ = json.Marshal(SocketResponse{Action: "updated", Data: notification.Service})
+        case client.InstanceListenerRemoveNotification:
+          b, _ = json.Marshal(SocketResponse{Action: "removed", Data: notification.Service})
+      }
 
-			b, _ := json.Marshal(SocketResponse{Action: "added", Data: service})
-
-			ws.Write(b)
-		case path := <-l.RemoveChan:
-
-			b, _ := json.Marshal(SocketResponse{Action: "removed", Data: path})
 			ws.Write(b)
 		}
 	}

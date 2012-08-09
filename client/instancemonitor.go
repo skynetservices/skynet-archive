@@ -12,10 +12,9 @@ import (
 type InstanceMonitor struct {
 	doozer     *skynet.DoozerConnection
 	clients    map[string]*InstanceListener
-	addChan    chan instance
-	removeChan chan string
 	listChan   chan *InstanceListener
 	instances  map[string]service.Service
+  notificationChan chan InstanceListenerNotification
 }
 
 type instance struct {
@@ -25,8 +24,7 @@ type instance struct {
 
 type InstanceListener struct {
 	query      *Query
-	AddChan    chan service.Service
-	RemoveChan chan string
+  NotificationChan chan InstanceListenerNotification
 	monitor    *InstanceMonitor
 	id         string
 
@@ -34,6 +32,20 @@ type InstanceListener struct {
 
 	doneChan chan bool
 }
+
+type InstanceListenerNotification struct {
+  Path string
+  Service service.Service
+  Type InstanceListenerNotificationType
+}
+
+type InstanceListenerNotificationType int
+
+const (
+  InstanceListenerAddNotification = iota 
+  InstanceListenerUpdateNotification
+  InstanceListenerRemoveNotification
+)
 
 func (l *InstanceListener) Close() {
 	delete(l.monitor.clients, l.id)
@@ -43,8 +55,7 @@ func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 	im = &InstanceMonitor{
 		doozer:     doozer,
 		clients:    make(map[string]*InstanceListener, 0),
-		addChan:    make(chan instance),
-		removeChan: make(chan string),
+		notificationChan: make(chan InstanceListenerNotification),
 		listChan:   make(chan *InstanceListener),
 		instances:  make(map[string]service.Service, 0),
 	}
@@ -58,22 +69,19 @@ func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 func (im *InstanceMonitor) mux() {
 	for {
 		select {
-		case instance := <-im.addChan:
-			for _, c := range im.clients {
+    case notification := <- im.notificationChan:
 
-				im.instances[instance.path] = instance.service
-
-				if c.query.PathMatches(instance.path) {
-					c.AddChan <- instance.service
-				}
-			}
-
-		case path := <-im.removeChan:
-			delete(im.instances, path)
+      // Update internal instance list
+      switch notification.Type {
+        case InstanceListenerAddNotification, InstanceListenerUpdateNotification: 
+          im.instances[notification.Path] = notification.Service
+        case InstanceListenerRemoveNotification:
+          delete(im.instances, notification.Path)
+      }
 
 			for _, c := range im.clients {
-				if c.query.PathMatches(path) {
-					c.RemoveChan <- path
+				if c.query.PathMatches(notification.Path) {
+					c.NotificationChan <- notification
 				}
 			}
 
@@ -135,7 +143,11 @@ func (im *InstanceMonitor) monitorInstances() {
 		}
 
 		if ev.IsDel() {
-			im.removeChan <- ev.Path
+			im.notificationChan <- InstanceListenerNotification {
+        Path: ev.Path,
+        Service: im.instances[ev.Path],
+        Type: InstanceListenerRemoveNotification,
+      }
 		} else {
 			buf := bytes.NewBuffer(ev.Body)
 
@@ -146,7 +158,17 @@ func (im *InstanceMonitor) monitorInstances() {
 				continue
 			}
 
-			im.addChan <- instance{path: ev.Path, service: s}
+      var notificationType InstanceListenerNotificationType = InstanceListenerAddNotification;
+
+      if _,ok := im.instances[ev.Path]; ok { 
+        notificationType = InstanceListenerUpdateNotification
+      }
+
+			im.notificationChan <- InstanceListenerNotification {
+        Path: ev.Path,
+        Service: s,
+        Type: notificationType,
+      }
 		}
 	}
 
@@ -155,8 +177,7 @@ func (im *InstanceMonitor) monitorInstances() {
 func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
 	l = &InstanceListener{
 		query:      q,
-		AddChan:    make(chan service.Service),
-		RemoveChan: make(chan string),
+		NotificationChan: make(chan InstanceListenerNotification),
 		monitor:    im,
 		id:         id,
 		Instances:  make(map[string]service.Service),
