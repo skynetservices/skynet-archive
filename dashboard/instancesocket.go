@@ -2,7 +2,6 @@ package main
 
 import (
 	"code.google.com/p/go.net/websocket"
-	"encoding/json"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
 	"time"
@@ -13,72 +12,79 @@ type SocketResponse struct {
 	Data   interface{}
 }
 
+type SocketRequest struct {
+	Action string
+}
+
+func instanceSocketRead(ws *websocket.Conn, readChan chan SocketRequest, closeChan chan bool) {
+	// Watch for read, if it fails break out of loop and close
+	for {
+		var request SocketRequest
+		err := websocket.JSON.Receive(ws, &request)
+
+		if err != nil {
+			closeChan <- true
+			break
+		}
+
+		readChan <- request
+	}
+}
+
 func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 	closeChan := make(chan bool, 1)
-	readChan := make(chan string)
+	readChan := make(chan SocketRequest)
 	ticker := time.NewTicker(5 * time.Second)
 	lastHeartbeat := time.Now()
 
 	callback := func(notification client.InstanceListenerNotification) {
-		var b []byte
+		var err error
 
 		switch notification.Type {
 		case client.InstanceListenerAddNotification:
-			b, _ = json.Marshal(SocketResponse{Action: "added", Data: notification.Service})
+			err = websocket.JSON.Send(ws, SocketResponse{Action: "Added", Data: notification.Service})
 		case client.InstanceListenerUpdateNotification:
-			b, _ = json.Marshal(SocketResponse{Action: "updated", Data: notification.Service})
+			err = websocket.JSON.Send(ws, SocketResponse{Action: "Updated", Data: notification.Service})
 		case client.InstanceListenerRemoveNotification:
-			b, _ = json.Marshal(SocketResponse{Action: "removed", Data: notification.Service})
+			err = websocket.JSON.Send(ws, SocketResponse{Action: "Removed", Data: notification.Service})
 		}
 
-		if len(b) > 0 {
-			_, err := ws.Write(b)
-
-			if err != nil {
-				closeChan <- true
-			}
+		if err != nil {
+			closeChan <- true
 		}
 	}
 
-	go (func() {
-		// Watch for read, if it fails break out of loop and close
-		for {
-			var data string
-			err := websocket.Message.Receive(ws, &data)
-
-			if err != nil {
-				closeChan <- true
-				break
-			}
-
-			readChan <- data
-		}
-	})()
+	go instanceSocketRead(ws, readChan, closeChan)
 
 	l := im.Listen(skynet.UUID(), &client.Query{}, callback)
 
-	b, _ := json.Marshal(SocketResponse{Action: "list", Data: l.Instances})
-	ws.Write(b)
+	err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: l.Instances})
+
+	if err != nil {
+		closeChan <- true
+	}
 
 	for {
 		select {
 		case <-closeChan:
+			ticker.Stop()
 			ws.Close()
 			l.Close()
 		case t := <-ticker.C:
 			// Check for timeout
 			if t.Sub(lastHeartbeat) > (15 * time.Second) {
-				ticker.Stop()
 				closeChan <- true
 			}
-		case data := <-readChan:
+		case request := <-readChan:
 			lastHeartbeat = time.Now()
 
-			switch data {
-			case "list":
-				b, _ := json.Marshal(SocketResponse{Action: "list", Data: l.Instances})
-				ws.Write(b)
-			case "heartbeat":
+			switch request.Action {
+			case "List":
+				err := websocket.JSON.Send(ws, SocketResponse{Action: "list", Data: l.Instances})
+				if err != nil {
+					closeChan <- true
+				}
+			case "Heartbeat":
 				// this is here more for documentation purposes, setting the lastHeartbeat on read handles the logic here
 			}
 		}

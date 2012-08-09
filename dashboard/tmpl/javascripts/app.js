@@ -133,7 +133,7 @@ jQuery(document).ready(function ($) {
 
       conn.onopen = function(evt){
         ticker = window.setInterval(function(){
-          conn.send("heartbeat");  
+          conn.send('{"Action": "Heartbeat"}');  
         }, 5000);
       };
 
