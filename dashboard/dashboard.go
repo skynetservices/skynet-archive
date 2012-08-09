@@ -89,8 +89,8 @@ var autodiscover = flag.Bool("autodiscover", skynet.GetDefaultEnvVar("DZDISCOVER
 var debug = flag.Bool("d", false, "print debug info")
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 var webroot = flag.String("webroot", ".", "root of templates and javascript libraries")
-var mgoserver = flag.String("mgoserver", skynet.GetDefaultEnvVar("MGOSERVER", ""), "comma-separated list of urls of mongodb servers")
-var mgodb = flag.String("mgodb", skynet.GetDefaultEnvVar("MGODB", ""), "mongodb database")
+var mgoserver = flag.String("mgoserver", skynet.GetDefaultEnvVar("SKYNET_MGOSERVER", ""), "comma-separated list of urls of mongodb servers")
+var mgodb = flag.String("mgodb", skynet.GetDefaultEnvVar("SKYNET_MGODB", ""), "mongodb database")
 
 var DC skynet.DoozerConnection
 
@@ -100,9 +100,7 @@ func main() {
 	flag.Parse()
 
 	if *mgoserver == "" {
-		if *mgoserver = os.Getenv("SKYNET_MGOSERVER"); *mgoserver == "" {
-			log.Fatal("no mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)")
-		}
+		log.Fatal("no mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)")
 	}
 
 	DC = Doozer()
