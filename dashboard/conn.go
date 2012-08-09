@@ -46,6 +46,8 @@ func (c *connection) fromClient() {
 		if err != nil {
 			if err != io.EOF {
 				log.Println("fromClient: bad receive: ", err.Error())
+			} else if *debug {
+				log.Println("EOF from client...")
 			}
 			break
 		}
@@ -177,4 +179,5 @@ func wsHandler(ws *websocket.Conn) {
 
 	c.fromClient() // must wait for client to select database
 	ws.Close()
+	close(c.cancel) // ensure no dangling readers
 }
