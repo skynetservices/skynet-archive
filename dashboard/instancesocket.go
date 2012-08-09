@@ -8,14 +8,14 @@ import (
 )
 
 type SocketResponse struct {
-  Action string
-  Data interface{}
+	Action string
+	Data   interface{}
 }
 
 func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 	l := im.Listen(skynet.UUID(), &client.Query{})
 
-  b, _ := json.Marshal(SocketResponse {Action: "list", Data: l.Instances})
+	b, _ := json.Marshal(SocketResponse{Action: "list", Data: l.Instances})
 	ws.Write(b)
 
 	// TODO: make sure this goes out of scope when the user closes the socket or times out (send heartbeat?)
@@ -23,13 +23,13 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 	for {
 		select {
 		case service := <-l.AddChan:
-      
-      b, _ := json.Marshal(SocketResponse {Action: "added", Data: service})
+
+			b, _ := json.Marshal(SocketResponse{Action: "added", Data: service})
 
 			ws.Write(b)
 		case path := <-l.RemoveChan:
 
-      b, _ := json.Marshal(SocketResponse {Action: "removed", Data: path})
+			b, _ := json.Marshal(SocketResponse{Action: "removed", Data: path})
 			ws.Write(b)
 		}
 	}

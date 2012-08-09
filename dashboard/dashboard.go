@@ -7,7 +7,6 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
 	"html/template"
-	"log"
 	"net/http"
 	"os"
 )
@@ -20,9 +19,11 @@ var layoutTmpl *template.Template
 var indexTmpl *template.Template
 var searchTmpl *template.Template
 
+var log skynet.Logger
+
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if *debug {
-		log.Printf("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path)
+		log.Println("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 	}
 	buf := new(bytes.Buffer)
 	indexTmpl.Execute(buf, r.URL.Path)
@@ -34,7 +35,7 @@ var session *mgo.Session
 func searchHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if *debug {
-		log.Printf("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path)
+		log.Println("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 	}
 
 	sdata := make([]string, 0)
@@ -42,7 +43,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	if session == nil {
 		session, err = mgo.Dial(*mgoserver)
 		if err != nil {
-			log.Printf("searchHandler: can't connect to mongodb server %s: %s\n", *mgoserver, err)
+			log.Println("searchHandler: can't connect to mongodb server %s: %s\n", *mgoserver, err)
 			// TODO: proper error pages?
 			w.Write([]byte("<html><body>Error establishing MongoDB connection</body></html>"))
 			return
@@ -56,7 +57,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		dbs, err = session.DatabaseNames()
 		if err != nil {
-			log.Printf("searchHandler: unable to obtain database list: %s\n", err)
+			log.Println("searchHandler: unable to obtain database list: %s\n", err)
 			// TODO: proper error pages?
 			w.Write([]byte("<html><body>Unable to obtain database list</body></html>"))
 			return
@@ -67,7 +68,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		ndb := session.DB(db)
 		colls, err := ndb.CollectionNames()
 		if err != nil {
-			log.Printf("searchHandler: can't get collection names for %s: %s", db, err)
+			log.Println("searchHandler: can't get collection names for %s: %s", db, err)
 			continue
 		}
 		for _, coll := range colls {
@@ -89,8 +90,8 @@ var autodiscover = flag.Bool("autodiscover", skynet.GetDefaultEnvVar("DZDISCOVER
 var debug = flag.Bool("d", false, "print debug info")
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 var webroot = flag.String("webroot", ".", "root of templates and javascript libraries")
-var mgoserver = flag.String("mgoserver", skynet.GetDefaultEnvVar("MGOSERVER", ""), "comma-separated list of urls of mongodb servers")
-var mgodb = flag.String("mgodb", skynet.GetDefaultEnvVar("MGODB", ""), "mongodb database")
+var mgoserver = flag.String("mgoserver", skynet.GetDefaultEnvVar("SKYNET_MGOSERVER", ""), "comma-separated list of urls of mongodb servers")
+var mgodb = flag.String("mgodb", skynet.GetDefaultEnvVar("SKYNET_MGODB", ""), "mongodb database")
 
 var DC skynet.DoozerConnection
 
@@ -99,10 +100,10 @@ func main() {
 
 	flag.Parse()
 
+	log = skynet.NewConsoleLogger(os.Stderr)
+
 	if *mgoserver == "" {
-		if *mgoserver = os.Getenv("SKYNET_MGOSERVER"); *mgoserver == "" {
-			log.Fatal("no mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)")
-		}
+		log.Panic("no mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)")
 	}
 
 	DC = Doozer()
@@ -114,7 +115,6 @@ func main() {
 	http.Handle("/logs/ws", websocket.Handler(wsHandler))
 
 	im := client.NewInstanceMonitor(DC)
-
 	http.Handle("/instances/ws", websocket.Handler(func(ws *websocket.Conn) {
 		NewInstanceSocket(ws, im)
 	}))
@@ -126,7 +126,7 @@ func main() {
 
 	err = http.ListenAndServe(*addr, nil)
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+		log.Panic("ListenAndServe: " + err.Error())
 	}
 }
 

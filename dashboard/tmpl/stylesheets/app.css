@@ -29,7 +29,7 @@ body {
 
 /* Logs */
 #log {
-	overflow: scroll;
+  overflow: scroll;
   height: 550px;
 }
 
