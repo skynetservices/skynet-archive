@@ -24,19 +24,19 @@ func TestNewDoozerConnection(t *testing.T) {
 
 	doozer := NewDoozerConnection("localhost:1234", "localhost:4321", true, logger)
 
-	if doozer.(*doozerConnection).Config.Uri != "localhost:1234" {
+	if doozer.Config.Uri != "localhost:1234" {
 		t.Error("NewDoozerConnection did not set doozer Uri")
 	}
 
-	if doozer.(*doozerConnection).Config.BootUri != "localhost:4321" {
+	if doozer.Config.BootUri != "localhost:4321" {
 		t.Error("NewDoozerConnection did not set doozer BootUri")
 	}
 
-	if doozer.(*doozerConnection).Config.AutoDiscover != true {
+	if doozer.Config.AutoDiscover != true {
 		t.Error("NewDoozerConnection did not set doozer AutoDiscover flag")
 	}
 
-	if doozer.(*doozerConnection).Log != logger {
+	if doozer.Log != logger {
 		t.Error("NewDoozerConnection did not set doozer log")
 	}
 }
@@ -44,7 +44,7 @@ func TestNewDoozerConnection(t *testing.T) {
 func TestNewDoozerConnectionDefaultLogger(t *testing.T) {
 	doozer := NewDoozerConnection("localhost:1234", "localhost:4321", true, nil)
 
-	if doozer.(*doozerConnection).Log == nil {
+	if doozer.Log == nil {
 		t.Error("NewDoozerConnection did not default logger")
 	}
 }
@@ -60,19 +60,19 @@ func TestNewDoozerConnectionFromConfig(t *testing.T) {
 
 	doozer := NewDoozerConnectionFromConfig(config, logger)
 
-	if doozer.(*doozerConnection).Config.Uri != "localhost:1234" {
+	if doozer.Config.Uri != "localhost:1234" {
 		t.Error("NewDoozerConnection did not set doozer Uri")
 	}
 
-	if doozer.(*doozerConnection).Config.BootUri != "localhost:4321" {
+	if doozer.Config.BootUri != "localhost:4321" {
 		t.Error("NewDoozerConnection did not set doozer BootUri")
 	}
 
-	if doozer.(*doozerConnection).Config.AutoDiscover != true {
+	if doozer.Config.AutoDiscover != true {
 		t.Error("NewDoozerConnection did not set doozer AutoDiscover flag")
 	}
 
-	if doozer.(*doozerConnection).Log != logger {
+	if doozer.Log != logger {
 		t.Error("NewDoozerConnection did not set doozer log")
 	}
 }
@@ -86,7 +86,7 @@ func TestNewDoozerConnectionFromConfigDefaultLogger(t *testing.T) {
 
 	doozer := NewDoozerConnectionFromConfig(config, nil)
 
-	if doozer.(*doozerConnection).Log == nil {
+	if doozer.Log == nil {
 		t.Error("NewDoozerConnection did not default logger")
 	}
 }

@@ -22,7 +22,7 @@ var (
 	RegisteredFlag  *string = flag.String("registered", "", "registered")
 )
 
-var DC skynet.DoozerConnection
+var DC *skynet.DoozerConnection
 
 func main() {
 	flag.Parse()
@@ -66,7 +66,7 @@ func main() {
 	}
 }
 
-func Doozer() skynet.DoozerConnection {
+func Doozer() *skynet.DoozerConnection {
 	if DC == nil {
 		DC = Connect()
 	}
@@ -74,7 +74,7 @@ func Doozer() skynet.DoozerConnection {
 	return DC
 }
 
-func Connect() skynet.DoozerConnection {
+func Connect() *skynet.DoozerConnection {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Failed to connect to Doozer")

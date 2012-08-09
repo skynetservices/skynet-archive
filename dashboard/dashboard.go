@@ -93,7 +93,7 @@ var webroot = flag.String("webroot", ".", "root of templates and javascript libr
 var mgoserver = flag.String("mgoserver", skynet.GetDefaultEnvVar("SKYNET_MGOSERVER", ""), "comma-separated list of urls of mongodb servers")
 var mgodb = flag.String("mgodb", skynet.GetDefaultEnvVar("SKYNET_MGODB", ""), "mongodb database")
 
-var DC skynet.DoozerConnection
+var DC *skynet.DoozerConnection
 
 func main() {
 	var err error
@@ -130,7 +130,7 @@ func main() {
 	}
 }
 
-func Doozer() skynet.DoozerConnection {
+func Doozer() *skynet.DoozerConnection {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Failed to connect to Doozer")
