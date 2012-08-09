@@ -43,7 +43,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	if session == nil {
 		session, err = mgo.Dial(*mgoserver)
 		if err != nil {
-			log.Println("searchHandler: can't connect to mongodb server %s: %s\n", *mgoserver, err)
+			log.Printf("searchHandler: can't connect to mongodb server %s: %s\n", *mgoserver, err)
 			// TODO: proper error pages?
 			w.Write([]byte("<html><body>Error establishing MongoDB connection</body></html>"))
 			return
@@ -68,7 +68,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		ndb := session.DB(db)
 		colls, err := ndb.CollectionNames()
 		if err != nil {
-			log.Println("searchHandler: can't get collection names for %s: %s", db, err)
+			log.Printf("searchHandler: can't get collection names for %s: %s", db, err)
 			continue
 		}
 		for _, coll := range colls {
