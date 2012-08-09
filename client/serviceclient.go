@@ -70,10 +70,9 @@ func (c *ServiceClient) monitorInstances() {
 	var ifc instanceFileCollector
 	errch := make(chan error)
 	doozer.Walk(rev, ddir, &ifc, errch)
-	select {
-	case err := <-errch:
+	close(errch)
+	for err := range errch {
 		c.Log.Item(err)
-	default:
 	}
 
 	for _, file := range ifc.files {

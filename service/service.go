@@ -26,7 +26,7 @@ type ServiceDelegate interface {
 
 type Service struct {
 	Config     *skynet.ServiceConfig
-	DoozerConn skynet.DoozerConnection `json:"-"`
+	DoozerConn *skynet.DoozerConnection `json:"-"`
 	Registered bool
 	doneChan   chan bool `json:"-"`
 
@@ -194,7 +194,7 @@ loop:
 }
 
 // only call this from doozerMux
-func (s *Service) doozer() skynet.DoozerConnection {
+func (s *Service) doozer() *skynet.DoozerConnection {
 	if s.DoozerConn == nil {
 		s.DoozerConn = skynet.NewDoozerConnectionFromConfig(*s.Config.DoozerConfig, s.Log)
 
