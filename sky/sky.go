@@ -140,7 +140,7 @@ func ListServices(q *client.Query) {
 }
 
 func ListServiceVersions(q *client.Query) {
-	if *ServiceNameFlag == "" {
+	if q.Service == "" {
 		fmt.Println("Service name is required")
 		return
 	}
