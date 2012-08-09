@@ -187,17 +187,18 @@ jQuery(document).ready(function ($) {
       }
 
       function appendLog(msg) {
-        var d = log[0]
-        var doScroll = d.scrollTop == d.scrollHeight - d.clientHeight;
+		// scroll doesn't scale: breaks at about 10k lines
+        //var d = log[0]
+        //var doScroll = d.scrollTop == d.scrollHeight - d.clientHeight;
 
         if (msg.text().indexOf(highlight) >= 0) {
           msg.css('background-color', "rgb(144, 238, 144)");
         }
 
         msg.appendTo(log)
-        if (doScroll) {
-          d.scrollTop = d.scrollHeight - d.clientHeight;
-        }
+        //if (doScroll) {
+        //  d.scrollTop = d.scrollHeight - d.clientHeight;
+        //}
       }
 
       $("#log-search").click(function() {
@@ -230,13 +231,13 @@ jQuery(document).ready(function ($) {
           appendLog($("<div><b>Connection closed.</b></div>"))
         }
         conn.onmessage = function(evt) {
-          logMsg = $("<div/>").text(evt.data);    // expecting {data:...}
+          logMsg = $("<div/>").text(evt.data);
           
           if(highlightEnabled){
             highlight(logMsg, msg.val());
           }
 
-          appendLog(logMsg)
+          appendLog(logMsg);
         }
       } else {
         appendLog($("<div><b>Your browser does not support WebSockets.</b></div>"))

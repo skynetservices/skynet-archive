@@ -18,7 +18,6 @@ type Logger interface {
 	Item(item interface{})
 	// Something has gone horribly wrong - remember what and bomb the program.
 	Panic(item interface{})
-
 	// this function exists only to catch things that are not transitioned
 	Println(items ...interface{})
 }
@@ -31,7 +30,7 @@ func MakeJObj(item interface{}) (jobj map[string]interface{}) {
 	return
 }
 
-// MultiLogger is an implementation of the Logger interface thatsends log
+// MultiLogger is an implementation of the Logger interface that sends log
 // messages out to multiple loggers.
 type MultiLogger []Logger
 
