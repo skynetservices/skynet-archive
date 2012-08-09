@@ -84,7 +84,7 @@ func (im *InstanceMonitor) mux() {
 
 			for _, c := range im.clients {
 				if c.query.PathMatches(notification.Path) {
-					c.callback(notification)
+					c.NotificationChan <- notification
 				}
 			}
 
@@ -177,14 +177,14 @@ func (im *InstanceMonitor) monitorInstances() {
 
 }
 
-func (im *InstanceMonitor) Listen(id string, q *Query, cb InstanceListenerCallback) (l *InstanceListener) {
+func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
 	l = &InstanceListener{
-		query:     q,
-		monitor:   im,
-		id:        id,
-		Instances: make(map[string]service.Service),
-		doneChan:  make(chan bool),
-		callback:  cb,
+		query:            q,
+		monitor:          im,
+		id:               id,
+		Instances:        make(map[string]service.Service),
+		doneChan:         make(chan bool),
+		NotificationChan: make(chan InstanceListenerNotification),
 	}
 
 	im.listChan <- l

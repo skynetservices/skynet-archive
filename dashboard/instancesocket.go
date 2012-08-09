@@ -37,26 +37,9 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 	ticker := time.NewTicker(5 * time.Second)
 	lastHeartbeat := time.Now()
 
-	callback := func(notification client.InstanceListenerNotification) {
-		var err error
-
-		switch notification.Type {
-		case client.InstanceListenerAddNotification:
-			err = websocket.JSON.Send(ws, SocketResponse{Action: "Added", Data: notification.Service})
-		case client.InstanceListenerUpdateNotification:
-			err = websocket.JSON.Send(ws, SocketResponse{Action: "Updated", Data: notification.Service})
-		case client.InstanceListenerRemoveNotification:
-			err = websocket.JSON.Send(ws, SocketResponse{Action: "Removed", Data: notification.Service})
-		}
-
-		if err != nil {
-			closeChan <- true
-		}
-	}
-
 	go instanceSocketRead(ws, readChan, closeChan)
 
-	l := im.Listen(skynet.UUID(), &client.Query{}, callback)
+	l := im.Listen(skynet.UUID(), &client.Query{})
 
 	err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: l.Instances})
 
@@ -86,6 +69,22 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 				}
 			case "Heartbeat":
 				// this is here more for documentation purposes, setting the lastHeartbeat on read handles the logic here
+			}
+
+		case notification := <-l.NotificationChan:
+			var err error
+
+			switch notification.Type {
+			case client.InstanceListenerAddNotification:
+				err = websocket.JSON.Send(ws, SocketResponse{Action: "Added", Data: notification.Service})
+			case client.InstanceListenerUpdateNotification:
+				err = websocket.JSON.Send(ws, SocketResponse{Action: "Updated", Data: notification.Service})
+			case client.InstanceListenerRemoveNotification:
+				err = websocket.JSON.Send(ws, SocketResponse{Action: "Removed", Data: notification.Service})
+			}
+
+			if err != nil {
+				closeChan <- true
 			}
 		}
 	}
