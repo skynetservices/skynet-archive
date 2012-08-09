@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html"
 	"io"
-	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -29,6 +28,16 @@ type Req struct {
 	Filter     string `json:"filter"`
 }
 
+func (c *connection) send(s string) bool {
+	err := websocket.Message.Send(c.ws, s)
+	if err != nil {
+		log.Println("can't send: ", err)
+		c.ws.Close()
+		return false
+	}
+	return true
+}
+
 func (c *connection) fromClient() {
 	shouldCancel := false
 	message := &Req{}
@@ -36,43 +45,56 @@ func (c *connection) fromClient() {
 		err := websocket.JSON.Receive(c.ws, message)
 		if err != nil {
 			if err != io.EOF {
-				log.Printf("fromClient: bad receive: %s", err)
+				log.Println("fromClient: bad receive: ", err.Error())
 			}
 			break
 		}
 		if *debug {
-			log.Printf("fromClient: %+v", message)
+			log.Println("fromClient: ", fmt.Sprintf("%+v", message))
 		}
 
-		if message.Filter != "" || message.Collection != "" {
-			// make sure we've cancelled before we assign new values to the object
-			if shouldCancel {
-				c.cancel <- true
-				shouldCancel = false
-			}
+		if shouldCancel {
+			c.cancel <- true
+			shouldCancel = false
 		}
 
 		if message.Filter != "" {
 			c.filter, err = regexp.Compile(html.UnescapeString(message.Filter))
 			if err != nil {
 				s := fmt.Sprintf("reader: can not compile regexp: %s %s\n", message.Filter, err)
-				log.Printf("%s", s)
-				websocket.Message.Send(c.ws, s)
+				log.Println(s)
+				if !c.send(s) {
+					return
+				}
 				continue
 			}
+		} else {
+			c.filter = nil
 		}
 
 		if message.Collection != "" {
 			dbc := strings.Split(message.Collection, ":")
 			if len(dbc) != 2 {
 				s := fmt.Sprintf("internal error: received bad db:collection from client: %s", message.Collection)
-				log.Printf("%s", s)
-				websocket.Message.Send(c.ws, s)
+				log.Println(s)
+				if !c.send(s) {
+					return
+				}
 				continue
 			}
 			c.db = dbc[0]
 			c.coll = dbc[1]
+		} else {
+			s := fmt.Sprintf("internal error: db:collection shouldn't be nil")
+			log.Println(s)
+			if !c.send(s) {
+				return
+			}
+			c.db = ""
+			c.coll = ""
+			continue
 		}
+
 		if c.coll != "" {
 			go c.dump()
 			shouldCancel = true
@@ -82,15 +104,29 @@ func (c *connection) fromClient() {
 }
 
 func (c *connection) dump() {
-	var iter *mgo.Iter
 	var result = make(map[string]interface{})
 
 	coll := c.sess.DB(c.db).C(c.coll)
-	query := coll.Find(nil)
-	iter = query.Iter()
+	if coll == nil {
+		if !c.send("internal mgo error: shouldn't happen!") {
+			return
+		}
+		<-c.cancel
+		return
+	}
+	iter := coll.Find(nil).Tail(500 * time.Millisecond)
+	if iter.Err() != nil {
+		s := fmt.Sprintf("internal error: %s", iter.Err())
+		log.Println(s)
+		if !c.send(s) {
+			return
+		}
+		// we must block here, no need to continue spinning
+		<-c.cancel
+		return
+	}
 
 	// Need to spin to be able to consume a cancel
-outer:
 	for {
 		select {
 		case <-c.cancel:
@@ -100,40 +136,35 @@ outer:
 				for k, v := range result {
 					s := fmt.Sprintf("%v: %v", k, v) // how complicated are the logs? objects? collections?
 					if c.filter == nil || c.filter.MatchString(s) {
-						websocket.Message.Send(c.ws, s)
+						if !c.send(s) {
+							return
+						}
 					}
+				}
+				if iter.Err() != nil {
+					s := fmt.Sprintf("%s", iter.Err())
+					if !c.send(s) {
+						return
+					}
+					<-c.cancel
+					return
 				}
 			} else {
 				if iter.Err() != nil {
-					s := fmt.Sprintf("internal error: %s", iter.Err())
-					log.Printf("%s", s)
-					websocket.Message.Send(c.ws, s)
-					// we must block here, no need to continue spinning
-					<-c.cancel
-				}
-				break outer
-			}
-		}
-	}
-
-	// now tail for updated results
-	iter = query.Tail(500 * time.Millisecond)
-	for {
-		select {
-		case <-c.cancel:
-			break
-		default:
-			if iter.Next(result) {
-				for k, v := range result {
-					s := fmt.Sprintf("%v: %v", k, v) // how complicated are the logs? objects? collections?
-					if c.filter == nil || c.filter.MatchString(s) {
-						websocket.Message.Send(c.ws, s)
+					s := fmt.Sprintf("%s", iter.Err())
+					if !c.send(s) {
+						return
 					}
+					<-c.cancel
+					return
 				}
-			}
-			if !iter.Timeout() {
-				log.Println("iter is done", iter.Err().Error())
-				<-c.cancel
+				if !iter.Timeout() {
+					if !c.send("lost connection to server, won't retry") {
+						return
+					}
+					<-c.cancel
+					return
+				}
 			}
 		}
 	}
@@ -145,4 +176,5 @@ func wsHandler(ws *websocket.Conn) {
 	c := &connection{ws: ws, cancel: make(chan bool), sess: session}
 
 	c.fromClient() // must wait for client to select database
+	ws.Close()
 }
