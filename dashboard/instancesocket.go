@@ -63,7 +63,7 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 
 			switch request.Action {
 			case "List":
-				err := websocket.JSON.Send(ws, SocketResponse{Action: "list", Data: l.Instances})
+				err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: l.Instances})
 				if err != nil {
 					closeChan <- true
 				}
