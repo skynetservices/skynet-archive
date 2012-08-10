@@ -40,6 +40,21 @@ type InstanceMonitorNotification struct {
 
 type InstanceNotificationType int
 
+func (nt InstanceNotificationType) MarshalJSON() ([]byte, error) {
+	v := "\"\""
+
+	switch nt {
+	case InstanceAddNotification:
+		v = "\"InstanceAddNotification\""
+	case InstanceUpdateNotification:
+		v = "\"InstanceUpdateNotification\""
+	case InstanceRemoveNotification:
+		v = "\"InstanceRemoveNotification\""
+	}
+
+	return []byte(v), nil
+}
+
 const (
 	InstanceAddNotification = iota
 	InstanceUpdateNotification
