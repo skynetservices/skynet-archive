@@ -64,6 +64,7 @@ type InstanceListener struct {
 	Instances map[string]service.Service
 
 	doneChan chan bool
+	closed   bool
 }
 
 func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceListener {
@@ -74,11 +75,16 @@ func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceList
 		Instances:        make(map[string]service.Service),
 		doneChan:         make(chan bool),
 		NotificationChan: make(NotificationChan),
+		closed:           false,
 	}
 }
 
 func (l *InstanceListener) notify(n InstanceMonitorNotification) {
 	ln := NewInstanceListenerNotification(n)
+
+	if l.closed {
+		return
+	}
 
 	select {
 	case l.NotificationChan <- ln:
@@ -90,5 +96,7 @@ func (l *InstanceListener) notify(n InstanceMonitorNotification) {
 }
 
 func (l *InstanceListener) Close() {
+	l.closed = true
 	l.monitor.RemoveListener(l.id)
+	close(l.NotificationChan)
 }
