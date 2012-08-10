@@ -8,49 +8,53 @@ type NotificationChan chan InstanceListenerNotification
 
 type InstanceListenerNotification map[string]InstanceMonitorNotification
 
-func (n InstanceListenerNotification) Join(notification InstanceMonitorNotification) {
+func (n InstanceListenerNotification) Join(notification InstanceListenerNotification) InstanceListenerNotification {
 	if len(n) == 0 {
-		n[notification.Path] = notification
-		return
+		n = notification
+		return n
 	}
 
-	if v, ok := n[notification.Path]; ok {
-		switch v.Type {
-		case InstanceAddNotification:
-			switch notification.Type {
-			case InstanceAddNotification, InstanceRemoveNotification:
-				// Current is add, new is add or remove. Replace notification
-				n[notification.Path] = notification
-			case InstanceUpdateNotification:
-				// Current is add, new is update. Leave type as add, but replace service data
-				on := n[notification.Path]
-				on.Service = notification.Service
-				n[notification.Path] = on
-			}
-		case InstanceUpdateNotification:
-			// TODO:
-			switch notification.Type {
-			case InstanceUpdateNotification, InstanceRemoveNotification:
-				// Current is update, new is update|remove. Replace notification
-				n[notification.Path] = notification
+	for p, change := range notification {
+		if v, ok := n[p]; ok {
+			switch v.Type {
 			case InstanceAddNotification:
-				// I'm not sure how we'd get an add, on top of an update, but let's assume we should just replace the service data
-				on := n[notification.Path]
-				on.Service = notification.Service
-				n[notification.Path] = on
+				switch change.Type {
+				case InstanceAddNotification, InstanceRemoveNotification:
+					// Current is add, new is add or remove. Replace notification
+					n[p] = change
+				case InstanceUpdateNotification:
+					// Current is add, new is update. Leave type as add, but replace service data
+					on := n[p]
+					on.Service = change.Service
+					n[p] = on
+				}
+			case InstanceUpdateNotification:
+				// TODO:
+				switch v.Type {
+				case InstanceUpdateNotification, InstanceRemoveNotification:
+					// Current is update, new is update|remove. Replace notification
+					n[p] = change
+				case InstanceAddNotification:
+					// I'm not sure how we'd get an add, on top of an update, but let's assume we should just replace the service data
+					on := n[p]
+					on.Service = change.Service
+					n[p] = on
+				}
+			case InstanceRemoveNotification:
+				// Current is a remove, doesn't matter what the new is it's safe to replace
+				n[p] = change
 			}
-		case InstanceRemoveNotification:
-			// Current is a remove, doesn't matter what the new is it's safe to replace
-			n[notification.Path] = notification
+		} else {
+			n[p] = change
 		}
-	} else {
-		n[notification.Path] = notification
 	}
+
+	return n
 }
 
 func NewInstanceListenerNotification(notification InstanceMonitorNotification) (n InstanceListenerNotification) {
 	n = make(InstanceListenerNotification)
-	n.Join(notification)
+	n[notification.Path] = notification
 
 	return n
 }
@@ -74,7 +78,7 @@ func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceList
 		id:               id,
 		Instances:        make(map[string]service.Service),
 		doneChan:         make(chan bool),
-		NotificationChan: make(NotificationChan),
+		NotificationChan: make(NotificationChan, 1),
 		closed:           false,
 	}
 }
@@ -82,16 +86,17 @@ func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceList
 func (l *InstanceListener) notify(n InstanceMonitorNotification) {
 	ln := NewInstanceListenerNotification(n)
 
-	if l.closed {
-		return
-	}
+	for {
+		if l.closed {
+			return
+		}
 
-	select {
-	case l.NotificationChan <- ln:
-		return
-	case ln := <-l.NotificationChan:
-		ln.Join(n)
-		l.NotificationChan <- ln
+		select {
+		case l.NotificationChan <- ln:
+			return
+		case on := <-l.NotificationChan:
+			ln = on.Join(ln)
+		}
 	}
 }
 

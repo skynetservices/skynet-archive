@@ -76,7 +76,7 @@ func (im *InstanceMonitor) mux() {
 
 			for _, c := range im.clients {
 				if c.query.PathMatches(notification.Path) {
-					go c.notify(notification)
+					c.notify(notification)
 				}
 			}
 
