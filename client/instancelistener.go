@@ -78,14 +78,14 @@ func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceList
 }
 
 func (l *InstanceListener) notify(n InstanceMonitorNotification) {
+	ln := NewInstanceListenerNotification(n)
+
 	for {
 		select {
-		case l.NotificationChan <- NewInstanceListenerNotification(n):
+		case l.NotificationChan <- ln:
 			return
-		case on := <-l.NotificationChan:
-			on.Join(n)
-
-			l.NotificationChan <- on
+		case ln := <-l.NotificationChan:
+			ln.Join(n)
 		}
 	}
 }
