@@ -14,14 +14,14 @@ type InstanceMonitor struct {
 	clients          map[string]*InstanceListener
 	listChan         chan *InstanceListener
 	instances        map[string]service.Service
-	notificationChan chan InstanceListenerNotification
+	notificationChan chan InstanceMonitorNotification
 }
 
 func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 	im = &InstanceMonitor{
 		doozer:           doozer,
 		clients:          make(map[string]*InstanceListener, 0),
-		notificationChan: make(chan InstanceListenerNotification),
+		notificationChan: make(chan InstanceMonitorNotification),
 		listChan:         make(chan *InstanceListener),
 		instances:        make(map[string]service.Service, 0),
 	}
@@ -32,6 +32,20 @@ func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 	return
 }
 
+type InstanceMonitorNotification struct {
+	Path    string
+	Service service.Service
+	Type    InstanceNotificationType
+}
+
+type InstanceNotificationType int
+
+const (
+	InstanceAddNotification = iota
+	InstanceUpdateNotification
+	InstanceRemoveNotification
+)
+
 func (im *InstanceMonitor) mux() {
 	for {
 		select {
@@ -39,15 +53,15 @@ func (im *InstanceMonitor) mux() {
 
 			// Update internal instance list
 			switch notification.Type {
-			case InstanceListenerAddNotification, InstanceListenerUpdateNotification:
+			case InstanceAddNotification, InstanceUpdateNotification:
 				im.instances[notification.Path] = notification.Service
-			case InstanceListenerRemoveNotification:
+			case InstanceRemoveNotification:
 				delete(im.instances, notification.Path)
 			}
 
 			for _, c := range im.clients {
 				if c.query.PathMatches(notification.Path) {
-					c.NotificationChan <- notification
+					c.notify(notification)
 				}
 			}
 
@@ -109,10 +123,10 @@ func (im *InstanceMonitor) monitorInstances() {
 		}
 
 		if ev.IsDel() {
-			im.notificationChan <- InstanceListenerNotification{
+			im.notificationChan <- InstanceMonitorNotification{
 				Path:    ev.Path,
 				Service: im.instances[ev.Path],
-				Type:    InstanceListenerRemoveNotification,
+				Type:    InstanceRemoveNotification,
 			}
 		} else {
 			buf := bytes.NewBuffer(ev.Body)
@@ -124,13 +138,13 @@ func (im *InstanceMonitor) monitorInstances() {
 				continue
 			}
 
-			var notificationType InstanceListenerNotificationType = InstanceListenerAddNotification
+			var notificationType InstanceNotificationType = InstanceAddNotification
 
 			if _, ok := im.instances[ev.Path]; ok {
-				notificationType = InstanceListenerUpdateNotification
+				notificationType = InstanceUpdateNotification
 			}
 
-			im.notificationChan <- InstanceListenerNotification{
+			im.notificationChan <- InstanceMonitorNotification{
 				Path:    ev.Path,
 				Service: s,
 				Type:    notificationType,
@@ -141,14 +155,7 @@ func (im *InstanceMonitor) monitorInstances() {
 }
 
 func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
-	l = &InstanceListener{
-		query:            q,
-		monitor:          im,
-		id:               id,
-		Instances:        make(map[string]service.Service),
-		doneChan:         make(chan bool),
-		NotificationChan: make(chan InstanceListenerNotification),
-	}
+	l = NewInstanceListener(im, id, q)
 
 	im.listChan <- l
 	<-l.doneChan
