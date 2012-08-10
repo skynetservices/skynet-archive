@@ -61,7 +61,7 @@ func (im *InstanceMonitor) mux() {
 
 			for _, c := range im.clients {
 				if c.query.PathMatches(notification.Path) {
-					c.notify(notification)
+					go c.notify(notification)
 				}
 			}
 
@@ -75,6 +75,10 @@ func (im *InstanceMonitor) mux() {
 			listener.doneChan <- true
 		}
 	}
+}
+
+func (im *InstanceMonitor) RemoveListener(id string) {
+	delete(im.clients, id)
 }
 
 func (im *InstanceMonitor) monitorInstances() {

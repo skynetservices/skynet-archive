@@ -80,16 +80,15 @@ func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceList
 func (l *InstanceListener) notify(n InstanceMonitorNotification) {
 	ln := NewInstanceListenerNotification(n)
 
-	for {
-		select {
-		case l.NotificationChan <- ln:
-			return
-		case ln := <-l.NotificationChan:
-			ln.Join(n)
-		}
+	select {
+	case l.NotificationChan <- ln:
+		return
+	case ln := <-l.NotificationChan:
+		ln.Join(n)
+		l.NotificationChan <- ln
 	}
 }
 
 func (l *InstanceListener) Close() {
-	delete(l.monitor.clients, l.id)
+	l.monitor.RemoveListener(l.id)
 }
