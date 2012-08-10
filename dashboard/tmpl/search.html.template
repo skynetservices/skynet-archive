@@ -1,5 +1,12 @@
 <fieldset>
   <div id="search-container" class="right">
+
+    <select id="database-collection">
+    {{range $i, $v := .}} 
+    <option>{{$v}}</option>
+    {{end}}
+    </select>
+
     <input type="text" id="search-term"/>
 
     <ul class="button-group radius right">

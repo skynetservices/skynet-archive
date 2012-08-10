@@ -128,17 +128,23 @@ jQuery(document).ready(function ($) {
 
   if(instanceList.size() > 0){
     if (window["WebSocket"]) {
-      conn = new WebSocket("ws://" + document.location.host + "/instances/ws");
+      var ticker;
+      var conn = new WebSocket("ws://" + document.location.host + "/instances/ws");
 
       conn.onopen = function(evt){
-        conn.send("foo");
-        conn.send("foo");
-        conn.send("foo");
-        conn.send("foo");
+        ticker = window.setInterval(function(){
+          conn.send('{"Action": "Heartbeat"}');  
+        }, 5000);
       };
 
       conn.onclose = function(evt) {
+        if(ticker){
+          window.clearInterval(ticker);
+          ticker = null;
+        }
+
         // TODO: Handle this properly
+        // we need to recreate/connect to the websocket so this page stays live
         console.log("closed");
       };
 
@@ -187,17 +193,18 @@ jQuery(document).ready(function ($) {
       }
 
       function appendLog(msg) {
-        var d = log[0]
-        var doScroll = d.scrollTop == d.scrollHeight - d.clientHeight;
+		// scroll doesn't scale: breaks at about 10k lines
+        //var d = log[0]
+        //var doScroll = d.scrollTop == d.scrollHeight - d.clientHeight;
 
         if (msg.text().indexOf(highlight) >= 0) {
           msg.css('background-color', "rgb(144, 238, 144)");
         }
 
         msg.appendTo(log)
-        if (doScroll) {
-          d.scrollTop = d.scrollHeight - d.clientHeight;
-        }
+        //if (doScroll) {
+        //  d.scrollTop = d.scrollHeight - d.clientHeight;
+        //}
       }
 
       $("#log-search").click(function() {
@@ -206,13 +213,14 @@ jQuery(document).ready(function ($) {
         if (!conn) {
           return false;
         }
-        if (!msg.val()) {
-          return false;
-        }
         log.children().each(function(){
           $(this).remove()
         });
-        conn.send(msg.val());
+        var selected;
+        $("#database-collection option:selected").each(function () {
+            selected = $(this).text();
+        });
+        conn.send( JSON.stringify({ filter: msg.val(), collection: selected }));
         return false
       });
 
@@ -235,7 +243,7 @@ jQuery(document).ready(function ($) {
             highlight(logMsg, msg.val());
           }
 
-          appendLog(logMsg)
+          appendLog(logMsg);
         }
       } else {
         appendLog($("<div><b>Your browser does not support WebSockets.</b></div>"))

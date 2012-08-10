@@ -196,8 +196,7 @@ func (q *Query) matchingPaths() []string {
 }
 
 func (q *Query) PathMatches(path string) bool {
-  parts := strings.Split(path, "/")
-
+	parts := strings.Split(path, "/")
 
 	if len(parts) >= 3 && q.Service != "" && parts[2] != q.Service {
 		return false

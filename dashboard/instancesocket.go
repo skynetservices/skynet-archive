@@ -2,35 +2,84 @@ package main
 
 import (
 	"code.google.com/p/go.net/websocket"
-	"encoding/json"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
+	"time"
 )
 
 type SocketResponse struct {
-  Action string
-  Data interface{}
+	Action string
+	Data   interface{}
+}
+
+type SocketRequest struct {
+	Action string
+}
+
+func instanceSocketRead(ws *websocket.Conn, readChan chan SocketRequest, closeChan chan bool) {
+	// Watch for read, if it fails break out of loop and close
+	for {
+		var request SocketRequest
+		err := websocket.JSON.Receive(ws, &request)
+
+		if err != nil {
+			closeChan <- true
+			break
+		}
+
+		readChan <- request
+	}
 }
 
 func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
+	closeChan := make(chan bool, 1)
+	readChan := make(chan SocketRequest)
+	ticker := time.NewTicker(5 * time.Second)
+	lastHeartbeat := time.Now()
+
+	go instanceSocketRead(ws, readChan, closeChan)
+
 	l := im.Listen(skynet.UUID(), &client.Query{})
 
-  b, _ := json.Marshal(SocketResponse {Action: "list", Data: l.Instances})
-	ws.Write(b)
+	err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: l.Instances})
 
-	// TODO: make sure this goes out of scope when the user closes the socket or times out (send heartbeat?)
-	// Close the websocket, and remove the listener from the InstanceMonitor: l.Close()
+	if err != nil {
+		closeChan <- true
+	}
+
 	for {
 		select {
-		case service := <-l.AddChan:
-      
-      b, _ := json.Marshal(SocketResponse {Action: "added", Data: service})
+		case <-closeChan:
+			ticker.Stop()
+			ws.Close()
+			l.Close()
+		case t := <-ticker.C:
+			// Check for timeout
+			if t.Sub(lastHeartbeat) > (15 * time.Second) {
+				closeChan <- true
+			}
+		case request := <-readChan:
+			lastHeartbeat = time.Now()
 
-			ws.Write(b)
-		case path := <-l.RemoveChan:
+			switch request.Action {
+			case "List":
+				err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: l.Instances})
+				if err != nil {
+					closeChan <- true
+				}
+			case "Heartbeat":
+				// this is here more for documentation purposes, setting the lastHeartbeat on read handles the logic here
+			}
 
-      b, _ := json.Marshal(SocketResponse {Action: "removed", Data: path})
-			ws.Write(b)
+		case notification := <-l.NotificationChan:
+			var err error
+
+			// Forward message as it stands across the websocket
+			err = websocket.JSON.Send(ws, SocketResponse{Action: "Update", Data: notification})
+
+			if err != nil {
+				closeChan <- true
+			}
 		}
 	}
 }

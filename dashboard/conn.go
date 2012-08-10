@@ -4,70 +4,180 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"fmt"
 	"html"
-	"log"
+	"io"
 	"regexp"
+	"strings"
+	"time"
+)
+
+import (
+	"labix.org/v2/mgo"
 )
 
 type connection struct {
 	ws     *websocket.Conn
-	send   chan string
+	db     string // mongodb database currently in use
+	coll   string // mongodb collection currently tailing
+	cancel chan bool
+	sess   *mgo.Session
 	filter *regexp.Regexp // if set, the client only sees matches
 }
 
-func (c *connection) reader() {
+type Req struct {
+	Collection string `json:"collection"`
+	Filter     string `json:"filter"`
+}
+
+func (c *connection) send(s string) bool {
+	err := websocket.Message.Send(c.ws, s)
+	if err != nil {
+		log.Println("can't send: ", err)
+		c.ws.Close()
+		return false
+	}
+	return true
+}
+
+func (c *connection) fromClient() {
+	shouldCancel := false
+	message := &Req{}
 	for {
-		var message string
-		err := websocket.Message.Receive(c.ws, &message)
+		err := websocket.JSON.Receive(c.ws, message)
 		if err != nil {
-			log.Printf("reader: bad read: %s\n", err)
+			if err != io.EOF {
+				log.Println("fromClient: bad receive: ", err.Error())
+			} else if *debug {
+				log.Println("EOF from client...")
+			}
 			break
 		}
 		if *debug {
-			log.Printf("reader received: %s", message)
+			log.Println("fromClient: ", fmt.Sprintf("%+v", message))
 		}
 
-		// Algorithm is as follows: unregister the client from the broadcast
-		// queue, then try to compile the regex. Then call logdump() to grab all 
-		// data from the log and then register back to receive future matching log
-		// messages 
-		h.unregister <- c
+		if shouldCancel {
+			c.cancel <- true
+			shouldCancel = false
+		}
 
-		str := html.UnescapeString(message)
-		c.filter, err = regexp.Compile(html.UnescapeString(message))
-		if err != nil {
-			s := fmt.Sprintf("reader: can not compile regexp: %s %s\n", str, err)
-			log.Print(s)
-			err := websocket.Message.Send(c.ws, s)
+		if message.Filter != "" {
+			c.filter, err = regexp.Compile(html.UnescapeString(message.Filter))
 			if err != nil {
-				break
+				s := fmt.Sprintf("reader: can not compile regexp: %s %s\n", message.Filter, err)
+				log.Println(s)
+				if !c.send(s) {
+					return
+				}
+				continue
 			}
 		} else {
-			dump(c.send)
-			h.register <- c
+			c.filter = nil
+		}
+
+		if message.Collection != "" {
+			dbc := strings.Split(message.Collection, ":")
+			if len(dbc) != 2 {
+				s := fmt.Sprintf("internal error: received bad db:collection from client: %s", message.Collection)
+				log.Println(s)
+				if !c.send(s) {
+					return
+				}
+				continue
+			}
+			c.db = dbc[0]
+			c.coll = dbc[1]
+		} else {
+			s := fmt.Sprintf("internal error: db:collection shouldn't be nil")
+			log.Println(s)
+			if !c.send(s) {
+				return
+			}
+			c.db = ""
+			c.coll = ""
+			continue
+		}
+
+		if c.coll != "" {
+			go c.dump()
+			shouldCancel = true
 		}
 	}
 	c.ws.Close()
 }
 
-func (c *connection) writer() {
-	for message := range c.send {
-		if *debug {
-			log.Printf("writer received: %s", message)
+func (c *connection) dump() {
+	var result = make(map[string]interface{})
+
+	coll := c.sess.DB(c.db).C(c.coll)
+	if coll == nil {
+		if !c.send("internal mgo error: shouldn't happen!") {
+			return
 		}
-		if c.filter == nil || c.filter.MatchString(message) {
-			err := websocket.Message.Send(c.ws, message)
-			if err != nil {
-				break
+		<-c.cancel
+		return
+	}
+	iter := coll.Find(nil).Tail(500 * time.Millisecond)
+	if iter.Err() != nil {
+		s := fmt.Sprintf("internal error: %s", iter.Err())
+		log.Println(s)
+		if !c.send(s) {
+			return
+		}
+		// we must block here, no need to continue spinning
+		<-c.cancel
+		return
+	}
+
+	// Need to spin to be able to consume a cancel
+	for {
+		select {
+		case <-c.cancel:
+			return
+		default:
+			if iter.Next(result) {
+				for k, v := range result {
+					s := fmt.Sprintf("%v: %v", k, v) // how complicated are the logs? objects? collections?
+					if c.filter == nil || c.filter.MatchString(s) {
+						if !c.send(s) {
+							return
+						}
+					}
+				}
+				if iter.Err() != nil {
+					s := fmt.Sprintf("%s", iter.Err())
+					if !c.send(s) {
+						return
+					}
+					<-c.cancel
+					return
+				}
+			} else {
+				if iter.Err() != nil {
+					s := fmt.Sprintf("%s", iter.Err())
+					if !c.send(s) {
+						return
+					}
+					<-c.cancel
+					return
+				}
+				if !iter.Timeout() {
+					if !c.send("lost connection to server, won't retry") {
+						return
+					}
+					<-c.cancel
+					return
+				}
 			}
 		}
 	}
-	c.ws.Close()
 }
 
 func wsHandler(ws *websocket.Conn) {
-	c := &connection{send: make(chan string, 256), ws: ws, filter: nil}
-	h.register <- c
-	defer func() { h.unregister <- c }()
-	go c.reader()
-	c.writer()
+	// Would it be better for each individual client to open 
+	// a separate connection with the MongoDB server by calling Dial here?
+	c := &connection{ws: ws, cancel: make(chan bool), sess: session}
+
+	c.fromClient() // must wait for client to select database
+	ws.Close()
+	close(c.cancel) // ensure no dangling readers
 }

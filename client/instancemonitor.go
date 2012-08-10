@@ -10,43 +10,20 @@ import (
 )
 
 type InstanceMonitor struct {
-	doozer     *skynet.DoozerConnection
-	clients    map[string]*InstanceListener
-	addChan    chan instance
-	removeChan chan string
-	listChan   chan *InstanceListener
-	instances  map[string]service.Service
-}
-
-type instance struct {
-	path    string
-	service service.Service
-}
-
-type InstanceListener struct {
-	query      *Query
-	AddChan    chan service.Service
-	RemoveChan chan string
-	monitor    *InstanceMonitor
-	id         string
-
-	Instances map[string]service.Service
-
-	doneChan chan bool
-}
-
-func (l *InstanceListener) Close() {
-	delete(l.monitor.clients, l.id)
+	doozer           *skynet.DoozerConnection
+	clients          map[string]*InstanceListener
+	listChan         chan *InstanceListener
+	instances        map[string]service.Service
+	notificationChan chan InstanceMonitorNotification
 }
 
 func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 	im = &InstanceMonitor{
-		doozer:     doozer,
-		clients:    make(map[string]*InstanceListener, 0),
-		addChan:    make(chan instance),
-		removeChan: make(chan string),
-		listChan:   make(chan *InstanceListener),
-		instances:  make(map[string]service.Service, 0),
+		doozer:           doozer,
+		clients:          make(map[string]*InstanceListener, 0),
+		notificationChan: make(chan InstanceMonitorNotification),
+		listChan:         make(chan *InstanceListener),
+		instances:        make(map[string]service.Service, 0),
 	}
 
 	go im.mux()
@@ -55,25 +32,51 @@ func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 	return
 }
 
+type InstanceMonitorNotification struct {
+	Path    string
+	Service service.Service
+	Type    InstanceNotificationType
+}
+
+type InstanceNotificationType int
+
+func (nt InstanceNotificationType) MarshalJSON() ([]byte, error) {
+	v := "\"\""
+
+	switch nt {
+	case InstanceAddNotification:
+		v = "\"InstanceAddNotification\""
+	case InstanceUpdateNotification:
+		v = "\"InstanceUpdateNotification\""
+	case InstanceRemoveNotification:
+		v = "\"InstanceRemoveNotification\""
+	}
+
+	return []byte(v), nil
+}
+
+const (
+	InstanceAddNotification = iota
+	InstanceUpdateNotification
+	InstanceRemoveNotification
+)
+
 func (im *InstanceMonitor) mux() {
 	for {
 		select {
-		case instance := <-im.addChan:
-			for _, c := range im.clients {
+		case notification := <-im.notificationChan:
 
-				im.instances[instance.path] = instance.service
-
-				if c.query.PathMatches(instance.path) {
-					c.AddChan <- instance.service
-				}
+			// Update internal instance list
+			switch notification.Type {
+			case InstanceAddNotification, InstanceUpdateNotification:
+				im.instances[notification.Path] = notification.Service
+			case InstanceRemoveNotification:
+				delete(im.instances, notification.Path)
 			}
 
-		case path := <-im.removeChan:
-			delete(im.instances, path)
-
 			for _, c := range im.clients {
-				if c.query.PathMatches(path) {
-					c.RemoveChan <- path
+				if c.query.PathMatches(notification.Path) {
+					c.notify(notification)
 				}
 			}
 
@@ -87,6 +90,10 @@ func (im *InstanceMonitor) mux() {
 			listener.doneChan <- true
 		}
 	}
+}
+
+func (im *InstanceMonitor) RemoveListener(id string) {
+	delete(im.clients, id)
 }
 
 func (im *InstanceMonitor) monitorInstances() {
@@ -135,7 +142,11 @@ func (im *InstanceMonitor) monitorInstances() {
 		}
 
 		if ev.IsDel() {
-			im.removeChan <- ev.Path
+			im.notificationChan <- InstanceMonitorNotification{
+				Path:    ev.Path,
+				Service: im.instances[ev.Path],
+				Type:    InstanceRemoveNotification,
+			}
 		} else {
 			buf := bytes.NewBuffer(ev.Body)
 
@@ -146,22 +157,24 @@ func (im *InstanceMonitor) monitorInstances() {
 				continue
 			}
 
-			im.addChan <- instance{path: ev.Path, service: s}
+			var notificationType InstanceNotificationType = InstanceAddNotification
+
+			if _, ok := im.instances[ev.Path]; ok {
+				notificationType = InstanceUpdateNotification
+			}
+
+			im.notificationChan <- InstanceMonitorNotification{
+				Path:    ev.Path,
+				Service: s,
+				Type:    notificationType,
+			}
 		}
 	}
 
 }
 
 func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
-	l = &InstanceListener{
-		query:      q,
-		AddChan:    make(chan service.Service),
-		RemoveChan: make(chan string),
-		monitor:    im,
-		id:         id,
-		Instances:  make(map[string]service.Service),
-		doneChan:   make(chan bool),
-	}
+	l = NewInstanceListener(im, id, q)
 
 	im.listChan <- l
 	<-l.doneChan
