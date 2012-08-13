@@ -87,10 +87,6 @@ func (l *InstanceListener) notify(n InstanceMonitorNotification) {
 	ln := NewInstanceListenerNotification(n)
 
 	for {
-		if l.closed {
-			return
-		}
-
 		select {
 		case l.NotificationChan <- ln:
 			return
@@ -103,5 +99,4 @@ func (l *InstanceListener) notify(n InstanceMonitorNotification) {
 func (l *InstanceListener) Close() {
 	l.closed = true
 	l.monitor.RemoveListener(l.id)
-	close(l.NotificationChan)
 }

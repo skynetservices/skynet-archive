@@ -9,29 +9,6 @@ import (
 	"path"
 )
 
-type InstanceMonitor struct {
-	doozer           *skynet.DoozerConnection
-	clients          map[string]*InstanceListener
-	listChan         chan *InstanceListener
-	instances        map[string]service.Service
-	notificationChan chan InstanceMonitorNotification
-}
-
-func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
-	im = &InstanceMonitor{
-		doozer:           doozer,
-		clients:          make(map[string]*InstanceListener, 0),
-		notificationChan: make(chan InstanceMonitorNotification),
-		listChan:         make(chan *InstanceListener),
-		instances:        make(map[string]service.Service, 0),
-	}
-
-	go im.mux()
-	go im.monitorInstances()
-
-	return
-}
-
 type InstanceMonitorNotification struct {
 	Path    string
 	Service service.Service
@@ -61,6 +38,31 @@ const (
 	InstanceRemoveNotification
 )
 
+type InstanceMonitor struct {
+	doozer           *skynet.DoozerConnection
+	clients          map[string]*InstanceListener
+	listChan         chan *InstanceListener
+	listCloseChan    chan string
+	instances        map[string]service.Service
+	notificationChan chan InstanceMonitorNotification
+}
+
+func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
+	im = &InstanceMonitor{
+		doozer:           doozer,
+		clients:          make(map[string]*InstanceListener, 0),
+		notificationChan: make(chan InstanceMonitorNotification),
+		listChan:         make(chan *InstanceListener),
+		listCloseChan:    make(chan string),
+		instances:        make(map[string]service.Service, 0),
+	}
+
+	go im.mux()
+	go im.monitorInstances()
+
+	return
+}
+
 func (im *InstanceMonitor) mux() {
 	for {
 		select {
@@ -81,6 +83,9 @@ func (im *InstanceMonitor) mux() {
 			}
 
 		case listener := <-im.listChan:
+
+			im.clients[listener.id] = listener
+
 			for path, s := range im.instances {
 				if listener.query.PathMatches(path) {
 					listener.Instances[path] = s
@@ -88,12 +93,18 @@ func (im *InstanceMonitor) mux() {
 			}
 
 			listener.doneChan <- true
+
+		case lid := <-im.listCloseChan:
+			c := im.clients[lid]
+			close(c.NotificationChan)
+			delete(im.clients, lid)
+
 		}
 	}
 }
 
 func (im *InstanceMonitor) RemoveListener(id string) {
-	delete(im.clients, id)
+	im.listCloseChan <- id
 }
 
 func (im *InstanceMonitor) monitorInstances() {
@@ -178,8 +189,6 @@ func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
 
 	im.listChan <- l
 	<-l.doneChan
-
-	im.clients[id] = l
 
 	return
 }
