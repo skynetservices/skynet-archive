@@ -1,9 +1,5 @@
 package client
 
-import (
-	"github.com/bketelsen/skynet/service"
-)
-
 type NotificationChan chan InstanceListenerNotification
 
 type InstanceListenerNotification map[string]InstanceMonitorNotification
@@ -64,11 +60,7 @@ type InstanceListener struct {
 	NotificationChan NotificationChan
 	monitor          *InstanceMonitor
 	id               string
-
-	Instances map[string]service.Service
-
-	doneChan chan bool
-	closed   bool
+	doneInitializing chan bool
 }
 
 func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceListener {
@@ -76,21 +68,23 @@ func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceList
 		query:            q,
 		monitor:          im,
 		id:               id,
-		Instances:        make(map[string]service.Service),
-		doneChan:         make(chan bool),
 		NotificationChan: make(NotificationChan, 1),
-		closed:           false,
+		doneInitializing: make(chan bool),
 	}
+}
+
+func (l *InstanceListener) notifyEmpty() {
+	ln := make(InstanceListenerNotification)
+	l.notifyAux(ln)
 }
 
 func (l *InstanceListener) notify(n InstanceMonitorNotification) {
 	ln := NewInstanceListenerNotification(n)
+	l.notifyAux(ln)
+}
 
+func (l *InstanceListener) notifyAux(ln InstanceListenerNotification) {
 	for {
-		if l.closed {
-			return
-		}
-
 		select {
 		case l.NotificationChan <- ln:
 			return
@@ -101,7 +95,5 @@ func (l *InstanceListener) notify(n InstanceMonitorNotification) {
 }
 
 func (l *InstanceListener) Close() {
-	l.closed = true
 	l.monitor.RemoveListener(l.id)
-	close(l.NotificationChan)
 }
