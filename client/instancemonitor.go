@@ -88,11 +88,13 @@ func (im *InstanceMonitor) mux() {
 
 			for path, s := range im.instances {
 				if listener.query.PathMatches(path) {
-					listener.Instances[path] = s
+					listener.notify(InstanceMonitorNotification{
+						Path:    path,
+						Service: s,
+						Type:    InstanceAddNotification,
+					})
 				}
 			}
-
-			listener.doneChan <- true
 
 		case lid := <-im.listCloseChan:
 			c := im.clients[lid]
@@ -188,7 +190,6 @@ func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
 	l = NewInstanceListener(im, id, q)
 
 	im.listChan <- l
-	<-l.doneChan
 
 	return
 }
