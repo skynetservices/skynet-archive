@@ -63,7 +63,7 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 
 			switch request.Action {
 			case "List":
-				err := websocket.JSON.Send(ws, SocketResponse{Action: "list", Data: l.Instances})
+				err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: l.Instances})
 				if err != nil {
 					closeChan <- true
 				}
@@ -74,14 +74,8 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 		case notification := <-l.NotificationChan:
 			var err error
 
-			switch notification.Type {
-			case client.InstanceListenerAddNotification:
-				err = websocket.JSON.Send(ws, SocketResponse{Action: "Added", Data: notification.Service})
-			case client.InstanceListenerUpdateNotification:
-				err = websocket.JSON.Send(ws, SocketResponse{Action: "Updated", Data: notification.Service})
-			case client.InstanceListenerRemoveNotification:
-				err = websocket.JSON.Send(ws, SocketResponse{Action: "Removed", Data: notification.Service})
-			}
+			// Forward message as it stands across the websocket
+			err = websocket.JSON.Send(ws, SocketResponse{Action: "Update", Data: notification})
 
 			if err != nil {
 				closeChan <- true
