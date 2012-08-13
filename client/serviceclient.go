@@ -1,14 +1,11 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
 	"github.com/4ad/doozer"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/pools"
 	"github.com/bketelsen/skynet/service"
 	"launchpad.net/mgo/v2/bson"
-	"path"
 	"time"
 )
 
@@ -28,6 +25,9 @@ type ServiceClient struct {
 	muxChan      chan interface{}
 	timeoutChan  chan timeoutLengths
 
+	instanceListener *InstanceListener
+	listenID         string
+
 	retryTimeout  time.Duration
 	giveupTimeout time.Duration
 }
@@ -43,8 +43,10 @@ func newServiceClient(query *Query, c *Client) (sc *ServiceClient) {
 		muxChan:      make(chan interface{}),
 		timeoutChan:  make(chan timeoutLengths),
 	}
+	sc.listenID = skynet.UUID()
+	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query)
+
 	go sc.mux()
-	go sc.monitorInstances()
 	return
 }
 
@@ -57,72 +59,6 @@ func (ic *instanceFileCollector) VisitDir(path string, f *doozer.FileInfo) bool 
 }
 func (ic *instanceFileCollector) VisitFile(path string, f *doozer.FileInfo) {
 	ic.files = append(ic.files, path)
-}
-
-func (c *ServiceClient) monitorInstances() {
-	// TODO: Let's watch doozer and keep this list up to date so we don't need to search it every time we spawn a new connection
-	doozer := c.query.DoozerConn
-
-	rev := doozer.GetCurrentRevision()
-
-	ddir := c.query.makePath()
-
-	var ifc instanceFileCollector
-	errch := make(chan error)
-	doozer.Walk(rev, ddir, &ifc, errch)
-	close(errch)
-	for err := range errch {
-		c.Log.Item(err)
-	}
-
-	for _, file := range ifc.files {
-		buf, _, err := doozer.Get(file, rev)
-		if err != nil {
-			c.Log.Item(err)
-			continue
-		}
-		var s service.Service
-		err = json.Unmarshal(buf, &s)
-		if err != nil {
-			c.Log.Item(err)
-			continue
-		}
-
-		c.muxChan <- service.ServiceDiscovered{
-			Service: &s,
-		}
-	}
-
-	watchPath := path.Join(c.query.makePath(), "**")
-
-	for {
-		ev, err := doozer.Wait(watchPath, rev+1)
-		rev = ev.Rev
-		if err != nil {
-			continue
-		}
-
-		var s service.Service
-
-		buf := bytes.NewBuffer(ev.Body)
-
-		err = json.Unmarshal(buf.Bytes(), &s)
-		if err != nil {
-			continue
-		}
-
-		if c.query.PathMatches(ev.Path) {
-			if ev.IsDel() || s.Registered == false {
-				c.muxChan <- service.ServiceRemoved{
-					Service: &s,
-				}
-			} else {
-				c.muxChan <- service.ServiceDiscovered{
-					Service: &s,
-				}
-			}
-		}
-	}
 }
 
 type servicePool struct {
@@ -145,27 +81,46 @@ type timeoutLengths struct {
 	retry, giveup time.Duration
 }
 
+func (c *ServiceClient) addInstanceMux(instance *service.Service) {
+	m := service.ServiceDiscovered{instance}
+	key := m.Service.Config.ServiceAddr.String()
+	_, known := c.instances[key]
+	if !known {
+		// we got a new pool, put it into the wild
+		c.instances[key] = c.client.getServicePool(m.Service)
+		c.instancePool.Release(c.instances[key])
+		c.Log.Item(m)
+	}
+}
+
+func (c *ServiceClient) removeInstanceMux(instance *service.Service) {
+	m := service.ServiceRemoved{instance}
+	key := m.Service.Config.ServiceAddr.String()
+	_, known := c.instances[key]
+	if !known {
+		return
+	}
+	c.instances[key].Close()
+	delete(c.instances, m.Service.Config.ServiceAddr.String())
+	c.Log.Item(m)
+}
+
 func (c *ServiceClient) mux() {
 
 	for {
 		select {
-		case mi := <-c.muxChan:
-			switch m := mi.(type) {
-			case service.ServiceDiscovered:
-				key := m.Service.Config.ServiceAddr.String()
-				_, known := c.instances[key]
-				if !known {
-					// we got a new pool, put it into the wild
-					c.instances[key] = c.client.getServicePool(m.Service)
-					c.instancePool.Release(c.instances[key])
-					c.Log.Item(m)
+		case ns := <-c.instanceListener.NotificationChan:
+			for _, n := range ns {
+				switch n.Type {
+				case InstanceAddNotification, InstanceUpdateNotification:
+					if n.Service.Registered {
+						c.addInstanceMux(&n.Service)
+					} else {
+						c.removeInstanceMux(&n.Service)
+					}
+				case InstanceRemoveNotification:
+					c.removeInstanceMux(&n.Service)
 				}
-
-			case service.ServiceRemoved:
-				key := m.Service.Config.ServiceAddr.String()
-				c.instances[key].Close()
-				delete(c.instances, m.Service.Config.ServiceAddr.String())
-				c.Log.Item(m)
 			}
 		case c.timeoutChan <- timeoutLengths{
 			retry:  c.retryTimeout,
