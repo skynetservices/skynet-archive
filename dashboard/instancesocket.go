@@ -41,7 +41,9 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 
 	l := im.Listen(skynet.UUID(), &client.Query{})
 
-	err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: l.Instances})
+	instances := <-l.NotificationChan
+
+	err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: instances})
 
 	if err != nil {
 		closeChan <- true
@@ -63,7 +65,7 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 
 			switch request.Action {
 			case "List":
-				err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: l.Instances})
+				err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: instances})
 				if err != nil {
 					closeChan <- true
 				}
@@ -76,6 +78,8 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 
 			// Forward message as it stands across the websocket
 			err = websocket.JSON.Send(ws, SocketResponse{Action: "Update", Data: notification})
+
+			instances = instances.Join(notification)
 
 			if err != nil {
 				closeChan <- true

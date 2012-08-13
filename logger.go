@@ -20,7 +20,6 @@ type Logger interface {
 	Panic(item interface{})
 	// these functions exists only to catch things that are not transitioned
 	Println(items ...interface{})
-	Printf(format string, items ...interface{})
 }
 
 func MakeJObj(item interface{}) (jobj map[string]interface{}) {
@@ -47,11 +46,6 @@ func (ml MultiLogger) Item(item interface{}) {
 func (ml MultiLogger) Println(items ...interface{}) {
 	for _, l := range ml {
 		l.Println(items...)
-	}
-}
-func (ml MultiLogger) Printf(format string, items ...interface{}) {
-	for _, l := range ml {
-		l.Printf(format, items...)
 	}
 }
 func (ml MultiLogger) Panic(item interface{}) {
@@ -93,9 +87,6 @@ func (cl *ConsoleLogger) Item(item interface{}) {
 }
 func (cl *ConsoleLogger) Println(items ...interface{}) {
 	cl.untransitioned.Println(items...)
-}
-func (cl *ConsoleLogger) Printf(format string, items ...interface{}) {
-	cl.untransitioned.Printf(format, items...)
 }
 func (cl *ConsoleLogger) Panic(item interface{}) {
 	cl.l.Panic(item)
