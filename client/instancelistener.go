@@ -69,7 +69,7 @@ func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceList
 		monitor:          im,
 		id:               id,
 		NotificationChan: make(NotificationChan, 1),
-		doneInitializing: make(chan bool),
+		doneInitializing: make(chan bool, 1),
 	}
 }
 
