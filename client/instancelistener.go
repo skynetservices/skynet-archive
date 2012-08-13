@@ -60,6 +60,7 @@ type InstanceListener struct {
 	NotificationChan NotificationChan
 	monitor          *InstanceMonitor
 	id               string
+	doneInitializing chan bool
 }
 
 func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceListener {
@@ -68,12 +69,21 @@ func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceList
 		monitor:          im,
 		id:               id,
 		NotificationChan: make(NotificationChan, 1),
+		doneInitializing: make(chan bool),
 	}
+}
+
+func (l *InstanceListener) notifyEmpty() {
+	ln := make(InstanceListenerNotification)
+	l.notifyAux(ln)
 }
 
 func (l *InstanceListener) notify(n InstanceMonitorNotification) {
 	ln := NewInstanceListenerNotification(n)
+	l.notifyAux(ln)
+}
 
+func (l *InstanceListener) notifyAux(ln InstanceListenerNotification) {
 	for {
 		select {
 		case l.NotificationChan <- ln:

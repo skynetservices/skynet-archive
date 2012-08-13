@@ -86,6 +86,8 @@ func (im *InstanceMonitor) mux() {
 
 			im.clients[listener.id] = listener
 
+			listener.notifyEmpty()
+
 			for path, s := range im.instances {
 				if listener.query.PathMatches(path) {
 					listener.notify(InstanceMonitorNotification{
@@ -95,6 +97,8 @@ func (im *InstanceMonitor) mux() {
 					})
 				}
 			}
+
+			listener.doneInitializing <- true
 
 		case lid := <-im.listCloseChan:
 			c := im.clients[lid]
@@ -190,6 +194,8 @@ func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
 	l = NewInstanceListener(im, id, q)
 
 	im.listChan <- l
+
+	<-l.doneInitializing
 
 	return
 }
