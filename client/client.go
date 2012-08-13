@@ -38,17 +38,8 @@ type Client struct {
 	Config *skynet.ClientConfig
 	Log    skynet.Logger `json:"-"`
 
-	servicePools map[string]*servicePool
-}
-
-func (c *Client) doozer() *skynet.DoozerConnection {
-	if c.DoozerConn == nil {
-		c.DoozerConn = skynet.NewDoozerConnectionFromConfig(*c.Config.DoozerConfig, c.Config.Log)
-
-		c.DoozerConn.Connect()
-	}
-
-	return c.DoozerConn
+	servicePools    map[string]*servicePool
+	instanceMonitor *InstanceMonitor
 }
 
 func NewClient(config *skynet.ClientConfig) *Client {
@@ -71,7 +62,19 @@ func NewClient(config *skynet.ClientConfig) *Client {
 
 	client.DoozerConn.Connect()
 
+	client.instanceMonitor = NewInstanceMonitor(client.DoozerConn)
+
 	return client
+}
+
+func (c *Client) doozer() *skynet.DoozerConnection {
+	if c.DoozerConn == nil {
+		c.DoozerConn = skynet.NewDoozerConnectionFromConfig(*c.Config.DoozerConfig, c.Config.Log)
+
+		c.DoozerConn.Connect()
+	}
+
+	return c.DoozerConn
 }
 
 var servicePoolMutex sync.Mutex

@@ -51,9 +51,9 @@ func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 	im = &InstanceMonitor{
 		doozer:           doozer,
 		clients:          make(map[string]*InstanceListener, 0),
-		notificationChan: make(chan InstanceMonitorNotification),
+		notificationChan: make(chan InstanceMonitorNotification, 1),
 		listChan:         make(chan *InstanceListener),
-		listCloseChan:    make(chan string),
+		listCloseChan:    make(chan string, 1),
 		instances:        make(map[string]service.Service, 0),
 	}
 
@@ -64,6 +64,7 @@ func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 }
 
 func (im *InstanceMonitor) mux() {
+
 	for {
 		select {
 		case notification := <-im.notificationChan:
@@ -119,6 +120,7 @@ func (im *InstanceMonitor) monitorInstances() {
 	// Build initial list of instances
 	var ifc instanceFileCollector
 	errch := make(chan error)
+
 	im.doozer.Walk(rev, "/services", &ifc, errch)
 
 	select {
@@ -142,6 +144,12 @@ func (im *InstanceMonitor) monitorInstances() {
 		}
 
 		im.instances[file] = s
+
+		im.notificationChan <- InstanceMonitorNotification{
+			Path:    file,
+			Service: s,
+			Type:    InstanceAddNotification,
+		}
 	}
 
 	// Watch for changes
