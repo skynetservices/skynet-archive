@@ -51,9 +51,9 @@ func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 	im = &InstanceMonitor{
 		doozer:           doozer,
 		clients:          make(map[string]*InstanceListener, 0),
-		notificationChan: make(chan InstanceMonitorNotification),
+		notificationChan: make(chan InstanceMonitorNotification, 1),
 		listChan:         make(chan *InstanceListener),
-		listCloseChan:    make(chan string),
+		listCloseChan:    make(chan string, 1),
 		instances:        make(map[string]service.Service, 0),
 	}
 
