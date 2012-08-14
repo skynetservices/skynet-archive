@@ -1,12 +1,10 @@
 package service
 
 import (
-	"code.google.com/p/gonicetrace/nicetrace"
 	"errors"
 	"fmt"
 	"github.com/bketelsen/skynet"
 	"launchpad.net/mgo/v2/bson"
-	"os"
 	"reflect"
 	"time"
 )
@@ -96,10 +94,7 @@ func NewServiceRPC(sd ServiceDelegate, log skynet.Logger) (srpc *ServiceRPC) {
 		continue
 
 	problem:
-		fmt.Println("trying to panic")
 		fmt.Printf("Bad RPC method for %T: %q %v\n", sd, m.Name, f)
-		nicetrace.WriteStacktrace(os.Stdout)
-		panic(fmt.Sprintf("Bad RPC method for %T: %q %v\n", sd, m.Name, f))
 	}
 
 	return
