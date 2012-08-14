@@ -35,3 +35,27 @@ type DoozerLostConnection struct {
 func (dlc DoozerLostConnection) String() string {
 	return fmt.Sprintf("Lost connection to doozer at %s", dlc.DoozerConfig.Uri)
 }
+
+type MongoConnected struct {
+	Addr string
+}
+
+func (m MongoConnected) String() string {
+	return fmt.Sprintf("Connected to mongodb at %s", m.Addr)
+}
+
+type MongoError struct {
+	Addr, Err string
+}
+
+func (m MongoError) String() string {
+	return fmt.Sprintf("MongoDB error: %s: %s", m.Addr, m.Err)
+}
+
+type LogsearchClient struct {
+	RemoteAddr, Method, Path string
+}
+
+func (l LogsearchClient) String() string {
+	return fmt.Sprintf("Log Search client attached: %s → %s %s", l.RemoteAddr, l.Method, l.Path)
+}
