@@ -23,7 +23,7 @@ var log skynet.Logger
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if *debug {
-		log.Println("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path)
+		log.Printf("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 	}
 	buf := new(bytes.Buffer)
 	indexTmpl.Execute(buf, r.URL.Path)
@@ -35,7 +35,7 @@ var session *mgo.Session
 func searchHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if *debug {
-		log.Println("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path)
+		log.Printf("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path)
 	}
 
 	sdata := make([]string, 0)
@@ -43,7 +43,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	if session == nil {
 		session, err = mgo.Dial(*mgoserver)
 		if err != nil {
-			log.Printf("searchHandler: can't connect to mongodb server %s: %s\n", *mgoserver, err)
+			log.Printf("searchHandler: can't connect to mongodb server %s: %s", *mgoserver, err)
 			// TODO: proper error pages?
 			w.Write([]byte("<html><body>Error establishing MongoDB connection</body></html>"))
 			return
@@ -57,7 +57,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		dbs, err = session.DatabaseNames()
 		if err != nil {
-			log.Println("searchHandler: unable to obtain database list: %s\n", err)
+			log.Printf("searchHandler: unable to obtain database list: %s", err)
 			// TODO: proper error pages?
 			w.Write([]byte("<html><body>Unable to obtain database list</body></html>"))
 			return
