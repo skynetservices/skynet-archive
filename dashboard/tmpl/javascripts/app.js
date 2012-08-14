@@ -1,3 +1,19 @@
+function activateTab($tab) {
+  var $activeTab = $tab.closest('dl').find('dd.active'),
+      contentLocation = $tab.children('a').attr("href") + 'Tab';
+
+  // Strip off the current url that IE adds
+  contentLocation = contentLocation.replace(/^.+#/, '#');
+
+  //Make Tab Active
+  $activeTab.removeClass('active');
+  $tab.addClass('active');
+
+  //Show Tab Content
+  $(contentLocation).closest('.tabs-content').children('li').removeClass('active').hide();
+  $(contentLocation).css('display', 'block').addClass('active');
+}
+
 jQuery(document).ready(function ($) {
 
   /* Use this js doc for all application specific JS */
@@ -5,23 +21,8 @@ jQuery(document).ready(function ($) {
   /* TABS --------------------------------- */
   /* Remove if you don't need :) */
 
-  function activateTab($tab) {
-    var $activeTab = $tab.closest('dl').find('dd.active'),
-        contentLocation = $tab.children('a').attr("href") + 'Tab';
 
-    // Strip off the current url that IE adds
-    contentLocation = contentLocation.replace(/^.+#/, '#');
-
-    //Make Tab Active
-    $activeTab.removeClass('active');
-    $tab.addClass('active');
-
-    //Show Tab Content
-    $(contentLocation).closest('.tabs-content').children('li').removeClass('active').hide();
-    $(contentLocation).css('display', 'block').addClass('active');
-  }
-
-  $('dl.tabs dd a').on('click.fndtn', function (event) {
+  $('dl.tabs dd a').live('click.fndtn', function (event) {
     activateTab($(this).parent('dd'));
   });
 
@@ -121,44 +122,6 @@ jQuery(document).ready(function ($) {
 
   /* CUSTOM FORMS */
   $.foundation.customForms.appendCustomMarkup();
-
-
-  /* Node List */
-  var instanceList = $("#instance-list");
-
-  if(instanceList.size() > 0){
-    if (window["WebSocket"]) {
-      var ticker;
-      var conn = new WebSocket("ws://" + document.location.host + "/instances/ws");
-
-      conn.onopen = function(evt){
-        ticker = window.setInterval(function(){
-          conn.send('{"Action": "Heartbeat"}');  
-        }, 5000);
-      };
-
-      conn.onclose = function(evt) {
-        if(ticker){
-          window.clearInterval(ticker);
-          ticker = null;
-        }
-
-        // TODO: Handle this properly
-        // we need to recreate/connect to the websocket so this page stays live
-        console.log("closed");
-      };
-
-      conn.onmessage = function(evt) {
-        // TODO: Handle this properly
-        console.log(evt.data);
-      };
-
-    } else {
-      // TODO: Handle this properly
-      console.log("no support for WebSocket");
-    }
-
-  }
 
 
   /* LOGS */
