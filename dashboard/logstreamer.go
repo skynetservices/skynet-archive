@@ -31,7 +31,7 @@ type Req struct {
 func (c *connection) send(s string) bool {
 	err := websocket.Message.Send(c.ws, s)
 	if err != nil {
-		log.Printf("%s: can't send to client: %s", c.ws.RemoteAddr(), err)
+		log.Printf("%s: can't send to client: %s", c.ws.Request().RemoteAddr, err)
 		c.ws.Close()
 		return false
 	}
@@ -45,14 +45,14 @@ func (c *connection) fromClient() {
 		err := websocket.JSON.Receive(c.ws, message)
 		if err != nil {
 			if err != io.EOF {
-				log.Printf("%s: fromClient: bad receive: %s", c.ws.RemoteAddr(), err.Error())
+				log.Printf("%s: fromClient: bad receive: %s", c.ws.Request().RemoteAddr, err.Error())
 			} else if *debug {
-				log.Printf("%s: EOF from client...", c.ws.RemoteAddr())
+				log.Printf("%s: EOF from client...", c.ws.Request().RemoteAddr)
 			}
 			break
 		}
 		if *debug {
-			log.Printf("%s: fromClient: %+v", c.ws.RemoteAddr(), message)
+			log.Printf("%s: fromClient: %+v", c.ws.Request().RemoteAddr, message)
 		}
 
 		if shouldCancel {
@@ -64,7 +64,7 @@ func (c *connection) fromClient() {
 			c.filter, err = regexp.Compile(html.UnescapeString(message.Filter))
 			if err != nil {
 				s := fmt.Sprintf("reader: can not compile regexp: %s %s", message.Filter, err)
-				log.Printf("%s: %s", c.ws.RemoteAddr(), s)
+				log.Printf("%s: %s", c.ws.Request().RemoteAddr, s)
 				if !c.send(s) {
 					return
 				}
@@ -78,7 +78,7 @@ func (c *connection) fromClient() {
 			dbc := strings.Split(message.Collection, ":")
 			if len(dbc) != 2 {
 				s := fmt.Sprintf("internal error: received bad db:collection from client: %s", message.Collection)
-				log.Printf("%s: %s", c.ws.RemoteAddr(), s)
+				log.Printf("%s: %s", c.ws.Request().RemoteAddr, s)
 				if !c.send(s) {
 					return
 				}
@@ -88,7 +88,7 @@ func (c *connection) fromClient() {
 			c.coll = dbc[1]
 		} else {
 			s := fmt.Sprintf("internal error: db:collection shouldn't be nil")
-			log.Printf("%s: %s", c.ws.RemoteAddr(), s)
+			log.Printf("%s: %s", c.ws.Request().RemoteAddr, s)
 			if !c.send(s) {
 				return
 			}
@@ -119,7 +119,7 @@ func (c *connection) dump() {
 	iter := coll.Find(nil).Tail(500 * time.Millisecond)
 	if iter.Err() != nil {
 		s := fmt.Sprintf("internal error: %s", iter.Err())
-		log.Printf("%s: %s", c.ws.RemoteAddr(), s)
+		log.Printf("%s: %s", c.ws.Request().RemoteAddr, s)
 		if !c.send(s) {
 			return
 		}
