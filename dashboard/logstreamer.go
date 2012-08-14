@@ -64,7 +64,7 @@ func (c *connection) fromClient() {
 			c.filter, err = regexp.Compile(html.UnescapeString(message.Filter))
 			if err != nil {
 				s := fmt.Sprintf("reader: can not compile regexp: %s %s", message.Filter, err)
-				log.Printf("%s: %s", s)
+				log.Printf("%s: %s", c.ws.RemoteAddr(), s)
 				if !c.send(s) {
 					return
 				}
@@ -78,7 +78,7 @@ func (c *connection) fromClient() {
 			dbc := strings.Split(message.Collection, ":")
 			if len(dbc) != 2 {
 				s := fmt.Sprintf("internal error: received bad db:collection from client: %s", message.Collection)
-				log.Printf("%s: %s", s)
+				log.Printf("%s: %s", c.ws.RemoteAddr(), s)
 				if !c.send(s) {
 					return
 				}
@@ -88,7 +88,7 @@ func (c *connection) fromClient() {
 			c.coll = dbc[1]
 		} else {
 			s := fmt.Sprintf("internal error: db:collection shouldn't be nil")
-			log.Printf("%s: %s", s)
+			log.Printf("%s: %s", c.ws.RemoteAddr(), s)
 			if !c.send(s) {
 				return
 			}
@@ -119,7 +119,7 @@ func (c *connection) dump() {
 	iter := coll.Find(nil).Tail(500 * time.Millisecond)
 	if iter.Err() != nil {
 		s := fmt.Sprintf("internal error: %s", iter.Err())
-		log.Printf("%s: %s", s)
+		log.Printf("%s: %s", c.ws.RemoteAddr(), s)
 		if !c.send(s) {
 			return
 		}
