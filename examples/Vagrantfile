@@ -49,7 +49,8 @@ Vagrant::Config.run do |config|
       version = (n % 2) == 0 ? 1 : 2
       region = (n % 3) == 0 ? "Chicago" : "Dallas" 
 
-      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.125.101:8046 -l 192.168.125.101:999#{n} -admin 192.168.125.101:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}.log &"
+      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.125.101:8046 -l 192.168.125.101:999#{n} -admin 192.168.125.101:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_example.log &"
+      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/fibservice --doozer=192.168.125.101:8046 -l 192.168.125.101:997#{n} -admin 192.168.125.101:996#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_fibservice.log &"
     end
 
     #c.vm.share_folder "skynet", "/opt/skynet", "../"
@@ -91,7 +92,8 @@ Vagrant::Config.run do |config|
         version = (n % 2) == 0 ? 1 : 2
         region = (n % 3) == 0 ? "Chicago" : "Dallas" 
 
-        c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.125.101:8046 -l 192.168.125.10#{i}:999#{n} -admin 192.168.125.10#{i}:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}.log &"
+        c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.125.101:8046 -l 192.168.125.10#{i}:999#{n} -admin 192.168.125.10#{i}:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_example.log &"
+        c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/fibservice --doozer=192.168.125.101:8046 -l 192.168.125.101:997#{n} -admin 192.168.125.101:996#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_fibservice.log &"
       end
 
 
