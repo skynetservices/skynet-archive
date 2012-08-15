@@ -116,9 +116,6 @@ func main() {
 		config.Region = "Jersey"
 	}
 
-	fmt.Println(config.Region)
-	fmt.Println(config.DoozerConfig)
-
 	var err error
 	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
 	clogger := skynet.NewConsoleLogger(os.Stdout)
