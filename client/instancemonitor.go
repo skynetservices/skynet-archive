@@ -102,8 +102,6 @@ func (im *InstanceMonitor) mux() {
 			listener.doneInitializing <- true
 
 		case lid := <-im.listCloseChan:
-			c := im.clients[lid]
-			close(c.NotificationChan)
 			delete(im.clients, lid)
 
 		}
