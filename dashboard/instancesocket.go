@@ -92,10 +92,18 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 					}
 				}
 
-				im.BuildInstanceList(l)
+				instances := l.GetInstances()
+				iln := make(client.InstanceListenerNotification)
+				for _, i := range instances {
+					path := i.GetConfigPath()
+					iln[path] = client.InstanceMonitorNotification{
+						Path:    path,
+						Service: i,
+						Type:    client.InstanceAddNotification,
+					}
+				}
 
-				instances := <-l.NotificationChan
-				err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: instances})
+				err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: iln})
 
 				if err != nil {
 					closeChan <- true

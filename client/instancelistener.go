@@ -1,5 +1,9 @@
 package client
 
+import (
+	"github.com/bketelsen/skynet/service"
+)
+
 type NotificationChan chan InstanceListenerNotification
 
 type InstanceListenerNotification map[string]InstanceMonitorNotification
@@ -96,4 +100,8 @@ func (l *InstanceListener) notifyAux(ln InstanceListenerNotification) {
 
 func (l *InstanceListener) Close() {
 	l.monitor.RemoveListener(l.id)
+}
+
+func (l *InstanceListener) GetInstances() []service.Service {
+	return l.monitor.GetQueryList(l.Query)
 }
