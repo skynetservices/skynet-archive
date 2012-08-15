@@ -136,6 +136,10 @@ func GetClientConfigFromFlags(argv ...string) (config *ClientConfig, args []stri
 	flagsForDoozer(config.DoozerConfig, flagset)
 	idleTimeout := flagset.Int("timeout", 0, "amount of idle time before timeout")
 
+	if len(argv) == 0 {
+		argv = os.Args[1:]
+	}
+
 	flagset.Parse(argv)
 	args = flagset.Args()
 
