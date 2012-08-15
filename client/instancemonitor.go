@@ -227,7 +227,7 @@ func (im *InstanceMonitor) monitorInstances() {
 
 }
 
-func (im *InstanceMonitor) BuildInstanceList(l *InstanceListener) {
+func (im *InstanceMonitor) buildInstanceList(l *InstanceListener) {
 	im.listChan <- l
 
 	<-l.doneInitializing
@@ -236,7 +236,7 @@ func (im *InstanceMonitor) BuildInstanceList(l *InstanceListener) {
 func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
 	l = NewInstanceListener(im, id, q)
 
-	im.BuildInstanceList(l)
+	im.buildInstanceList(l)
 
 	return
 }
