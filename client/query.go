@@ -7,6 +7,7 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/service"
 	"log"
+	"path"
 	"strings"
 )
 
@@ -135,27 +136,7 @@ func (q *Query) FindInstances() []*service.Service {
 
 		err = json.Unmarshal(data, &s)
 
-		if q.Service != "" && q.Service != s.Config.Name {
-			continue
-		}
-
-		if q.Version != "" && q.Version != s.Config.Version {
-			continue
-		}
-
-		if q.Region != "" && q.Region != s.Config.Region {
-			continue
-		}
-
-		if q.Host != "" && q.Host != s.Config.ServiceAddr.IPAddress {
-			continue
-		}
-
-		if q.Port != "" && q.Port != fmt.Sprintf("%d", s.Config.ServiceAddr.Port) {
-			continue
-		}
-
-		if q.Registered != nil && *q.Registered != s.Registered {
+		if !q.ServiceMatches(s) {
 			continue
 		}
 
@@ -174,15 +155,43 @@ func (q *Query) matchingPaths() []string {
 	results := make([]string, 0)
 	unique := make(map[string]string, 0)
 
-	for path, dir := range q.paths {
+	for p, dir := range q.paths {
 
-		if !q.PathMatches(path) {
+		if !q.pathMatches(p) {
 			continue
 		}
 
 		if _, ok := unique[dir.Name]; !ok {
-			unique[dir.Name] = dir.Name
-			results = append(results, dir.Name)
+			pathMatches := true
+
+			// If Port or Registered supplied, we have to inspect files to ensure the path has a match in it
+			if q.Port != "" || q.Registered != nil {
+				pathMatches = false
+				rev := q.DoozerConn.GetCurrentRevision()
+
+				files, _ := q.DoozerConn.Getdirinfo(p, rev, 0, -1)
+
+				if files != nil {
+					for _, file := range files {
+						data, _, err := q.DoozerConn.Get(path.Join(p, file.Name), rev)
+
+						if err == nil {
+							s := service.Service{}
+							err = json.Unmarshal(data, &s)
+
+							if q.ServiceMatches(s) {
+								pathMatches = true
+								break
+							}
+						}
+					}
+				}
+			}
+
+			if pathMatches {
+				unique[dir.Name] = dir.Name
+				results = append(results, dir.Name)
+			}
 		}
 	}
 
@@ -195,7 +204,8 @@ func (q *Query) matchingPaths() []string {
 	return results
 }
 
-func (q *Query) PathMatches(path string) bool {
+// We aren't able to match a path for a query on port or registered
+func (q *Query) pathMatches(path string) bool {
 	parts := strings.Split(path, "/")
 
 	if len(parts) >= 3 && q.Service != "" && parts[2] != q.Service {
@@ -212,10 +222,6 @@ func (q *Query) PathMatches(path string) bool {
 
 	if len(parts) >= 6 && q.Host != "" && parts[5] != q.Host {
 		return false
-	}
-
-	if len(parts) >= 7 {
-		fmt.Println(parts)
 	}
 
 	return true
