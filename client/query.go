@@ -214,10 +214,6 @@ func (q *Query) PathMatches(path string) bool {
 		return false
 	}
 
-	if len(parts) >= 7 {
-		fmt.Println(parts)
-	}
-
 	return true
 }
 
