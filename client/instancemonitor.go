@@ -38,9 +38,15 @@ const (
 	InstanceRemoveNotification
 )
 
+type instanceListRequest struct {
+	q *Query
+	r chan []service.Service
+}
+
 type InstanceMonitor struct {
 	doozer           *skynet.DoozerConnection
 	clients          map[string]*InstanceListener
+	ilqChan          chan instanceListRequest
 	listChan         chan *InstanceListener
 	listCloseChan    chan string
 	instances        map[string]service.Service
@@ -52,6 +58,7 @@ func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 		doozer:           doozer,
 		clients:          make(map[string]*InstanceListener, 0),
 		notificationChan: make(chan InstanceMonitorNotification, 1),
+		ilqChan:          make(chan instanceListRequest),
 		listChan:         make(chan *InstanceListener),
 		listCloseChan:    make(chan string, 1),
 		instances:        make(map[string]service.Service, 0),
@@ -83,13 +90,18 @@ func (im *InstanceMonitor) mux() {
 				}
 			}
 
+		case ilq := <-im.ilqChan:
+			ilq.r <- im.getQueryListMux(ilq.q)
+
 		case listener := <-im.listChan:
 
 			im.clients[listener.id] = listener
 
 			listener.notifyEmpty()
 
-			for path, s := range im.instances {
+			services := im.getQueryListMux(listener.Query)
+			for _, s := range services {
+				path := s.GetConfigPath()
 				if listener.Query.ServiceMatches(s) {
 					listener.notify(InstanceMonitorNotification{
 						Path:    path,
@@ -106,6 +118,25 @@ func (im *InstanceMonitor) mux() {
 
 		}
 	}
+}
+
+func (im *InstanceMonitor) getQueryListMux(q *Query) (r []service.Service) {
+	for _, s := range im.instances {
+		if q.ServiceMatches(s) {
+			r = append(r, s)
+		}
+	}
+	return
+}
+
+func (im *InstanceMonitor) GetQueryList(q *Query) (r []service.Service) {
+	ilq := instanceListRequest{
+		q: q,
+		r: make(chan []service.Service, 1),
+	}
+	im.ilqChan <- ilq
+	r = <-ilq.r
+	return
 }
 
 func (im *InstanceMonitor) RemoveListener(id string) {
