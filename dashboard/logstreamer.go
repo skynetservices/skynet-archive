@@ -4,7 +4,6 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"fmt"
 	"html"
-	"io"
 	"regexp"
 	"strings"
 	"time"
@@ -31,7 +30,6 @@ type Req struct {
 func (c *connection) send(s string) bool {
 	err := websocket.Message.Send(c.ws, s)
 	if err != nil {
-		log.Println("can't send: ", err)
 		c.ws.Close()
 		return false
 	}
@@ -44,15 +42,13 @@ func (c *connection) fromClient() {
 	for {
 		err := websocket.JSON.Receive(c.ws, message)
 		if err != nil {
-			if err != io.EOF {
-				log.Println("fromClient: bad receive: ", err.Error())
-			} else if *debug {
-				log.Println("EOF from client...")
+			if *debug {
+				fmt.Printf("%s: error receiving from client: %s\n", c.ws.Request().RemoteAddr, err)
 			}
 			break
 		}
 		if *debug {
-			log.Println("fromClient: ", fmt.Sprintf("%+v", message))
+			fmt.Printf("%s: fromClient: %+v\n", c.ws.Request().RemoteAddr, message)
 		}
 
 		if shouldCancel {
@@ -63,10 +59,12 @@ func (c *connection) fromClient() {
 		if message.Filter != "" {
 			c.filter, err = regexp.Compile(html.UnescapeString(message.Filter))
 			if err != nil {
-				s := fmt.Sprintf("reader: can not compile regexp: %s %s\n", message.Filter, err)
-				log.Println(s)
+				s := fmt.Sprintf("reader: can not compile regexp: %s %s", message.Filter, err)
 				if !c.send(s) {
 					return
+				}
+				if *debug {
+					fmt.Printf("%s: %s\n", c.ws.Request().RemoteAddr, s)
 				}
 				continue
 			}
@@ -78,9 +76,11 @@ func (c *connection) fromClient() {
 			dbc := strings.Split(message.Collection, ":")
 			if len(dbc) != 2 {
 				s := fmt.Sprintf("internal error: received bad db:collection from client: %s", message.Collection)
-				log.Println(s)
 				if !c.send(s) {
 					return
+				}
+				if *debug {
+					fmt.Printf("%s: %s\n", c.ws.Request().RemoteAddr, s)
 				}
 				continue
 			}
@@ -88,9 +88,11 @@ func (c *connection) fromClient() {
 			c.coll = dbc[1]
 		} else {
 			s := fmt.Sprintf("internal error: db:collection shouldn't be nil")
-			log.Println(s)
 			if !c.send(s) {
 				return
+			}
+			if *debug {
+				fmt.Printf("%s: %s\n", c.ws.Request().RemoteAddr, s)
 			}
 			c.db = ""
 			c.coll = ""
@@ -119,9 +121,11 @@ func (c *connection) dump() {
 	iter := coll.Find(nil).Tail(500 * time.Millisecond)
 	if iter.Err() != nil {
 		s := fmt.Sprintf("internal error: %s", iter.Err())
-		log.Println(s)
 		if !c.send(s) {
 			return
+		}
+		if *debug {
+			fmt.Printf("%s: %s\n", c.ws.Request().RemoteAddr, s)
 		}
 		// we must block here, no need to continue spinning
 		<-c.cancel
@@ -176,7 +180,6 @@ func wsHandler(ws *websocket.Conn) {
 	// Would it be better for each individual client to open 
 	// a separate connection with the MongoDB server by calling Dial here?
 	c := &connection{ws: ws, cancel: make(chan bool), sess: session}
-
 	c.fromClient() // must wait for client to select database
 	ws.Close()
 	close(c.cancel) // ensure no dangling readers
