@@ -4,6 +4,12 @@
  <img src="/media/images/ajax-loader.gif" />
  <p>Loading node list...</p>
 </div>
+<dl id="instance-filter" class="sub-nav right">
+  <dt>Filter:</dt>
+  <dd class="active"><a id="filter-all" href="#" class="filter-button">All</a></dd>
+  <dd><a id="filter-active" href="#" class="filter-button">Active</a></dd>
+  <dd><a id="filter-inactive" href="#" class="filter-button">Inactive</a></dd>
+</dl>
 <dl id="region-tabs" class="tabs">
 </dl>
 <ul id="instance-list" class="tabs-content contained">
@@ -15,12 +21,7 @@
 
 <script id="region-template" type="text/template">
   <li id="region-<%htmlId%>Tab">
-    <dl class="sub-nav right">
-      <dt>Filter:</dt>
-      <dd class="active"><a href="#">All</a></dd>
-      <dd><a href="#">Active</a></dd>
-      <dd><a href="#">Inactive</a></dd>
-    </dl>
+    
 
     <br /><br /><br /><br />
   </li>

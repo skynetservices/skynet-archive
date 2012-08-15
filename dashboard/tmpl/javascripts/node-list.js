@@ -248,6 +248,8 @@ jQuery(document).ready(function ($) {
           $("#loading").hide();
           regions.render();
           $("#region-tabs").show();
+          $("#instance-filter").show();
+          $("#instance-list").show();
           activateTab($('#region-tabs dd').first());
 
       } else if(notification.Action === "Update"){
@@ -310,10 +312,42 @@ jQuery(document).ready(function ($) {
           var e =  $.parseJSON(evt.data);
           parseNotification(e);
       }
+
+
+      return conn;
     }
 
     if(window["WebSocket"]){
-      openWebSocket(0);
+      var conn = openWebSocket(0);
+
+      $(".filter-button").live('click', function(evt){
+        // Clear current list and let the socket know aboutt our new filter
+        regions.reset();
+        $("#region-tabs").empty();
+        $("#instance-list").empty().hide();
+        $("#instance-filter").hide();
+        $("#loading").show();
+
+
+        // Set filter
+        $("#instance-filter dd").removeClass('active');
+        $("#" + evt.target.id).parent('dd').addClass('active');
+
+        switch(evt.target.id){
+          case "filter-active":
+            conn.send('{"Action": "Filter", "Data": {"Registered": true}}');  
+            break;
+          case "filter-inactive":
+            conn.send('{"Action": "Filter", "Data": {"Registered": false}}');  
+            break;
+
+          case "filter-all":
+            conn.send('{"Action": "Filter", "Data": {"Reset": true}}');  
+            break;
+        }
+
+      });
+
     } else {
       $("#loading").html("Your browser does not support WebSockets")
     }

@@ -47,6 +47,10 @@ body {
   display: none;
 }
 
+#instance-filter {
+  display: none;
+}
+
 .nodes {
   width: 100%;
 }
