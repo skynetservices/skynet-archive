@@ -135,27 +135,7 @@ func (q *Query) FindInstances() []*service.Service {
 
 		err = json.Unmarshal(data, &s)
 
-		if q.Service != "" && q.Service != s.Config.Name {
-			continue
-		}
-
-		if q.Version != "" && q.Version != s.Config.Version {
-			continue
-		}
-
-		if q.Region != "" && q.Region != s.Config.Region {
-			continue
-		}
-
-		if q.Host != "" && q.Host != s.Config.ServiceAddr.IPAddress {
-			continue
-		}
-
-		if q.Port != "" && q.Port != fmt.Sprintf("%d", s.Config.ServiceAddr.Port) {
-			continue
-		}
-
-		if q.Registered != nil && *q.Registered != s.Registered {
+		if !q.ServiceMatches(s) {
 			continue
 		}
 
