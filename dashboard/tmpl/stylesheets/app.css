@@ -42,10 +42,26 @@ body {
 }
 
 /* Dashboard */
-dl.tabs {
+#region-tabs {
   margin-bottom: 0;
+  display: none;
+}
+
+#instance-filter {
+  display: none;
 }
 
 .nodes {
   width: 100%;
+}
+
+#loading {
+  text-align: center;
+  font-size: 1.2em;
+  padding: 0;
+  margin: 0;
+}
+
+#loading p {
+  margin-top: 15px;
 }
