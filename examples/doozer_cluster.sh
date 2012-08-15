@@ -76,7 +76,7 @@ function start {
     echo doozerd -timeout 5 -l "$BIND_IP:$dz_port" -w ":$dz_web_port" -c "skynet" -b "doozer:?ca=$BIND_IP:$START_DZNS_PORT"
     doozerd -timeout 5 -l "$BIND_IP:$dz_port" -w ":$dz_web_port" -c "skynet" -b "doozer:?ca=$BIND_IP:$START_DZNS_PORT" 2>/dev/null &
 
-    if [ $dzns_count -eq 0 ]
+    if [ $dz_count -eq 0 ]
     then
       sleep 1
     else
