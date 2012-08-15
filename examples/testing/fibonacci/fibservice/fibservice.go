@@ -101,9 +101,6 @@ func main() {
 
 	config, _ := skynet.GetServiceConfigFromFlags()
 
-	// DoozerConfig was already pulled from flags, let's borrow it from fibclient
-	config.DoozerConfig = f.cconfig.DoozerConfig
-
 	if config.Name == "" {
 		config.Name = "Fibonacci"
 	}
