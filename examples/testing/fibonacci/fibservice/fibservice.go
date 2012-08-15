@@ -24,7 +24,7 @@ type Fibonacci struct {
 func NewFibonacci() (f *Fibonacci) {
 	f = new(Fibonacci)
 
-	f.cconfig, _ = skynet.GetClientConfigFromFlags(os.Args...)
+	f.cconfig, _ = skynet.GetClientConfigFromFlags()
 	f.client = client.NewClient(f.cconfig)
 
 	f.cache = map[int]chan uint64{
@@ -101,9 +101,18 @@ func main() {
 
 	config, _ := skynet.GetServiceConfigFromFlags()
 
-	config.Name = "Fibonacci"
-	config.Version = "1"
-	config.Region = "Jersey"
+	if config.Name == "" {
+		config.Name = "Fibonacci"
+	}
+
+	if config.Version == "" {
+		config.Version = "1"
+	}
+
+	if config.Region == "unknown" {
+		config.Region = "Jersey"
+	}
+
 	var err error
 	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
 	clogger := skynet.NewConsoleLogger(os.Stdout)
