@@ -30,6 +30,7 @@ type doozerconn interface {
 	Walk(string, int64, int, int) ([]doozer.Event, error)
 	Rev() (rev int64, err error)
 	Getdir(dir string, rev int64, off, lim int) (names []string, err error)
+	Getdirinfo(dir string, rev int64, off, lim int) (names []doozer.FileInfo, err error)
 }
 
 type DoozerConnection struct {
@@ -325,6 +326,30 @@ func (d *DoozerConnection) Get(file string, rev int64) (data []byte, revision in
 	}()
 
 	return d.Connection().Get(file, &rev)
+}
+
+func (d *DoozerConnection) Getdir(path string, rev int64, offset int, limit int) (files []string, err error) {
+	defer func() {
+		if err := recover(); err != nil {
+			d.recoverFromError(err)
+
+			files, err = d.Getdir(path, rev, offset, limit)
+		}
+	}()
+
+	return d.Connection().Getdir(path, rev, offset, limit)
+}
+
+func (d *DoozerConnection) Getdirinfo(path string, rev int64, offset int, limit int) (files []doozer.FileInfo, err error) {
+	defer func() {
+		if err := recover(); err != nil {
+			d.recoverFromError(err)
+
+			files, err = d.Getdirinfo(path, rev, offset, limit)
+		}
+	}()
+
+	return d.Connection().Getdirinfo(path, rev, offset, limit)
 }
 
 func (d *DoozerConnection) Rev() (rev int64, err error) {

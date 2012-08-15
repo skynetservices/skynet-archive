@@ -18,6 +18,7 @@ var (
 	VersionFlag     *string = flag.String("version", "", "service version")
 	ServiceNameFlag *string = flag.String("service", "", "service name")
 	HostFlag        *string = flag.String("host", "", "host")
+	PortFlag        *string = flag.String("port", "", "port")
 	RegionFlag      *string = flag.String("region", "", "region")
 	RegisteredFlag  *string = flag.String("registered", "", "registered")
 )
@@ -33,6 +34,7 @@ func main() {
 		Version:    *VersionFlag,
 		Host:       *HostFlag,
 		Region:     *RegionFlag,
+    Port:       *PortFlag,
 	}
 
 	switch flag.Arg(0) {
@@ -221,20 +223,25 @@ Commands:
 		-version - limit results to instances of the specified version of service
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
+		-port - limit results to instances on the specified port
 		-registered - (true, false) limit results to instances that are registered (accepting requests)
 	regions: List all regions available that meet the specified criteria
 	services: List all services available that meet the specified criteria
 		-host - limit results to the specified host
+		-host - limit results to the specified port
+		-region - limit results to hosts in the specified region
 		-region - limit results to hosts in the specified region
 	versions: List all services available that meet the specified criteria
 		-service - service name (required)
 		-host - limit results to the specified host
+		-host - limit results to the specified port
 		-region - limit results to hosts in the specified region
 	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
 		-service - limit results to instances of the specified service
 		-version - limit results to instances of the specified version of service
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
+		-host - limit results to the specified port
 	daemon [config file]: Run the "SkynetDaemon" service, and deploy services listed in the provided config
 	remote [command]: Administer the services run by the SkynetDaemon service on the given host.
 		-host - the SkynetDaemon service to connect to
@@ -303,6 +310,13 @@ func InteractiveShell() {
 
 			fmt.Printf("Host: %v\n", query.Host)
 
+		case "port":
+			if len(parts) >= 2 {
+				query.Port = parts[1]
+			}
+
+			fmt.Printf("Host: %v\n", query.Host)
+
 		case "version":
 			if len(parts) >= 2 {
 				query.Version = parts[1]
@@ -350,6 +364,10 @@ func InteractiveShell() {
 				query.Host = ""
 			}
 
+			if len(parts) == 1 || parts[1] == "port" {
+				query.Port = ""
+			}
+
 			if len(parts) == 1 || parts[1] == "region" {
 				query.Region = ""
 			}
@@ -389,6 +407,7 @@ Filters:
 	service <service> - Set service filter, all commands will be scoped to this service until reset
 	version <version> - Set version filter, all commands will be scoped to this version until reset
 	host <host> - Set host filter, all commands will be scoped to this host until reset
+	port <port> - Set port filter, all commands will be scoped to this port until reset
 
 `)
 }
