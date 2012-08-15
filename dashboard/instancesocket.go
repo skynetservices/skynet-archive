@@ -14,6 +14,7 @@ type SocketResponse struct {
 
 type SocketRequest struct {
 	Action string
+	Data   interface{}
 }
 
 func instanceSocketRead(ws *websocket.Conn, readChan chan SocketRequest, closeChan chan bool) {
@@ -31,6 +32,10 @@ func instanceSocketRead(ws *websocket.Conn, readChan chan SocketRequest, closeCh
 	}
 }
 
+func sendInstanceList(ws *websocket.Conn, im *client.InstanceMonitor) {
+	// Wait for list to be built, then pull off the notification channel
+}
+
 func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 	closeChan := make(chan bool, 1)
 	readChan := make(chan SocketRequest)
@@ -42,7 +47,6 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 	l := im.Listen(skynet.UUID(), &client.Query{})
 
 	instances := <-l.NotificationChan
-
 	err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: instances})
 
 	if err != nil {
@@ -71,6 +75,31 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 				}
 			case "Heartbeat":
 				// this is here more for documentation purposes, setting the lastHeartbeat on read handles the logic here
+			case "Filter":
+				if request.Data != nil {
+					data := request.Data.(map[string]interface{})
+
+					if r, ok := data["Reset"]; ok {
+						reset := r.(bool)
+						if reset {
+							l.Query.Reset()
+						}
+					}
+
+					if r, ok := data["Registered"]; ok {
+						filter := r.(bool)
+						l.Query.Registered = &filter
+					}
+				}
+
+				im.BuildInstanceList(l)
+
+				instances := <-l.NotificationChan
+				err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: instances})
+
+				if err != nil {
+					closeChan <- true
+				}
 			}
 
 		case notification := <-l.NotificationChan:

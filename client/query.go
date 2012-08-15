@@ -214,7 +214,48 @@ func (q *Query) PathMatches(path string) bool {
 		return false
 	}
 
+	if len(parts) >= 7 {
+		fmt.Println(parts)
+	}
+
 	return true
+}
+
+func (q *Query) ServiceMatches(s service.Service) bool {
+	if q.Service != "" && s.Config.Name != q.Service {
+		return false
+	}
+
+	if q.Version != "" && s.Config.Version != q.Version {
+		return false
+	}
+
+	if q.Region != "" && s.Config.Region != q.Region {
+		return false
+	}
+
+	if q.Host != "" && s.Config.ServiceAddr.IPAddress != q.Host {
+		return false
+	}
+
+	if q.Port != "" && fmt.Sprintf("%d", s.Config.ServiceAddr.Port) != q.Port {
+		return false
+	}
+
+	if q.Registered != nil && s.Registered != *q.Registered {
+		return false
+	}
+
+	return true
+}
+
+func (q *Query) Reset() {
+	q.Service = ""
+	q.Version = ""
+	q.Region = ""
+	q.Host = ""
+	q.Registered = nil
+	q.Port = ""
 }
 
 func (q *Query) getCurrentDoozerRevision() int64 {

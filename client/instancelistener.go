@@ -56,7 +56,7 @@ func NewInstanceListenerNotification(notification InstanceMonitorNotification) (
 }
 
 type InstanceListener struct {
-	query            *Query
+	Query            *Query
 	NotificationChan NotificationChan
 	monitor          *InstanceMonitor
 	id               string
@@ -65,7 +65,7 @@ type InstanceListener struct {
 
 func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceListener {
 	return &InstanceListener{
-		query:            q,
+		Query:            q,
 		monitor:          im,
 		id:               id,
 		NotificationChan: make(NotificationChan, 1),

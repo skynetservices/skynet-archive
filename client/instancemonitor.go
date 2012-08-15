@@ -78,7 +78,7 @@ func (im *InstanceMonitor) mux() {
 			}
 
 			for _, c := range im.clients {
-				if c.query.PathMatches(notification.Path) {
+				if c.Query.ServiceMatches(notification.Service) {
 					c.notify(notification)
 				}
 			}
@@ -90,7 +90,7 @@ func (im *InstanceMonitor) mux() {
 			listener.notifyEmpty()
 
 			for path, s := range im.instances {
-				if listener.query.PathMatches(path) {
+				if listener.Query.ServiceMatches(s) {
 					listener.notify(InstanceMonitorNotification{
 						Path:    path,
 						Service: s,
@@ -102,8 +102,6 @@ func (im *InstanceMonitor) mux() {
 			listener.doneInitializing <- true
 
 		case lid := <-im.listCloseChan:
-			c := im.clients[lid]
-			close(c.NotificationChan)
 			delete(im.clients, lid)
 
 		}
@@ -198,12 +196,16 @@ func (im *InstanceMonitor) monitorInstances() {
 
 }
 
-func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
-	l = NewInstanceListener(im, id, q)
-
+func (im *InstanceMonitor) BuildInstanceList(l *InstanceListener) {
 	im.listChan <- l
 
 	<-l.doneInitializing
+}
+
+func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
+	l = NewInstanceListener(im, id, q)
+
+	im.BuildInstanceList(l)
 
 	return
 }

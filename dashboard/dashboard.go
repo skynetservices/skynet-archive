@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"code.google.com/p/go.net/websocket"
 	"flag"
+	"fmt"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
 	"html/template"
 	"net/http"
-	"fmt"
 	"os"
 )
 
@@ -23,9 +23,6 @@ var searchTmpl *template.Template
 var log skynet.Logger
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	if *debug {
-		log.Item(fmt.Sprintf("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path))
-	}
 	buf := new(bytes.Buffer)
 	indexTmpl.Execute(buf, r.URL.Path)
 	layoutTmpl.Execute(w, template.HTML(buf.String()))
@@ -36,7 +33,7 @@ var session *mgo.Session
 func searchHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if *debug {
-		log.Item(fmt.Sprintf("%s → %s %s", r.RemoteAddr, r.Method, r.URL.Path))
+		log.Item(skynet.LogsearchClient{r.RemoteAddr, r.Method, r.URL.Path})
 	}
 
 	sdata := make([]string, 0)
@@ -44,11 +41,13 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	if session == nil {
 		session, err = mgo.Dial(*mgoserver)
 		if err != nil {
-			log.Item(fmt.Sprintf("searchHandler: can't connect to mongodb server %s: %s\n", *mgoserver, err))
+			log.Item(skynet.MongoError{*mgoserver, "can't connect to server"})
+			// Tell client:
 			// TODO: proper error pages?
 			w.Write([]byte("<html><body>Error establishing MongoDB connection</body></html>"))
 			return
 		}
+		log.Item(skynet.MongoConnected{*mgoserver})
 	}
 
 	var dbs []string
@@ -58,7 +57,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		dbs, err = session.DatabaseNames()
 		if err != nil {
-			log.Println("searchHandler: unable to obtain database list: %s\n", err)
+			log.Item(skynet.MongoError{*mgoserver, fmt.Sprintf("unable to obtain database list: %s", err)})
 			// TODO: proper error pages?
 			w.Write([]byte("<html><body>Unable to obtain database list</body></html>"))
 			return
@@ -69,7 +68,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		ndb := session.DB(db)
 		colls, err := ndb.CollectionNames()
 		if err != nil {
-			log.Item(fmt.Sprintf("searchHandler: can't get collection names for %s: %s", db, err))
+			log.Item(skynet.MongoError{*mgoserver, fmt.Sprintf("unable to obtain collection names: %s", err)})
 			continue
 		}
 		for _, coll := range colls {
@@ -104,7 +103,7 @@ func main() {
 	log = skynet.NewConsoleLogger(os.Stderr)
 
 	if *mgoserver == "" {
-		log.Panic("no mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)")
+		log.Item(skynet.MongoError{"", "no mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)"})
 	}
 
 	DC = Doozer()
