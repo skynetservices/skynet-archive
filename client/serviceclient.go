@@ -43,7 +43,7 @@ func newServiceClient(query *Query, c *Client) (sc *ServiceClient) {
 		cconfig:      c.Config,
 		query:        query,
 		instances:    make(map[string]*servicePool),
-		instancePool: pools.NewResourcePool(func() (pools.Resource, error) { panic("unreachable") }, -1, 0),
+		instancePool: pools.NewSourcelessPool(),
 		muxChan:      make(chan interface{}),
 		timeoutChan:  make(chan timeoutLengths),
 	}
