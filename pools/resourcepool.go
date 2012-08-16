@@ -79,6 +79,7 @@ loop:
 						rp.activeWaits[0].rch <- r
 					}
 				}
+				rp.activeWaits = rp.activeWaits[1:]
 			} else {
 				// if no one is waiting, release it for idling or closing
 				rp.release(rel.r)

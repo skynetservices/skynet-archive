@@ -39,7 +39,7 @@ func newServiceClient(query *Query, c *Client) (sc *ServiceClient) {
 		cconfig:      c.Config,
 		query:        query,
 		instances:    make(map[string]*servicePool),
-		instancePool: pools.NewResourcePool(func() (pools.Resource, error) { panic("unreachable") }, -1, 0),
+		instancePool: pools.NewSourcelessPool(),
 		muxChan:      make(chan interface{}),
 		timeoutChan:  make(chan timeoutLengths),
 	}
@@ -192,8 +192,8 @@ type sendAttempt struct {
 func (c *ServiceClient) attemptSend(attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
 	// first find an available instance
 	spr, _ := c.instancePool.Acquire()
+	defer c.instancePool.Release(spr)
 	sp := spr.(*servicePool)
-	defer c.instancePool.Release(sp)
 
 	// then, get a connection to that instance
 	r, err := sp.pool.Acquire()
