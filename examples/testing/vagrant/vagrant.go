@@ -9,6 +9,9 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
+  "time"
+	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 )
 
 var requests = flag.Int("requests", 10, "number of concurrent requests")
@@ -17,8 +20,23 @@ var doozer = flag.String("doozer", "127.0.0.1:8046", "doozer instance to connect
 var totalRequests = expvar.NewInt("total-requests")
 var successfulRequests = expvar.NewInt("successful-requests")
 
+var testserviceClient *client.ServiceClient
+var fibserviceClient *client.ServiceClient
+
 func main() {
 	flag.Parse()
+
+  doozerConfig := &skynet.DoozerConfig {
+    Uri: *doozer,
+    AutoDiscover: true,
+  }
+
+  clientConfig := &skynet.ClientConfig {
+    DoozerConfig: doozerConfig,
+    ConnectionPoolSize: *requests,
+    IdleTimeout: (2 * time.Minute),
+  }
+
 
 	c := make(chan os.Signal, 1)
 	quitChan := make(chan bool, 1)
@@ -28,10 +46,17 @@ func main() {
 
 	go watchSignals(c, quitChan)
 
+
+	skynetClient := client.NewClient(clientConfig)
+	testserviceClient = skynetClient.GetService("TestService", "", "", "")
+	fibserviceClient = skynetClient.GetService("Fibonacci", "", "", "")
+
 	fmt.Printf("Starting %d Workers\n", *requests)
 	for i := 0; i < *requests; i++ {
 		go worker(requestChan, workerWaitGroup, workerQuitChan)
 	}
+
+  requestNum := 0
 
 	for {
 		select {
@@ -53,7 +78,9 @@ func main() {
 			fmt.Printf("Total Requests: %d, Successful: %d (%d%%), Failed: %d (%d%%)\n", total, successful, percentSuccess, failed, percentFailed)
 			return
 		default:
-			requestChan <- "foo"
+        requestChan <- "testservice"
+
+      requestNum++
 		}
 	}
 }
@@ -67,10 +94,27 @@ func worker(requestChan chan string, waitGroup *sync.WaitGroup, quitChan chan bo
 			waitGroup.Done()
 			return
 
-		case _ = <-requestChan:
+    case service := <-requestChan:
 			totalRequests.Add(1)
-      fmt.Println("sending request")
-			successfulRequests.Add(1)
+
+      switch(service){
+      case "testservice":
+        fmt.Println("Sending TestService request")
+
+        in := map[string]interface{}{
+          "data": "Upcase me!!",
+        }
+
+        out := map[string]interface{}{}
+        err := testserviceClient.Send(nil, "Upcase", in, &out)
+
+        if err == nil && out["data"].(string) == "UPCASE ME!!" {
+          successfulRequests.Add(1)
+        }
+
+      case "fibservice":
+      }
+
 		}
 	}
 }
