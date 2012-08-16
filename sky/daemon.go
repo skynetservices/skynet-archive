@@ -96,7 +96,7 @@ func deployConfig(s *SkynetDaemon, cfg string) (err error) {
 		}
 		servicePath := line[:split]
 		args := strings.TrimSpace(line[split:])
-		s.Deploy(&skynet.RequestInfo{}, M{"service": servicePath, "args": args}, &M{})
+		s.Deploy(&skynet.RequestInfo{}, DeployIn{ServicePath: servicePath, Args: args}, &DeployOut{})
 	}
 	return
 }
@@ -115,25 +115,29 @@ func (sd *SkynetDaemon) Stopped(s *service.Service) {
 	sd.StopAllSubServices(&skynet.RequestInfo{}, StopAllSubServicesIn{}, &StopAllSubServicesOut{})
 }
 
-func (s *SkynetDaemon) Deploy(requestInfo *skynet.RequestInfo, in M, out *M) (err error) {
-	*out = map[string]interface{}{}
-	uuid := skynet.UUID()
-	(*out)["uuid"] = uuid
+type DeployIn struct {
+	ServicePath string
+	Args        string
+}
 
-	servicePath := in["service"].(string)
-	args := in["args"].(string)
+type DeployOut struct {
+	UUID string
+}
+
+func (s *SkynetDaemon) Deploy(requestInfo *skynet.RequestInfo, in DeployIn, out *DeployOut) (err error) {
+	out.UUID = skynet.UUID()
 
 	s.Log.Item(SubserviceDeployment{
-		ServicePath: servicePath,
-		Args:        args,
+		ServicePath: in.ServicePath,
+		Args:        in.Args,
 	})
 
-	ss, err := NewSubService(s.Log, servicePath, args, uuid)
+	ss, err := NewSubService(s.Log, in.ServicePath, in.Args, out.UUID)
 	if err != nil {
 		return
 	}
 	s.serviceLock.Lock()
-	s.Services[uuid] = ss
+	s.Services[out.UUID] = ss
 	s.serviceLock.Unlock()
 	return
 }

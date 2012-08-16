@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
+	"github.com/kballard/go-shellquote"
 	"os"
 	"text/template"
 )
@@ -104,8 +105,27 @@ func remoteList(q *client.Query) {
 	listTemplate.Execute(os.Stdout, response)
 }
 
-func remoteDeploy(q *client.Query, servicePath string, serviceArgs []string) {
+var deployTemplate = template.Must(template.New("").Parse(
+	`Deployed service with UUID {{.UUID}}.
+`))
 
+func remoteDeploy(q *client.Query, servicePath string, serviceArgs []string) {
+	_, service := getDaemonServiceClient(q)
+
+	in := DeployIn{
+		ServicePath: servicePath,
+		Args:        shellquote.Join(serviceArgs...),
+	}
+	var out DeployOut
+
+	err := service.Send(nil, "Deploy", in, &out)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	startTemplate.Execute(os.Stdout, out)
 }
 
 var startTemplate = template.Must(template.New("").Parse(
