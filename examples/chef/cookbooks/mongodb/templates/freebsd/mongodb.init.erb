@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# PROVIDE: <%= @provides %>
+# REQUIRE: NETWORK
+# KEYWORD: shutdown
+#
+# Add the following lines to /etc/rc.conf.local or /etc/rc.conf
+# to enable this service:
+#
+# <%= @provides %>_enable (bool):   Set to NO by default.
+#               Set it to YES to enable mongod.
+#
+# Additional configurable variables:
+# <%= @provides %>_config (path):   Set to /usr/local/etc/mongodb.conf
+#               by default. Additional configuration. You
+#               can also use mongod_flags for additional
+#               command line arguments.
+# <%= @provides %>_dbpath (path):   Set to /var/db/mongodb by default
+# <%= @provides %>_user (username): Set to "mongodb" by default
+
+. /etc/rc.subr
+
+name="<%= @provides %>"
+rcvar=${name}_enable
+
+command=/usr/local/bin/mongod
+
+load_rc_config $name
+
+: ${<%= @provides %>_enable="NO"}
+: ${<%= @provides %>_config="/usr/local/etc/mongodb.conf"}
+: ${<%= @provides %>_dbpath="/var/db/mongodb"}
+: ${<%= @provides %>_user="mongodb"}
+: ${<%= @provides %>_command_args=""}
+
+if [ "x$<%= @provides %>_command_args" = "x" ]
+then
+  command_args="-f $<%= @provides %>_config --dbpath $<%= @provides %>_dbpath --logappend --logpath $<%= @provides %>_dbpath/<%= @provides %>.log --fork"
+else
+  command_args="$<%= @provides %>_command_args"
+fi
+
+required_dirs=${<%= @provides %>_dbpath}
+
+run_rc_command "$1"
