@@ -55,6 +55,20 @@ func Remote(q *client.Query, args []string) {
 			return
 		}
 		remoteStopAll(q)
+	case "restart":
+		if len(args) != 2 {
+			fmt.Printf("Must specify a service UUID")
+			remoteHelp()
+			return
+		}
+		uuid := args[1]
+		remoteRestart(q, uuid)
+	case "restartall":
+		if len(args) != 1 {
+			remoteHelp()
+			return
+		}
+		remoteRestartAll(q)
 	case "help":
 		remoteHelp()
 	default:
@@ -164,12 +178,6 @@ func remoteStartAll(q *client.Query) {
 		fmt.Println(err)
 		return
 	}
-	count := 0
-	for _, start := range out.Starts {
-		if start.Ok {
-			count++
-		}
-	}
 
 	startallTemplate.Execute(os.Stdout, out)
 }
@@ -214,6 +222,45 @@ func remoteStopAll(q *client.Query) {
 	stopallTemplate.Execute(os.Stdout, out)
 }
 
+var restartTemplate = template.Must(template.New("").Parse(
+	`Restarted service with UUID {{.UUID}}.
+`))
+
+func remoteRestart(q *client.Query, uuid string) {
+	_, service := getDaemonServiceClient(q)
+
+	// This on the other hand will fail if it can't find a service to connect to
+	var in = RestartSubServiceIn{UUID: uuid}
+	var out RestartSubServiceOut
+	err := service.Send(nil, "RestartSubService", in, &out)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	restartTemplate.Execute(os.Stdout, out)
+}
+
+var restartallTemplate = template.Must(template.New("").Parse(
+	`Restarted {{len .Restarts}} services.
+{{range .Restarts}} {{.UUID}}
+{{end}}`))
+
+func remoteRestartAll(q *client.Query) {
+	_, service := getDaemonServiceClient(q)
+	var in RestartAllSubServicesIn
+	var out RestartAllSubServicesOut
+	err := service.Send(nil, "RestartAllSubServices", in, &out)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	restartallTemplate.Execute(os.Stdout, out)
+}
+
 func remoteHelp() {
 	fmt.Println(`remote commands:
 	help
@@ -233,6 +280,7 @@ func remoteHelp() {
 		- Stop all services.
 	restart [uuid]
 		- Restart the service assined to the given uuid.
-	
+	restartall
+		- Restart all services.
 `)
 }

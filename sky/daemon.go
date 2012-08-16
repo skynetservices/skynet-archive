@@ -293,14 +293,49 @@ func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in StopSu
 	return
 }
 
-func (s *SkynetDaemon) RestartSubService(requestInfo *skynet.RequestInfo, in M, out *M) (err error) {
-	*out = map[string]interface{}{}
-	uuid, ok := in.String("uuid")
-	if !ok {
-		err = errors.New("No UUID provided")
+type RestartSubServiceIn struct {
+	UUID string
+}
+
+type RestartSubServiceOut struct {
+	UUID string
+}
+
+func (s *SkynetDaemon) RestartSubService(requestInfo *skynet.RequestInfo, in RestartSubServiceIn, out *RestartSubServiceOut) (err error) {
+	ss := s.getSubService(in.UUID)
+	ss.Restart()
+	out.UUID = in.UUID
+	return
+}
+
+type RestartAllSubServicesIn struct {
+}
+
+type RestartAllSubServicesOut struct {
+	Count    int
+	Restarts []RestartSubServiceOut
+}
+
+func (s *SkynetDaemon) RestartAllSubServices(requestInfo *skynet.RequestInfo, in RestartAllSubServicesIn, out *RestartAllSubServicesOut) (err error) {
+	var uuids []string
+	s.serviceLock.Lock()
+	for uuid := range s.Services {
+		uuids = append(uuids, uuid)
+	}
+	s.serviceLock.Unlock()
+
+	if len(uuids) == 0 {
+		err = errors.New("No services deployed")
 		return
 	}
-	ss := s.getSubService(uuid)
-	ss.Restart()
+
+	out.Restarts = make([]RestartSubServiceOut, len(uuids))
+
+	for i, uuid := range uuids {
+		err = s.RestartSubService(requestInfo, RestartSubServiceIn{UUID: uuid}, &out.Restarts[i])
+		if err != nil {
+			return
+		}
+	}
 	return
 }
