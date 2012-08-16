@@ -4,14 +4,14 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
+	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"os"
 	"os/signal"
 	"strconv"
 	"sync"
 	"syscall"
-  "time"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/client"
+	"time"
 )
 
 var requests = flag.Int("requests", 10, "number of concurrent requests")
@@ -26,26 +26,24 @@ var fibserviceClient *client.ServiceClient
 func main() {
 	flag.Parse()
 
-  doozerConfig := &skynet.DoozerConfig {
-    Uri: *doozer,
-    AutoDiscover: true,
-  }
+	doozerConfig := &skynet.DoozerConfig{
+		Uri:          *doozer,
+		AutoDiscover: true,
+	}
 
-  clientConfig := &skynet.ClientConfig {
-    DoozerConfig: doozerConfig,
-    ConnectionPoolSize: *requests,
-    IdleTimeout: (2 * time.Minute),
-  }
-
+	clientConfig := &skynet.ClientConfig{
+		DoozerConfig:       doozerConfig,
+		ConnectionPoolSize: *requests,
+		IdleTimeout:        (2 * time.Minute),
+	}
 
 	c := make(chan os.Signal, 1)
 	quitChan := make(chan bool, 1)
 	requestChan := make(chan string, *requests*3)
 	workerQuitChan := make(chan bool, 1)
-  workerWaitGroup := new(sync.WaitGroup)
+	workerWaitGroup := new(sync.WaitGroup)
 
 	go watchSignals(c, quitChan)
-
 
 	skynetClient := client.NewClient(clientConfig)
 	testserviceClient = skynetClient.GetService("TestService", "", "", "")
@@ -56,7 +54,7 @@ func main() {
 		go worker(requestChan, workerWaitGroup, workerQuitChan)
 	}
 
-  requestNum := 0
+	requestNum := 0
 
 	for {
 		select {
@@ -78,15 +76,15 @@ func main() {
 			fmt.Printf("Total Requests: %d, Successful: %d (%d%%), Failed: %d (%d%%)\n", total, successful, percentSuccess, failed, percentFailed)
 			return
 		default:
-        requestChan <- "testservice"
+			requestChan <- "testservice"
 
-      requestNum++
+			requestNum++
 		}
 	}
 }
 
 func worker(requestChan chan string, waitGroup *sync.WaitGroup, quitChan chan bool) {
-  waitGroup.Add(1)
+	waitGroup.Add(1)
 
 	for {
 		select {
@@ -94,26 +92,26 @@ func worker(requestChan chan string, waitGroup *sync.WaitGroup, quitChan chan bo
 			waitGroup.Done()
 			return
 
-    case service := <-requestChan:
+		case service := <-requestChan:
 			totalRequests.Add(1)
 
-      switch(service){
-      case "testservice":
-        fmt.Println("Sending TestService request")
+			switch service {
+			case "testservice":
+				fmt.Println("Sending TestService request")
 
-        in := map[string]interface{}{
-          "data": "Upcase me!!",
-        }
+				in := map[string]interface{}{
+					"data": "Upcase me!!",
+				}
 
-        out := map[string]interface{}{}
-        err := testserviceClient.Send(nil, "Upcase", in, &out)
+				out := map[string]interface{}{}
+				err := testserviceClient.Send(nil, "Upcase", in, &out)
 
-        if err == nil && out["data"].(string) == "UPCASE ME!!" {
-          successfulRequests.Add(1)
-        }
+				if err == nil && out["data"].(string) == "UPCASE ME!!" {
+					successfulRequests.Add(1)
+				}
 
-      case "fibservice":
-      }
+			case "fibservice":
+			}
 
 		}
 	}
