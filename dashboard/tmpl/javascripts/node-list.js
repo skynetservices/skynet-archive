@@ -15,6 +15,12 @@ jQuery(document).ready(function ($) {
 
 
     var Instance = Backbone.Model.extend({
+      initialize: function(){
+        this.on('change', function(i){
+          $("#" + i.htmlId()).replaceWith(i.contentHTML());
+        });
+      },
+
       contentHTML: function(){
         return Mustache.to_html(Templates.instance, this);
       },
@@ -25,7 +31,17 @@ jQuery(document).ready(function ($) {
     });
 
     var InstanceCollection = Backbone.Collection.extend({
-      model: Instance
+      model: Instance,
+
+      initialize: function(models, options){
+        this.on('add', function(instance){
+          $("#" + instance.get('node').regionHtmlId() + "-" + instance.get('node').htmlId() + " table tbody").append(instance.contentHTML());
+        });
+
+        this.on('remove', function(i){
+          $("#" + i.htmlId()).remove();
+        });
+      }
     });
 
     var Node = Backbone.Model.extend({
@@ -99,6 +115,16 @@ jQuery(document).ready(function ($) {
 
     var NodeCollection = Backbone.Collection.extend({
       model: Node,
+      initialize: function(models, options){
+        this.on('add', function(node){
+          $("#region-" + node.get('region').htmlId() + "Tab").append(node.contentHTML());
+
+        });
+
+        this.on('remove', function(node){
+          $("#" + node.get('region').htmlId() + "-" + node.htmlId()).remove();
+        });
+      }
     });
 
     var Region = Backbone.Model.extend({
@@ -169,6 +195,22 @@ jQuery(document).ready(function ($) {
     var RegionCollection = Backbone.Collection.extend({
         model: Region,
 
+        initialize: function(models, options){
+          this.on('add', function(region){
+            $("#region-tabs").append(region.tabHTML());
+            $("#instance-list").append(region.contentHTML());
+          });
+
+          this.on('remove', function(region){
+            if($("#region-" + region.htmlId() + "-tab").hasClass('active')){
+                activateTab($('#region-tabs dd').first());
+            }
+
+            $("#region-" + region.htmlId() + "-tab").remove();
+            $("#region-" + region.htmlId() + "Tab").remove();
+          });
+        },
+
         render: function(){
           var tabHTML = "";
           var contentHTML = "";
@@ -186,42 +228,6 @@ jQuery(document).ready(function ($) {
     });
 
     var regions = new RegionCollection();
-
-    regions.on('add', function(region){
-      $("#region-tabs").append(region.tabHTML());
-      $("#instance-list").append(region.contentHTML());
-
-      region.attributes.nodes.on('add', function(node){
-        $("#region-" + node.get('region').htmlId() + "Tab").append(node.contentHTML());
-
-        node.attributes.instances.on('add', function(instance){
-          $("#" + instance.get('node').regionHtmlId() + "-" + instance.get('node').htmlId() + " table tbody").append(instance.contentHTML());
-
-
-          instance.on('remove', function(i){
-            $("#" + i.htmlId()).remove();
-          });
-
-          instance.on('change', function(i){
-            $("#" + i.htmlId()).replaceWith(i.contentHTML());
-          });
-        });
-      });
-
-
-      region.attributes.nodes.on('remove', function(node){
-        $("#" + node.get('region').htmlId() + "-" + node.htmlId()).remove();
-      })
-    });
-
-    regions.on('remove', function(region){
-      if($("#region-" + region.htmlId() + "-tab").hasClass('active')){
-          activateTab($('#region-tabs dd').first());
-      }
-
-      $("#region-" + region.htmlId() + "-tab").remove();
-      $("#region-" + region.htmlId() + "Tab").remove();
-    });
 
     function findOrCreateRegion(regionName, silent){
       var region = regions.get(regionName);
