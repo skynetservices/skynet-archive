@@ -85,6 +85,7 @@ func watchSignals(c chan os.Signal, quitChan chan bool) {
 			// Trap signals for clean shutdown
 			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
 				quitChan <- true
+				return
 			}
 		}
 	}
