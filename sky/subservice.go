@@ -70,31 +70,35 @@ func (ss *SubService) Deregister() {
 	// TODO: connect to admin port or remove this method
 }
 
-func (ss *SubService) Stop() {
+func (ss *SubService) Stop() bool {
 	ss.startMutex.Lock()
 	defer ss.startMutex.Unlock()
 
 	if !ss.running {
-		return
+		return false
 	}
+	ss.running = false
 
 	ss.Deregister()
 	// halt the rerunner so we can kill the processes without it relaunching
 	ss.rerunChan <- false
+	return true
 }
 
-func (ss *SubService) Start() {
+func (ss *SubService) Start() bool {
 	ss.startMutex.Lock()
 	defer ss.startMutex.Unlock()
 
 	if ss.running {
-		return
+		return false
 	}
+	ss.running = true
 	ss.rerunChan = make(chan bool)
 
 	go ss.rerunner(ss.rerunChan)
 	// send a signal to launch the service
 	ss.rerunChan <- true
+	return true
 }
 
 func (ss *SubService) Restart() {
