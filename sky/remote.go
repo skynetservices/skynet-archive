@@ -125,7 +125,7 @@ func remoteDeploy(q *client.Query, servicePath string, serviceArgs []string) {
 		return
 	}
 
-	startTemplate.Execute(os.Stdout, out)
+	deployTemplate.Execute(os.Stdout, out)
 }
 
 var startTemplate = template.Must(template.New("").Parse(
