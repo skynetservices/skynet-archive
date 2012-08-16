@@ -105,7 +105,7 @@ func main() {
 		config.Name = "Fibonacci"
 	}
 
-	if config.Version == "" {
+	if config.Version == "unknown" {
 		config.Version = "1"
 	}
 
