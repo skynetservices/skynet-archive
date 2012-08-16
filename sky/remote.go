@@ -5,6 +5,7 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
 	"os"
+	"text/template"
 )
 
 // Remote() uses the SkynetDaemon service to remotely manage services.
@@ -60,20 +61,28 @@ func getDaemonServiceClient(q *client.Query) (c *client.Client, service *client.
 	return
 }
 
+var listTemplate = template.Must(template.New("").Parse(
+	`Services deployed on this daemon:{{range .Services}}
+UUID: {{.UUID}}
+ {{.ServicePath}}
+ {{.Args}}
+ {{if .Running}}RUNNING{{else}}HALTED{{end}}
+{{end}}
+`))
+
 func remoteList(q *client.Query) {
 	_, service := getDaemonServiceClient(q)
 
 	// This on the other hand will fail if it can't find a service to connect to
-	var x struct{}
-	ret := map[string]interface{}{}
-	err := service.Send(nil, "ListSubServices", x, ret)
+	var response ListSubServicesOut
+	err := service.Send(nil, "ListSubServices", ListSubServicesIn{}, &response)
 
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Println(ret)
+	listTemplate.Execute(os.Stdout, response)
 }
 
 func remoteDeploy(q *client.Query, servicePath string, serviceArgs []string) {

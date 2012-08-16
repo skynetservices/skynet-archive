@@ -156,8 +156,30 @@ func (m M) String(key string) (val string, ok bool) {
 	return
 }
 
-func (s *SkynetDaemon) ListSubServices(requestInfo *skynet.RequestInfo, in M, out M) (err error) {
-	out["Services"] = s.Services
+type ListSubServicesIn struct {
+}
+
+type ListSubServicesOut struct {
+	Services map[string]SubServiceInfo
+}
+
+type SubServiceInfo struct {
+	UUID        string
+	ServicePath string
+	Args        string
+	Running     bool
+}
+
+func (s *SkynetDaemon) ListSubServices(requestInfo *skynet.RequestInfo, in ListSubServicesIn, out *ListSubServicesOut) (err error) {
+	out.Services = make(map[string]SubServiceInfo)
+	for uuid, ss := range s.Services {
+		out.Services[uuid] = SubServiceInfo{
+			UUID:        uuid,
+			ServicePath: ss.ServicePath,
+			Args:        ss.Args,
+			Running:     ss.running,
+		}
+	}
 	return
 }
 

@@ -77,6 +77,7 @@ func (ss *SubService) Stop() {
 	if !ss.running {
 		return
 	}
+	ss.running = false
 
 	ss.Deregister()
 	// halt the rerunner so we can kill the processes without it relaunching
@@ -90,6 +91,7 @@ func (ss *SubService) Start() {
 	if ss.running {
 		return
 	}
+	ss.running = true
 	ss.rerunChan = make(chan bool)
 
 	go ss.rerunner(ss.rerunChan)
