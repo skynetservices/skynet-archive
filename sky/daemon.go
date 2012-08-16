@@ -192,6 +192,7 @@ type StopAllSubServicesIn struct {
 }
 
 type StopAllSubServicesOut struct {
+	Count int
 	Stops []StopSubServiceOut
 }
 
@@ -210,6 +211,9 @@ func (s *SkynetDaemon) StopAllSubServices(requestInfo *skynet.RequestInfo, in St
 		if err != nil {
 			return
 		}
+		if out.Stops[i].Ok {
+			out.Count++
+		}
 	}
 	return
 }
@@ -218,6 +222,7 @@ type StartAllSubServicesIn struct {
 }
 
 type StartAllSubServicesOut struct {
+	Count  int
 	Starts []StartSubServiceOut
 }
 
@@ -240,6 +245,9 @@ func (s *SkynetDaemon) StartAllSubServices(requestInfo *skynet.RequestInfo, in S
 		err = s.StartSubService(requestInfo, StartSubServiceIn{UUID: uuid}, &out.Starts[i])
 		if err != nil {
 			return
+		}
+		if out.Starts[i].Ok {
+			out.Count++
 		}
 	}
 	return

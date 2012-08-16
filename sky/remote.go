@@ -108,6 +108,11 @@ func remoteDeploy(q *client.Query, servicePath string, serviceArgs []string) {
 
 }
 
+var startTemplate = template.Must(template.New("").Parse(
+	`{{if .Ok}}Started service with UUID {{.UUID}}.
+{{else}}Service with UUID {{.UUID}} is already running.
+{{end}}`))
+
 func remoteStart(q *client.Query, uuid string) {
 	_, service := getDaemonServiceClient(q)
 
@@ -121,12 +126,13 @@ func remoteStart(q *client.Query, uuid string) {
 		return
 	}
 
-	if out.Ok {
-		fmt.Printf("Started service with UUID %s.\n", out.UUID)
-	} else {
-		fmt.Printf("Service with UUID %s is already running.\n", out.UUID)
-	}
+	startTemplate.Execute(os.Stdout, out)
 }
+
+var startallTemplate = template.Must(template.New("").Parse(
+	`Started {{.Count}} services.
+{{range .Starts}} {{.UUID}}: {{if .Ok}}STARTED{{else}}ALREADY STARTED{{end}}
+{{end}}`))
 
 func remoteStartAll(q *client.Query) {
 	_, service := getDaemonServiceClient(q)
@@ -145,15 +151,13 @@ func remoteStartAll(q *client.Query) {
 		}
 	}
 
-	fmt.Printf("Started %d services.\n", count)
-	for _, start := range out.Starts {
-		running := "STARTED"
-		if !start.Ok {
-			running = "RUNNING"
-		}
-		fmt.Printf(" %s: %s\n", start.UUID, running)
-	}
+	startallTemplate.Execute(os.Stdout, out)
 }
+
+var stopTemplate = template.Must(template.New("").Parse(
+	`{{if .Ok}}Stopped service with UUID {{.UUID}}.
+{{else}}Service with UUID {{.UUID}} is already stopped.
+{{end}}`))
 
 func remoteStop(q *client.Query, uuid string) {
 	_, service := getDaemonServiceClient(q)
@@ -168,12 +172,13 @@ func remoteStop(q *client.Query, uuid string) {
 		return
 	}
 
-	if out.Ok {
-		fmt.Printf("Stopped service with UUID %s.\n", out.UUID)
-	} else {
-		fmt.Printf("Service with UUID %s is already halted.\n", out.UUID)
-	}
+	stopTemplate.Execute(os.Stdout, out)
 }
+
+var stopallTemplate = template.Must(template.New("").Parse(
+	`Stopped {{.Count}} services.
+{{range .Stops}} {{.UUID}}: {{if .Ok}}STOPPED{{else}}ALREADY STOPPED{{end}}
+{{end}}`))
 
 func remoteStopAll(q *client.Query) {
 	_, service := getDaemonServiceClient(q)
@@ -185,21 +190,8 @@ func remoteStopAll(q *client.Query) {
 		fmt.Println(err)
 		return
 	}
-	count := 0
-	for _, stop := range out.Stops {
-		if stop.Ok {
-			count++
-		}
-	}
 
-	fmt.Printf("Stopped %d services.\n", count)
-	for _, stop := range out.Stops {
-		stopped := "STOPPED"
-		if !stop.Ok {
-			stopped = "HALTED"
-		}
-		fmt.Printf(" %s: %s\n", stop.UUID, stopped)
-	}
+	stopallTemplate.Execute(os.Stdout, out)
 }
 
 func remoteHelp() {
