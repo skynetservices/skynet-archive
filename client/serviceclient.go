@@ -10,7 +10,11 @@ import (
 )
 
 type serviceError struct {
-	error
+	msg string
+}
+
+func (se serviceError) Error() string {
+	return se.msg
 }
 
 type ServiceClient struct {
@@ -175,8 +179,8 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.R
 		c.Log.Item(err)
 	}
 
-	if sout.Err != nil {
-		err = serviceError{sout.Err}
+	if sout.ErrString != "" {
+		err = serviceError{sout.ErrString}
 	}
 
 	result = sout.Out
@@ -270,7 +274,10 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 				}
 			}
 
-			err = bson.Unmarshal(attempt.result, out)
+			unmarshallerr := bson.Unmarshal(attempt.result, out)
+			if unmarshallerr != nil {
+				err = unmarshallerr
+			}
 			return
 		}
 	}

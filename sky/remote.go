@@ -93,16 +93,20 @@ func remoteStart(q *client.Query, uuid string) {
 	_, service := getDaemonServiceClient(q)
 
 	// This on the other hand will fail if it can't find a service to connect to
-	var in = M{"uuid": uuid}
-	var out = M{}
-	err := service.Send(nil, "StartSubService", in, out)
+	var in = StartSubServiceIn{UUID: uuid}
+	var out StartSubServiceOut
+	err := service.Send(nil, "StartSubService", in, &out)
 
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Println(out)
+	if out.Ok {
+		fmt.Printf("Started subservice with UUID %s.\n", out.UUID)
+	} else {
+		fmt.Printf("Subservice with UUID %s is already running.\n", out.UUID)
+	}
 }
 
 func remoteHelp() {

@@ -84,12 +84,12 @@ func (ss *SubService) Stop() {
 	ss.rerunChan <- false
 }
 
-func (ss *SubService) Start() {
+func (ss *SubService) Start() bool {
 	ss.startMutex.Lock()
 	defer ss.startMutex.Unlock()
 
 	if ss.running {
-		return
+		return false
 	}
 	ss.running = true
 	ss.rerunChan = make(chan bool)
@@ -97,6 +97,7 @@ func (ss *SubService) Start() {
 	go ss.rerunner(ss.rerunChan)
 	// send a signal to launch the service
 	ss.rerunChan <- true
+	return true
 }
 
 func (ss *SubService) Restart() {

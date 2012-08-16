@@ -160,7 +160,8 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 	}
 
 	erri := returns[0].Interface()
-	out.Err, _ = erri.(error)
+	rerr, _ := erri.(error)
+	out.ErrString = rerr.Error()
 
 	return
 }
@@ -172,6 +173,6 @@ type ServiceRPCIn struct {
 }
 
 type ServiceRPCOut struct {
-	Out []byte
-	Err error
+	Out       []byte
+	ErrString string
 }

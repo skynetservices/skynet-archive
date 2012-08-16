@@ -209,7 +209,7 @@ func (s *SkynetDaemon) StartAllSubServices(requestInfo *skynet.RequestInfo, in M
 	}
 	s.serviceLock.Unlock()
 	for _, uuid := range uuids {
-		err = s.StartSubService(requestInfo, M{"uuid": uuid}, &M{})
+		err = s.StartSubService(requestInfo, StartSubServiceIn{UUID: uuid}, nil)
 		if err != nil {
 			return
 		}
@@ -217,19 +217,22 @@ func (s *SkynetDaemon) StartAllSubServices(requestInfo *skynet.RequestInfo, in M
 	return
 }
 
-func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in M, out *M) (err error) {
-	*out = map[string]interface{}{}
-	uuid, ok := in.String("uuid")
-	if !ok {
-		err = errors.New("No UUID provided")
-		return
-	}
+type StartSubServiceIn struct {
+	UUID string
+}
 
-	ss := s.getSubService(uuid)
+type StartSubServiceOut struct {
+	Ok   bool
+	UUID string
+}
+
+func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in StartSubServiceIn, out *StartSubServiceOut) (err error) {
+	ss := s.getSubService(in.UUID)
 	if ss != nil {
-		ss.Start()
+		out.Ok = ss.Start()
+		out.UUID = in.UUID
 	} else {
-		err = errors.New(fmt.Sprintf("No such service UUID %q", uuid))
+		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
 	}
 	return
 }
