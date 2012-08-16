@@ -213,10 +213,6 @@ func remoteHelp() {
 		- Stop all services.
 	restart [uuid]
 		- Restart the service assined to the given uuid.
-	register [uuid]
-		- Register the service assined to the given uuid.
-	deregister [uuid]
-		- Deregister the service assined to the given uuid.
 	
 `)
 }
