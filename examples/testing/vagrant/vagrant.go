@@ -16,7 +16,6 @@ var doozer = flag.String("doozer", "127.0.0.1:8046", "doozer instance to connect
 
 var totalRequests = expvar.NewInt("total-requests")
 var successfulRequests = expvar.NewInt("successful-requests")
-var failedRequests = expvar.NewInt("failed-requests")
 
 func main() {
 	flag.Parse()
@@ -24,30 +23,29 @@ func main() {
 	c := make(chan os.Signal, 1)
 	quitChan := make(chan bool, 1)
 	requestChan := make(chan string, *requests*3)
-	workerQuitChan := make(chan *sync.WaitGroup, *requests)
+	workerQuitChan := make(chan bool, 1)
+  workerWaitGroup := new(sync.WaitGroup)
 
 	go watchSignals(c, quitChan)
 
 	fmt.Printf("Starting %d Workers\n", *requests)
 	for i := 0; i < *requests; i++ {
-		go worker(requestChan, workerQuitChan)
+		go worker(requestChan, workerWaitGroup, workerQuitChan)
 	}
 
 	for {
 		select {
 		case <-quitChan:
-			wg := new(sync.WaitGroup)
-
 			for i := 0; i < *requests; i++ {
-				wg.Add(1)
-				workerQuitChan <- wg
+				workerQuitChan <- true
 			}
 
-			wg.Wait()
+			workerWaitGroup.Wait()
 
 			successful, _ := strconv.Atoi(successfulRequests.String())
-			failed, _ := strconv.Atoi(failedRequests.String())
 			total, _ := strconv.Atoi(totalRequests.String())
+
+			failed := total - successful
 
 			percentSuccess := int(float64(successful) / float64(total) * 100)
 			percentFailed := int(float64(failed) / float64(total) * 100)
@@ -55,20 +53,23 @@ func main() {
 			fmt.Printf("Total Requests: %d, Successful: %d (%d%%), Failed: %d (%d%%)\n", total, successful, percentSuccess, failed, percentFailed)
 			return
 		default:
-			totalRequests.Add(1)
 			requestChan <- "foo"
 		}
 	}
 }
 
-func worker(requestChan chan string, quitChan chan *sync.WaitGroup) {
+func worker(requestChan chan string, waitGroup *sync.WaitGroup, quitChan chan bool) {
+  waitGroup.Add(1)
+
 	for {
 		select {
-		case wg := <-quitChan:
-			wg.Done()
+		case <-quitChan:
+			waitGroup.Done()
 			return
 
 		case _ = <-requestChan:
+			totalRequests.Add(1)
+      fmt.Println("sending request")
 			successfulRequests.Add(1)
 		}
 	}
