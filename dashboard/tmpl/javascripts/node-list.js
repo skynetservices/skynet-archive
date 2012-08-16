@@ -36,10 +36,14 @@ jQuery(document).ready(function ($) {
       initialize: function(models, options){
         this.on('add', function(instance){
           $("#" + instance.get('node').regionHtmlId() + "-" + instance.get('node').htmlId() + " table tbody").append(instance.contentHTML());
+
+          $("#" + instance.htmlId()).effect("highlight", {}, 600);
         });
 
         this.on('remove', function(i){
-          $("#" + i.htmlId()).remove();
+          $("#" + i.htmlId()).effect("highlight", {}, 600, function(){
+            $("#" + i.htmlId()).remove();
+          });
         });
       }
     });
@@ -118,11 +122,13 @@ jQuery(document).ready(function ($) {
       initialize: function(models, options){
         this.on('add', function(node){
           $("#region-" + node.get('region').htmlId() + "Tab").append(node.contentHTML());
-
+          $("#" + node.get('region').htmlId() + "-" + node.htmlId()).effect("highlight", {}, 600);
         });
 
         this.on('remove', function(node){
-          $("#" + node.get('region').htmlId() + "-" + node.htmlId()).remove();
+          $("#" + node.get('region').htmlId() + "-" + node.htmlId()).effect("highlight", {}, 600, function(){
+            $("#" + node.get('region').htmlId() + "-" + node.htmlId()).remove();
+          });
         });
       }
     });
@@ -199,6 +205,8 @@ jQuery(document).ready(function ($) {
           this.on('add', function(region){
             $("#region-tabs").append(region.tabHTML());
             $("#instance-list").append(region.contentHTML());
+
+            $("#region-" + region.htmlId() + "-tab").effect("highlight", {}, 600);
           });
 
           this.on('remove', function(region){
@@ -206,8 +214,10 @@ jQuery(document).ready(function ($) {
                 activateTab($('#region-tabs dd').first());
             }
 
-            $("#region-" + region.htmlId() + "-tab").remove();
-            $("#region-" + region.htmlId() + "Tab").remove();
+            $("#region-" + region.htmlId() + "-tab").effect("highlight", {}, 600, function(){
+              $("#region-" + region.htmlId() + "-tab").remove();
+              $("#region-" + region.htmlId() + "Tab").remove();
+            });
           });
         },
 
