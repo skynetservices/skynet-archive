@@ -49,8 +49,8 @@ func main() {
 			failed, _ := strconv.Atoi(failedRequests.String())
 			total, _ := strconv.Atoi(totalRequests.String())
 
-			percentSuccess := (successful / total) * 100
-			percentFailed := (failed / total) * 100
+			percentSuccess := int(float64(successful) / float64(total) * 100)
+			percentFailed := int(float64(failed) / float64(total) * 100)
 
 			fmt.Printf("Total Requests: %d, Successful: %d (%d%%), Failed: %d (%d%%)\n", total, successful, percentSuccess, failed, percentFailed)
 			return
@@ -66,9 +66,9 @@ func worker(requestChan chan string, quitChan chan *sync.WaitGroup) {
 		select {
 		case wg := <-quitChan:
 			wg.Done()
-			break
+			return
 
-    case _ = <-requestChan:
+		case _ = <-requestChan:
 			successfulRequests.Add(1)
 		}
 	}
