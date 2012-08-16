@@ -160,8 +160,10 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 	}
 
 	erri := returns[0].Interface()
-	rerr, _ := erri.(error)
-	out.ErrString = rerr.Error()
+	if erri != nil {
+		rerr, _ := erri.(error)
+		out.ErrString = rerr.Error()
+	}
 
 	return
 }
