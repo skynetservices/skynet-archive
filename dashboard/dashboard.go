@@ -101,10 +101,15 @@ func main() {
 	flag.Parse()
 
 	log = skynet.NewConsoleLogger(os.Stderr)
-
 	if *mgoserver == "" {
-		log.Item(skynet.MongoError{"", "no mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)"})
+		log.Item(skynet.MongoError{"", "No mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)"})
 	}
+
+	mlogger, err := skynet.NewMongoLogger(*mgoserver, "skynet", "log", skynet.UUID())
+	if err != nil {
+		log.Item(skynet.MongoError{Addr: "Could not connect to mongo db for logging", Err: err.Error()})
+	}
+	log = skynet.NewMultiLogger(mlogger, log)
 
 	DC = Doozer()
 
