@@ -5,7 +5,6 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
 	"github.com/bketelsen/skynet/examples/testing/fibonacci"
-	"os"
 	"strconv"
 )
 
