@@ -94,14 +94,14 @@ func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
 }
 
 type ServiceConfig struct {
-	Log          Logger `json:"-"`
-	UUID         string
-	Name         string
-	Version      string
-	Region       string
-	ServiceAddr  *BindAddr
-	AdminAddr    *BindAddr
-	DoozerConfig *DoozerConfig `json:"-"`
+	Log                  Logger `json:"-"`
+	UUID                 string
+	Name                 string
+	Version              string
+	Region               string
+	ServiceAddr          *BindAddr
+	AdminAddr            *BindAddr
+	DoozerConfig         *DoozerConfig `json:"-"`
 	DoozerUpdateInterval time.Duration `json:"-"`
 }
 
@@ -163,6 +163,7 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 	flagset.StringVar(&config.UUID, "uuid", UUID(), "UUID for this service")
 	flagset.StringVar(&config.Region, "region", GetDefaultEnvVar("SKYNET_REGION", "unknown"), "region service is located in")
 	flagset.StringVar(&config.Version, "version", "unknown", "version of service")
+	flagset.DurationVar(&config.DoozerUpdateInterval, "dzupdate", 5e9, "ns to wait before sending the next status update")
 
 	if len(argv) == 0 {
 		argv = os.Args[1:]
