@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bketelsen/skynet"
-	"launchpad.net/mgo/v2/bson"
+	"labix.org/v2/mgo/bson"
 	"reflect"
 	"time"
 )

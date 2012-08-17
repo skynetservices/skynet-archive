@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"launchpad.net/mgo/v2/bson"
+	"labix.org/v2/mgo/bson"
 )
 
 type Encoder struct {
