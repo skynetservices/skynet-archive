@@ -5,7 +5,7 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/pools"
 	"github.com/bketelsen/skynet/service"
-	"launchpad.net/mgo/v2/bson"
+	"labix.org/v2/mgo/bson"
 	"time"
 )
 
