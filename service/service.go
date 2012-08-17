@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
-  "time"
+	"time"
 )
 
 // TODO: Better error handling, should gracefully fail to startup if it can't connect to doozer
@@ -25,17 +25,21 @@ type ServiceDelegate interface {
 	Unregistered(s *Service)
 }
 
+type ServiceStatistics struct {
+	Clients             int
+	StartTime           string
+	LastRequest         string
+	RequestsServed      int64
+	AverageResponseTime int64
+}
+
 type Service struct {
 	Config     *skynet.ServiceConfig
 	DoozerConn *skynet.DoozerConnection `json:"-"`
 	Registered bool
-  Clients int
-  StartTime  string
-  LastRequest string
-  RequestsServed int64
-  AverageResponseTime int64
+	Stats      ServiceStatistics
 
-	doneChan   chan bool `json:"-"`
+	doneChan chan bool `json:"-"`
 
 	Log skynet.Logger `json:"-"`
 
@@ -54,8 +58,8 @@ type Service struct {
 	doozerChan   chan interface{} `json:"-"`
 	doozerWaiter sync.WaitGroup   `json:"-"`
 
-	rpcListener *net.TCPListener `json:"-"`
-	updateTicker *time.Ticker `json:"-"`
+	rpcListener  *net.TCPListener `json:"-"`
+	updateTicker *time.Ticker     `json:"-"`
 }
 
 func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
@@ -66,12 +70,15 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		Config:         c,
 		Delegate:       sd,
 		Log:            c.Log,
-    StartTime:      time.Now().Format("2006-01-02T15:04:05Z-0700"),
 		methods:        make(map[string]reflect.Value),
 		connectionChan: make(chan *net.TCPConn),
 		registeredChan: make(chan bool),
 		doozerChan:     make(chan interface{}),
-    updateTicker:   time.NewTicker(c.DoozerUpdateInterval),
+		updateTicker:   time.NewTicker(c.DoozerUpdateInterval),
+
+		Stats: ServiceStatistics{
+			StartTime: time.Now().Format("2006-01-02T15:04:05Z-0700"),
+		},
 	}
 
 	c.Log.Item(ServiceCreated{
@@ -116,7 +123,7 @@ loop:
 	for {
 		select {
 		case conn := <-s.connectionChan:
-      s.Clients += 1
+			s.Stats.Clients += 1
 			s.activeClients.Add(1)
 
 			// send the server handshake
@@ -128,13 +135,13 @@ loop:
 			if err != nil {
 				s.Log.Item(err)
 
-        s.Clients -= 1
+				s.Stats.Clients -= 1
 				s.activeClients.Done()
 				break
 			}
 			if !s.Registered {
 				conn.Close()
-        s.Clients -= 1
+				s.Stats.Clients -= 1
 				s.activeClients.Done()
 				break
 			}
@@ -145,7 +152,7 @@ loop:
 			err = decoder.Decode(&ch)
 			if err != nil {
 				s.Log.Item(err)
-        s.Clients -= 1
+				s.Stats.Clients -= 1
 				s.activeClients.Done()
 				break
 			}
@@ -155,7 +162,7 @@ loop:
 			go func() {
 				s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
 
-        s.Clients -= 1
+				s.Stats.Clients -= 1
 				s.activeClients.Done()
 			}()
 		case register := <-s.registeredChan:
@@ -173,8 +180,8 @@ loop:
 			s.doozerChan <- doozerFinish{}
 			break loop
 
-    case _ = <-s.updateTicker.C:
-      s.UpdateCluster()
+		case _ = <-s.updateTicker.C:
+			s.UpdateCluster()
 		}
 	}
 }
@@ -351,9 +358,9 @@ func initializeConfig(c *skynet.ServiceConfig) {
 		}
 	}
 
-  if c.DoozerUpdateInterval == 0 {
-    c.DoozerUpdateInterval = 5 * time.Second
-  }
+	if c.DoozerUpdateInterval == 0 {
+		c.DoozerUpdateInterval = 5 * time.Second
+	}
 }
 
 func (s *Service) GetConfigPath() string {
