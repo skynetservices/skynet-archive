@@ -24,10 +24,11 @@ type ServiceClient struct {
 	query   *Query
 	// a list of the known instances
 	instances map[string]*servicePool
-	// a pool of the available instances. contains things of type servicePool
-	instancePool *pools.ResourcePool
-	muxChan      chan interface{}
-	timeoutChan  chan timeoutLengths
+
+	chooser *InstanceChooser
+
+	muxChan     chan interface{}
+	timeoutChan chan timeoutLengths
 
 	instanceListener *InstanceListener
 	listenID         string
@@ -38,14 +39,14 @@ type ServiceClient struct {
 
 func newServiceClient(query *Query, c *Client) (sc *ServiceClient) {
 	sc = &ServiceClient{
-		client:       c,
-		Log:          c.Config.Log,
-		cconfig:      c.Config,
-		query:        query,
-		instances:    make(map[string]*servicePool),
-		instancePool: pools.NewSourcelessPool(),
-		muxChan:      make(chan interface{}),
-		timeoutChan:  make(chan timeoutLengths),
+		client:      c,
+		Log:         c.Config.Log,
+		cconfig:     c.Config,
+		query:       query,
+		instances:   make(map[string]*servicePool),
+		chooser:     NewInstanceChooser(),
+		muxChan:     make(chan interface{}),
+		timeoutChan: make(chan timeoutLengths),
 	}
 	sc.listenID = skynet.UUID()
 	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query)
@@ -87,12 +88,12 @@ type timeoutLengths struct {
 
 func (c *ServiceClient) addInstanceMux(instance *service.Service) {
 	m := service.ServiceDiscovered{instance}
-	key := m.Service.Config.ServiceAddr.String()
+	key := getInstanceKey(m.Service)
 	_, known := c.instances[key]
 	if !known {
 		// we got a new pool, put it into the wild
 		c.instances[key] = c.client.getServicePool(m.Service)
-		c.instancePool.Release(c.instances[key])
+		c.chooser.Add(m.Service)
 		c.Log.Item(m)
 	}
 }
@@ -105,6 +106,7 @@ func (c *ServiceClient) removeInstanceMux(instance *service.Service) {
 		return
 	}
 	c.instances[key].Close()
+	c.chooser.Remove(m.Service)
 	delete(c.instances, m.Service.Config.ServiceAddr.String())
 	c.Log.Item(m)
 }
@@ -195,9 +197,8 @@ type sendAttempt struct {
 
 func (c *ServiceClient) attemptSend(attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
 	// first find an available instance
-	spr, _ := c.instancePool.Acquire()
-	defer c.instancePool.Release(spr)
-	sp := spr.(*servicePool)
+	instance := c.chooser.Choose()
+	sp := c.instances[getInstanceKey(instance)]
 
 	// then, get a connection to that instance
 	r, err := sp.pool.Acquire()
