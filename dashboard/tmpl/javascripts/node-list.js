@@ -18,6 +18,7 @@ jQuery(document).ready(function ($) {
       initialize: function(){
         this.on('change', function(i){
           $("#" + i.htmlId()).replaceWith(i.contentHTML());
+          $("#" + i.htmlId()).find('.timeago').timeago();
         });
       },
 
@@ -43,7 +44,7 @@ jQuery(document).ready(function ($) {
 
       uptime: function(){
         var startTime = this.get("startTime");
-        return startTime == "" ? "" : $.timeago(startTime);
+        return startTime == "" ? "" : startTime;
       }
     });
 

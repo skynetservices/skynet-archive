@@ -57,7 +57,7 @@
   <td><%attributes.adminAddress%></td>
   <td><%attributes.registered%></td>
   <td><%attributes.clients%></td>
-  <td class="timeago" title="<%uptime%>"><%uptime%></td>
+  <td class="timeago" title="<%attributes.startTime%>"><%uptime%></td>
   <td><%averageResponseTime%></td>
   <td><%lastRequest%></td>
 </tr>
