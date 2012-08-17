@@ -24,10 +24,10 @@ end
 
 execute "download-skynet" do
   command %Q{
-    go get code.google.com/p/gonicetrace/nicetrace && go get github.com/bketelsen/skynet
+    go get github.com/bketelsen/skynet
   }
 
-  #not_if "ls $GOPATH/src/github.com/bketelsen/skynet"
+  not_if "ls $GOPATH/src/github.com/bketelsen/skynet"
 end
 
 execute "install-example-service" do
@@ -36,4 +36,16 @@ execute "install-example-service" do
   command %Q{
     go install  
   }
+
+  not_if "ls $GOPATH/bin/service"
+end
+
+execute "install-fibonacci-service" do
+  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice'
+
+  command %Q{
+    go install  
+  }
+
+  not_if "ls $GOPATH/bin/fibservice"
 end

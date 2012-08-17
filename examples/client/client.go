@@ -12,7 +12,7 @@ import (
 func main() {
 	c := make(chan os.Signal, 1)
 
-	config, _ := skynet.GetClientConfigFromFlags(os.Args...)
+	config, _ := skynet.GetClientConfigFromFlags()
 
 	var err error
 	config.Log = skynet.NewConsoleLogger(os.Stderr)
