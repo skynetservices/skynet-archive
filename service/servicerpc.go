@@ -17,8 +17,7 @@ var (
 )
 
 type ServiceRPC struct {
-	log         skynet.Logger
-	delegate    ServiceDelegate
+	service     *Service
 	methods     map[string]reflect.Value
 	MethodNames []string
 }
@@ -35,15 +34,14 @@ func init() {
 	}
 }
 
-func NewServiceRPC(sd ServiceDelegate, log skynet.Logger) (srpc *ServiceRPC) {
+func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 	srpc = &ServiceRPC{
-		log:      log,
-		delegate: sd,
-		methods:  make(map[string]reflect.Value),
+		service: s,
+		methods: make(map[string]reflect.Value),
 	}
 
 	// scan through methods looking for a method (RequestInfo, something, something) error
-	typ := reflect.TypeOf(srpc.delegate)
+	typ := reflect.TypeOf(srpc.service.Delegate)
 	for i := 0; i < typ.NumMethod(); i++ {
 		m := typ.Method(i)
 
@@ -94,7 +92,7 @@ func NewServiceRPC(sd ServiceDelegate, log skynet.Logger) (srpc *ServiceRPC) {
 		continue
 
 	problem:
-		fmt.Printf("Bad RPC method for %T: %q %v\n", sd, m.Name, f)
+		fmt.Printf("Bad RPC method for %T: %q %v\n", s.Delegate, m.Name, f)
 	}
 
 	return
@@ -134,7 +132,7 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 	startTime := time.Now().UnixNano()
 
 	params := []reflect.Value{
-		reflect.ValueOf(srpc.delegate),
+		reflect.ValueOf(srpc.service.Delegate),
 		reflect.ValueOf(in.RequestInfo),
 		inValuePtr.Elem(),
 		outValue,
@@ -150,8 +148,8 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 		Duration:    duration,
 	}
 
-	if srpc.log != nil {
-		srpc.log.Item(mc)
+	if srpc.service.Log != nil {
+		srpc.service.Log.Item(mc)
 	}
 
 	out.Out, err = bson.Marshal(outValue.Interface())
