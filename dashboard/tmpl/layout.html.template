@@ -58,6 +58,7 @@
   <script src="/media/javascripts/jquery.customforms.js"></script>
   <script src="/media/javascripts/jquery.placeholder.min.js"></script>
   <script src="/media/javascripts/jquery.tooltips.js"></script>
+  <script src="/media/javascripts/jquery.timeago.js"></script>
   <script src="/media/javascripts/mustache.js"></script>
   <script src="/media/javascripts/json2.js"></script>
   <script src="/media/javascripts/underscore-min.js"></script>

@@ -27,6 +27,23 @@ jQuery(document).ready(function ($) {
 
       htmlId: function(){
         return sanitizeName(this.get('address'));
+      },
+
+      averageResponseTime: function(){
+        if(this.get('averageResponseTime') === 0){
+          return "";
+        }
+      },
+
+      lastRequest: function(){
+        if(this.get('lastRequest') === 0){
+          return "";
+        }
+      },
+
+      uptime: function(){
+        var startTime = this.get("startTime");
+        return startTime == "" ? "" : $.timeago(startTime);
       }
     });
 
@@ -81,6 +98,10 @@ jQuery(document).ready(function ($) {
           address: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
           adminAddress: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
           registered: instance.Registered,
+          clients: instance.Clients,
+          startTime: instance.StartTime,
+          lastRequest: instance.LastRequest,
+          averageResponseTime: instance.AverageResponseTime,
           node: this
         }, {silent: silent});
       },
@@ -111,6 +132,10 @@ jQuery(document).ready(function ($) {
             address: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
             adminAddress: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
             registered: instance.Registered,
+            clients: instance.Clients,
+            startTime: instance.StartTime,
+            lastRequest: instance.LastRequest,
+            averageResponseTime: instance.AverageResponseTime,
             node: this,
           }, {silent: false});
         }
@@ -265,6 +290,7 @@ jQuery(document).ready(function ($) {
           regions.render();
           $("#region-tabs").show();
           $("#instance-filter").show();
+          $(".timeago").timeago();
           $("#instance-list").show();
           activateTab($('#region-tabs dd').first());
 
@@ -332,6 +358,16 @@ jQuery(document).ready(function ($) {
 
       return conn;
     }
+
+
+    $.timeago.settings.strings.suffixAgo = "";
+    // Set this to 0 because it sets a timer for each element, so this could grow a lot as elements are added/removed.
+    // lets do it a smarter way
+    $.timeago.settings.refreshMillis = 0;
+
+    var timeagoInterval = setInterval(function(){
+      $(".timeago").timeago();
+    }, 6000);
 
     if(window["WebSocket"]){
       var conn = openWebSocket(0);

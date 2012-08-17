@@ -102,6 +102,7 @@ type ServiceConfig struct {
 	ServiceAddr  *BindAddr
 	AdminAddr    *BindAddr
 	DoozerConfig *DoozerConfig `json:"-"`
+	DoozerUpdateInterval time.Duration `json:"-"`
 }
 
 type ClientConfig struct {
