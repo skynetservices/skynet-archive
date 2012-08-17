@@ -136,6 +136,7 @@ func getConnectionFactory(s *service.Service) (factory pools.Factory) {
 		// get the service handshake
 		var sh skynet.ServiceHandshake
 		decoder := bsonrpc.NewDecoder(conn)
+
 		err = decoder.Decode(&sh)
 		if err != nil {
 			conn.Close()
@@ -144,6 +145,7 @@ func getConnectionFactory(s *service.Service) (factory pools.Factory) {
 
 		ch := skynet.ClientHandshake{}
 		encoder := bsonrpc.NewEncoder(conn)
+
 		err = encoder.Encode(ch)
 		if err != nil {
 			conn.Close()
