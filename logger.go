@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"launchpad.net/mgo/v2"
+	"labix.org/v2/mgo"
 	"log"
 	"os"
 	"runtime"
