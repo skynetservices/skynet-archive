@@ -1,0 +1,11 @@
+========================
+chef cookbooks Changelog
+========================
+
+Version 0.1.0, UNRELEASED
+----------------------------
+Initial release of the cookbooks for the chef configuration management system
+developed at edelight GmbH.
+With this first release we publish the mongodb cookbook we use for our systems.
+This cookbook helps you to configure single node mongodb instances as well as
+more complicated cluster setups (including sharding and replication).

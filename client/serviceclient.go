@@ -196,8 +196,8 @@ type sendAttempt struct {
 func (c *ServiceClient) attemptSend(attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
 	// first find an available instance
 	spr, _ := c.instancePool.Acquire()
+	defer c.instancePool.Release(spr)
 	sp := spr.(*servicePool)
-	defer c.instancePool.Release(sp)
 
 	// then, get a connection to that instance
 	r, err := sp.pool.Acquire()
