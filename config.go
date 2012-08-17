@@ -141,8 +141,13 @@ func GetClientConfigFromFlags(argv ...string) (config *ClientConfig, args []stri
 		argv = os.Args[1:]
 	}
 
-	flagset.Parse(argv)
+	err := flagset.Parse(argv)
 	args = flagset.Args()
+	if err != nil {
+		// -help was given, pass it on to caller who 
+		// may decide to quit instead of continuing
+		args = append(args, "-help")
+	}
 
 	config.IdleTimeout = time.Duration(*idleTimeout)
 
@@ -167,8 +172,13 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 	if len(argv) == 0 {
 		argv = os.Args[1:]
 	}
-	flagset.Parse(argv)
+	err := flagset.Parse(argv)
 	args = flagset.Args()
+	if err != nil {
+		// -help was given, pass it on to caller who 
+		// may decide to quit instead of continuing
+		args = append(args, "-help")
+	}
 
 	rpcBA, err := BindAddrFromString(*rpcAddr)
 	if err != nil {
