@@ -5,20 +5,6 @@ import (
 	"testing"
 )
 
-func TestBasename(t *testing.T) {
-	if basename("/foo") != "foo" {
-		t.Error("failed to find correct basename")
-	}
-
-	if basename("/foo/bar") != "bar" {
-		t.Error("failed to find correct basename")
-	}
-
-	if basename("/foo/bar/baz") != "baz" {
-		t.Error("failed to find correct basename")
-	}
-}
-
 func TestNewDoozerConnection(t *testing.T) {
 	logger := NewConsoleLogger(os.Stdout)
 
