@@ -39,14 +39,15 @@ type ServiceClient struct {
 
 func newServiceClient(query *Query, c *Client) (sc *ServiceClient) {
 	sc = &ServiceClient{
-		client:      c,
-		Log:         c.Config.Log,
-		cconfig:     c.Config,
-		query:       query,
-		instances:   make(map[string]*servicePool),
-		chooser:     NewInstanceChooser(),
-		muxChan:     make(chan interface{}),
-		timeoutChan: make(chan timeoutLengths),
+		client:       c,
+		Log:          c.Config.Log,
+		cconfig:      c.Config,
+		query:        query,
+		instances:    make(map[string]*servicePool),
+		chooser:      NewInstanceChooser(),
+		muxChan:      make(chan interface{}),
+		timeoutChan:  make(chan timeoutLengths),
+		retryTimeout: 500 * time.Millisecond,
 	}
 	sc.listenID = skynet.UUID()
 	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query)
@@ -237,7 +238,7 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 }
 
 /*
-ServiceClient.SendOnce() will send a request to one of the available instances. In intervals of retry time,
+ServiceClient.Send() will send a request to one of the available instances. In intervals of retry time,
 it will send additional requests to other known instances. If no response is heard after
 the giveup time has passed, it will return an error.
 */
