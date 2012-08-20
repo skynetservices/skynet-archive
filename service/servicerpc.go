@@ -105,11 +105,11 @@ func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 // either end.
 func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error) {
 	srpc.service.activeRequests.Add(1)
+	defer srpc.service.activeRequests.Done()
 
 	m, ok := srpc.methods[in.Method]
 	if !ok {
 		err = errors.New(fmt.Sprintf("No such method %q", in.Method))
-		srpc.service.activeRequests.Done()
 		return
 	}
 
@@ -117,7 +117,6 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 
 	err = bson.Unmarshal(in.In, inValuePtr.Interface())
 	if err != nil {
-		srpc.service.activeRequests.Done()
 		return
 	}
 
@@ -131,7 +130,6 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 	case reflect.Map:
 		outValue = reflect.MakeMap(outType)
 	default:
-		srpc.service.activeRequests.Done()
 		panic("illegal out param type")
 	}
 
@@ -168,7 +166,6 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 
 	out.Out, err = bson.Marshal(outValue.Interface())
 	if err != nil {
-		srpc.service.activeRequests.Done()
 		return
 	}
 
@@ -178,7 +175,6 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 		out.ErrString = rerr.Error()
 	}
 
-	srpc.service.activeRequests.Done()
 	return
 }
 
