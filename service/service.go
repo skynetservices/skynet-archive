@@ -53,7 +53,7 @@ type Service struct {
 
 	methods map[string]reflect.Value `json:"-"`
 
-	activeClients sync.WaitGroup `json:"-"`
+	activeRequests sync.WaitGroup `json:"-"`
 
 	connectionChan chan *net.TCPConn `json:"-"`
 	registeredChan chan bool         `json:"-"`
@@ -127,7 +127,6 @@ loop:
 		select {
 		case conn := <-s.connectionChan:
 			s.Stats.Clients += 1
-			s.activeClients.Add(1)
 
 			// send the server handshake
 			sh := skynet.ServiceHandshake{
@@ -139,13 +138,11 @@ loop:
 				s.Log.Item(err)
 
 				s.Stats.Clients -= 1
-				s.activeClients.Done()
 				break
 			}
 			if !s.Registered {
 				conn.Close()
 				s.Stats.Clients -= 1
-				s.activeClients.Done()
 				break
 			}
 
@@ -156,7 +153,6 @@ loop:
 			if err != nil {
 				s.Log.Item(err)
 				s.Stats.Clients -= 1
-				s.activeClients.Done()
 				break
 			}
 
@@ -166,7 +162,6 @@ loop:
 				s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
 
 				s.Stats.Clients -= 1
-				s.activeClients.Done()
 			}()
 		case register := <-s.registeredChan:
 			if register {
@@ -318,11 +313,9 @@ func (s *Service) Unregister() {
 }
 
 func (s *Service) Shutdown() {
-
-	// TODO: make this wait for requests to finish
 	s.doneChan <- true
 
-	s.activeClients.Wait()
+	s.activeRequests.Wait()
 	s.doozerWaiter.Wait()
 
 	s.Delegate.Stopped(s) // Call user defined callback

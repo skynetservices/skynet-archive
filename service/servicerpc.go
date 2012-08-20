@@ -104,6 +104,9 @@ func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 // calls are transmitted in a []byte, and are then marshalled/unmarshalled on
 // either end.
 func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error) {
+	srpc.service.activeRequests.Add(1)
+	defer srpc.service.activeRequests.Done()
+
 	m, ok := srpc.methods[in.Method]
 	if !ok {
 		err = errors.New(fmt.Sprintf("No such method %q", in.Method))
