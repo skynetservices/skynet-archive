@@ -129,6 +129,12 @@ func (c *ServiceClient) mux() {
 					c.removeInstanceMux(&n.Service)
 				}
 			}
+		case mi := <-c.muxChan:
+			switch m := mi.(type) {
+			case timeoutLengths:
+				c.retryTimeout = m.retry
+				c.giveupTimeout = m.giveup
+			}
 		case c.timeoutChan <- timeoutLengths{
 			retry:  c.retryTimeout,
 			giveup: c.giveupTimeout,
