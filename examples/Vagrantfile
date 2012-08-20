@@ -5,6 +5,9 @@ NUM_SKYNET_NODES = 5
 FORCE_SKYNET_REBUILD = false
 SKYNET_BRANCH = "master"
 
+# This will make chef always deploy the current branch you're working on locally
+#SKYNET_BRANCH = (`git branch | grep '*'`).strip.gsub('* ', '')
+
 Vagrant::Config.run do |config|
   #doozerd -timeout 5 -l "127.0.0.1:10000" -w "127.0.0.1:11000" -c "dzns"
 
