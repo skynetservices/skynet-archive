@@ -203,7 +203,7 @@ type sendAttempt struct {
 	err    error
 }
 
-func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
+func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}) {
 	// first find an available instance
 	var r pools.Resource
 	var err error
@@ -287,13 +287,13 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 		}()
 	}()
 
-	go c.attemptSend(doneSignal, attempts, ri, fn, in, out)
+	go c.attemptSend(doneSignal, attempts, ri, fn, in)
 
 	for {
 		select {
 		case <-ticker:
 			attemptCount++
-			go c.attemptSend(doneSignal, attempts, ri, fn, in, out)
+			go c.attemptSend(doneSignal, attempts, ri, fn, in)
 		case <-timeout:
 			if err == nil {
 				err = ErrRequestTimeout
