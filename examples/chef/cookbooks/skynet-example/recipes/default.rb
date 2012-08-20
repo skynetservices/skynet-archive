@@ -30,6 +30,26 @@ execute "download-skynet" do
   not_if "ls $GOPATH/src/github.com/bketelsen/skynet"
 end
 
+execute "update-skynet" do
+  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet'
+
+  branch = node[:skynet_branch] || "master"
+
+  command %Q{
+    git checkout #{branch} && git pull origin #{branch}
+  }
+end
+
+execute "forced-rebuild" do
+ cwd '/opt/local/gopath/bin'
+
+ if node[:skynet_rebuild] == true
+   command %Q{
+     rm fibservice service
+   }
+ end
+end
+
 execute "install-example-service" do
   cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/examples/service'
 

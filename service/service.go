@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
+	"time"
 )
 
 // TODO: Better error handling, should gracefully fail to startup if it can't connect to doozer
@@ -24,11 +25,24 @@ type ServiceDelegate interface {
 	Unregistered(s *Service)
 }
 
+type ServiceStatistics struct {
+	Clients        uint
+	StartTime      string
+	LastRequest    string
+	RequestsServed uint64
+
+	// For now this will be since startup, we might change it later to be for a given sample interval
+	AverageResponseTime uint64
+	totalDuration       uint64
+}
+
 type Service struct {
 	Config     *skynet.ServiceConfig
 	DoozerConn *skynet.DoozerConnection `json:"-"`
 	Registered bool
-	doneChan   chan bool `json:"-"`
+	Stats      ServiceStatistics
+
+	doneChan chan bool `json:"-"`
 
 	Log skynet.Logger `json:"-"`
 
@@ -47,7 +61,8 @@ type Service struct {
 	doozerChan   chan interface{} `json:"-"`
 	doozerWaiter sync.WaitGroup   `json:"-"`
 
-	rpcListener *net.TCPListener `json:"-"`
+	rpcListener  *net.TCPListener `json:"-"`
+	updateTicker *time.Ticker     `json:"-"`
 }
 
 func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
@@ -62,6 +77,11 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		connectionChan: make(chan *net.TCPConn),
 		registeredChan: make(chan bool),
 		doozerChan:     make(chan interface{}),
+		updateTicker:   time.NewTicker(c.DoozerUpdateInterval),
+
+		Stats: ServiceStatistics{
+			StartTime: time.Now().Format("2006-01-02T15:04:05Z-0700"),
+		},
 	}
 
 	c.Log.Item(ServiceCreated{
@@ -69,7 +89,7 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	})
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
-	rpcForwarder := NewServiceRPC(s.Delegate, c.Log)
+	rpcForwarder := NewServiceRPC(s)
 
 	c.Log.Item(RegisteredMethods{rpcForwarder.MethodNames})
 
@@ -106,6 +126,7 @@ loop:
 	for {
 		select {
 		case conn := <-s.connectionChan:
+			s.Stats.Clients += 1
 			s.activeClients.Add(1)
 
 			// send the server handshake
@@ -116,11 +137,14 @@ loop:
 			err := encoder.Encode(sh)
 			if err != nil {
 				s.Log.Item(err)
+
+				s.Stats.Clients -= 1
 				s.activeClients.Done()
 				break
 			}
 			if !s.Registered {
 				conn.Close()
+				s.Stats.Clients -= 1
 				s.activeClients.Done()
 				break
 			}
@@ -131,6 +155,7 @@ loop:
 			err = decoder.Decode(&ch)
 			if err != nil {
 				s.Log.Item(err)
+				s.Stats.Clients -= 1
 				s.activeClients.Done()
 				break
 			}
@@ -139,6 +164,8 @@ loop:
 
 			go func() {
 				s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
+
+				s.Stats.Clients -= 1
 				s.activeClients.Done()
 			}()
 		case register := <-s.registeredChan:
@@ -155,6 +182,9 @@ loop:
 			s.RemoveFromCluster()
 			s.doozerChan <- doozerFinish{}
 			break loop
+
+		case _ = <-s.updateTicker.C:
+			s.UpdateCluster()
 		}
 	}
 }
@@ -329,6 +359,10 @@ func initializeConfig(c *skynet.ServiceConfig) {
 			Uri:          "127.0.0.1:8046",
 			AutoDiscover: true,
 		}
+	}
+
+	if c.DoozerUpdateInterval == 0 {
+		c.DoozerUpdateInterval = 5 * time.Second
 	}
 }
 

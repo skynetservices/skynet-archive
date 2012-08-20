@@ -40,7 +40,9 @@
         <th>Registered</th>
         <th>Clients</th>
         <th>Uptime</th>
+        <th>Requests Served</th>
         <th>Avg Response Time</th>
+        <th>Last Request</th>
       </thead>
       <tbody>
       </tbody>
@@ -55,8 +57,10 @@
   <td><%attributes.address%></td>
   <td><%attributes.adminAddress%></td>
   <td><%attributes.registered%></td>
-  <td><%attributes.clients%></td>
-  <td><%attributes.uptime%></td>
-  <td><%attributes.averageResponseTime%></td>
+  <td><%attributes.stats.Clients%></td>
+  <td class="timeago" title="<%attributes.stats.StartTime%>"><%uptime%></td>
+  <td><%attributes.stats.RequestsServed%></td>
+  <td><%averageResponseTime%></td>
+  <td class="timeago" title="<%attributes.stats.LastRequest%>"><%attributes.stats.LastRequest%></td>
 </tr>
 </script>
