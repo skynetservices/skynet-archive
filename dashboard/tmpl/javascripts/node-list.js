@@ -4,6 +4,10 @@ jQuery(document).ready(function ($) {
       return name.replace(/[\s_.:]/g,"-").toLowerCase();
     }
 
+    function roundFloat(num, dec) {
+      return Math.round(num*Math.pow(10,dec))/Math.pow(10,dec);
+    }
+
     Mustache.tags = ["<%", "%>"];
 
     var Templates = {
@@ -45,6 +49,20 @@ jQuery(document).ready(function ($) {
       uptime: function(){
         var startTime = this.get("stats")['StartTime'];
         return startTime == "" ? "" : startTime;
+      },
+
+      averageResponseTime: function(){
+        var responseTime = this.get("stats")['AverageResponseTime'];
+
+        if(responseTime == ""){
+          return ""
+        }
+
+        if(responseTime >= 1000000000){
+          return roundFloat(responseTime / 1000000000, 4) + "s";
+        }
+        
+        return roundFloat(responseTime / 1000000, 4) + "ms";
       }
     });
 

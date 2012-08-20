@@ -6,6 +6,7 @@ import (
 	"github.com/bketelsen/skynet"
 	"labix.org/v2/mgo/bson"
 	"reflect"
+	"sync/atomic"
 	"time"
 )
 
@@ -129,6 +130,8 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 		panic("illegal out param type")
 	}
 
+	srpc.service.Stats.LastRequest = time.Now().Format("2006-01-02T15:04:05Z-0700")
+
 	startTime := time.Now().UnixNano()
 
 	params := []reflect.Value{
@@ -141,6 +144,15 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 	returns := m.Call(params)
 
 	duration := time.Now().UnixNano() - startTime
+
+	// Update stats
+	srpc.service.Stats.RequestsServed = atomic.AddUint64(&srpc.service.Stats.RequestsServed, 1)
+	srpc.service.Stats.totalDuration = atomic.AddUint64(&srpc.service.Stats.totalDuration, uint64(duration)) // ns
+
+	fmt.Println(srpc.service.Stats.totalDuration)
+
+	srpc.service.Stats.AverageResponseTime = srpc.service.Stats.totalDuration / srpc.service.Stats.RequestsServed
+	fmt.Println(srpc.service.Stats.AverageResponseTime)
 
 	mc := MethodCall{
 		MethodName:  in.Method,

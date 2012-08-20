@@ -60,7 +60,7 @@
   <td><%attributes.stats.Clients%></td>
   <td class="timeago" title="<%attributes.stats.StartTime%>"><%uptime%></td>
   <td><%attributes.stats.RequestsServed%></td>
-  <td><%attributes.stats.AverageResponseTime%></td>
-  <td><%attributes.stats.LastRequest%></td>
+  <td><%averageResponseTime%></td>
+  <td class="timeago" title="<%attributes.stats.LastRequest%>"><%attributes.stats.LastRequest%></td>
 </tr>
 </script>
