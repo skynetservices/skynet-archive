@@ -128,6 +128,12 @@ func (c *ServiceClient) mux() {
 					c.removeInstanceMux(&n.Service)
 				}
 			}
+		case mi := <-c.muxChan:
+			switch m := mi.(type) {
+			case timeoutLengths:
+				c.retryTimeout = m.retry
+				c.giveupTimeout = m.giveup
+			}
 		case c.timeoutChan <- timeoutLengths{
 			retry:  c.retryTimeout,
 			giveup: c.giveupTimeout,
@@ -195,7 +201,7 @@ type sendAttempt struct {
 	err    error
 }
 
-func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
+func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}) {
 	// first find an available instance
 	var r pools.Resource
 	var err error
@@ -237,7 +243,7 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 }
 
 /*
-ServiceClient.SendOnce() will send a request to one of the available instances. In intervals of retry time,
+ServiceClient.Send() will send a request to one of the available instances. In intervals of retry time,
 it will send additional requests to other known instances. If no response is heard after
 the giveup time has passed, it will return an error.
 */
@@ -279,13 +285,13 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 		}()
 	}()
 
-	go c.attemptSend(doneSignal, attempts, ri, fn, in, out)
+	go c.attemptSend(doneSignal, attempts, ri, fn, in)
 
 	for {
 		select {
 		case <-ticker:
 			attemptCount++
-			go c.attemptSend(doneSignal, attempts, ri, fn, in, out)
+			go c.attemptSend(doneSignal, attempts, ri, fn, in)
 		case <-timeout:
 			if err == nil {
 				err = ErrRequestTimeout
