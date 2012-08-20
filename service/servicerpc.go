@@ -149,10 +149,7 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 	srpc.service.Stats.RequestsServed = atomic.AddUint64(&srpc.service.Stats.RequestsServed, 1)
 	srpc.service.Stats.totalDuration = atomic.AddUint64(&srpc.service.Stats.totalDuration, uint64(duration)) // ns
 
-	fmt.Println(srpc.service.Stats.totalDuration)
-
 	srpc.service.Stats.AverageResponseTime = srpc.service.Stats.totalDuration / srpc.service.Stats.RequestsServed
-	fmt.Println(srpc.service.Stats.AverageResponseTime)
 
 	mc := MethodCall{
 		MethodName:  in.Method,
