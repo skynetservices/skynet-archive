@@ -6,6 +6,7 @@ import (
 	"github.com/bketelsen/skynet"
 	"labix.org/v2/mgo/bson"
 	"reflect"
+	"sync/atomic"
 	"time"
 )
 
@@ -17,8 +18,7 @@ var (
 )
 
 type ServiceRPC struct {
-	log         skynet.Logger
-	delegate    ServiceDelegate
+	service     *Service
 	methods     map[string]reflect.Value
 	MethodNames []string
 }
@@ -35,15 +35,14 @@ func init() {
 	}
 }
 
-func NewServiceRPC(sd ServiceDelegate, log skynet.Logger) (srpc *ServiceRPC) {
+func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 	srpc = &ServiceRPC{
-		log:      log,
-		delegate: sd,
-		methods:  make(map[string]reflect.Value),
+		service: s,
+		methods: make(map[string]reflect.Value),
 	}
 
 	// scan through methods looking for a method (RequestInfo, something, something) error
-	typ := reflect.TypeOf(srpc.delegate)
+	typ := reflect.TypeOf(srpc.service.Delegate)
 	for i := 0; i < typ.NumMethod(); i++ {
 		m := typ.Method(i)
 
@@ -94,7 +93,7 @@ func NewServiceRPC(sd ServiceDelegate, log skynet.Logger) (srpc *ServiceRPC) {
 		continue
 
 	problem:
-		fmt.Printf("Bad RPC method for %T: %q %v\n", sd, m.Name, f)
+		fmt.Printf("Bad RPC method for %T: %q %v\n", s.Delegate, m.Name, f)
 	}
 
 	return
@@ -131,10 +130,12 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 		panic("illegal out param type")
 	}
 
+	srpc.service.Stats.LastRequest = time.Now().Format("2006-01-02T15:04:05Z-0700")
+
 	startTime := time.Now().UnixNano()
 
 	params := []reflect.Value{
-		reflect.ValueOf(srpc.delegate),
+		reflect.ValueOf(srpc.service.Delegate),
 		reflect.ValueOf(in.RequestInfo),
 		inValuePtr.Elem(),
 		outValue,
@@ -144,14 +145,20 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 
 	duration := time.Now().UnixNano() - startTime
 
+	// Update stats
+	srpc.service.Stats.RequestsServed = atomic.AddUint64(&srpc.service.Stats.RequestsServed, 1)
+	srpc.service.Stats.totalDuration = atomic.AddUint64(&srpc.service.Stats.totalDuration, uint64(duration)) // ns
+
+	srpc.service.Stats.AverageResponseTime = srpc.service.Stats.totalDuration / srpc.service.Stats.RequestsServed
+
 	mc := MethodCall{
 		MethodName:  in.Method,
 		RequestInfo: in.RequestInfo,
 		Duration:    duration,
 	}
 
-	if srpc.log != nil {
-		srpc.log.Item(mc)
+	if srpc.service.Log != nil {
+		srpc.service.Log.Item(mc)
 	}
 
 	out.Out, err = bson.Marshal(outValue.Interface())

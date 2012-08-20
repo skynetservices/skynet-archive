@@ -4,6 +4,10 @@ jQuery(document).ready(function ($) {
       return name.replace(/[\s_.:]/g,"-").toLowerCase();
     }
 
+    function roundFloat(num, dec) {
+      return Math.round(num*Math.pow(10,dec))/Math.pow(10,dec);
+    }
+
     Mustache.tags = ["<%", "%>"];
 
     var Templates = {
@@ -18,6 +22,7 @@ jQuery(document).ready(function ($) {
       initialize: function(){
         this.on('change', function(i){
           $("#" + i.htmlId()).replaceWith(i.contentHTML());
+          $("#" + i.htmlId()).find('.timeago').timeago();
         });
       },
 
@@ -27,6 +32,37 @@ jQuery(document).ready(function ($) {
 
       htmlId: function(){
         return sanitizeName(this.get('address'));
+      },
+
+      averageResponseTime: function(){
+        if(this.get('averageResponseTime') === 0){
+          return "";
+        }
+      },
+
+      lastRequest: function(){
+        if(this.get('lastRequest') === 0){
+          return "";
+        }
+      },
+
+      uptime: function(){
+        var startTime = this.get("stats")['StartTime'];
+        return startTime == "" ? "" : startTime;
+      },
+
+      averageResponseTime: function(){
+        var responseTime = this.get("stats")['AverageResponseTime'];
+
+        if(responseTime == ""){
+          return ""
+        }
+
+        if(responseTime >= 1000000000){
+          return roundFloat(responseTime / 1000000000, 4) + "s";
+        }
+        
+        return roundFloat(responseTime / 1000000, 4) + "ms";
       }
     });
 
@@ -81,6 +117,7 @@ jQuery(document).ready(function ($) {
           address: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
           adminAddress: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
           registered: instance.Registered,
+          stats: instance.Stats,
           node: this
         }, {silent: silent});
       },
@@ -111,6 +148,7 @@ jQuery(document).ready(function ($) {
             address: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
             adminAddress: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
             registered: instance.Registered,
+            stats: instance.Stats,
             node: this,
           }, {silent: false});
         }
@@ -265,6 +303,7 @@ jQuery(document).ready(function ($) {
           regions.render();
           $("#region-tabs").show();
           $("#instance-filter").show();
+          $(".timeago").timeago();
           $("#instance-list").show();
           activateTab($('#region-tabs dd').first());
 
@@ -332,6 +371,16 @@ jQuery(document).ready(function ($) {
 
       return conn;
     }
+
+
+    $.timeago.settings.strings.suffixAgo = "";
+    // Set this to 0 because it sets a timer for each element, so this could grow a lot as elements are added/removed.
+    // lets do it a smarter way
+    $.timeago.settings.refreshMillis = 0;
+
+    var timeagoInterval = setInterval(function(){
+      $(".timeago").timeago();
+    }, 6000);
 
     if(window["WebSocket"]){
       var conn = openWebSocket(0);

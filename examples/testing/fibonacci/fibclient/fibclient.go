@@ -5,12 +5,11 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
 	"github.com/bketelsen/skynet/examples/testing/fibonacci"
-	"os"
 	"strconv"
 )
 
 func main() {
-	config, args := skynet.GetClientConfigFromFlags(os.Args...)
+	config, args := skynet.GetClientConfigFromFlags()
 	client := client.NewClient(config)
 
 	service := client.GetService("Fibonacci", "", "", "")
