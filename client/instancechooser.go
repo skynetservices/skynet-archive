@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"github.com/bketelsen/skynet/service"
 	"math/rand"
 )
@@ -31,7 +30,6 @@ func (ic *InstanceChooser) mux() {
 	for {
 		select {
 		case instance := <-ic.addCh:
-			fmt.Println("adding", instance.GetConfigPath())
 			ic.add(instance)
 			for _, ich := range activeWaits {
 				ich <- instance
@@ -69,7 +67,7 @@ func (ic *InstanceChooser) Remove(instance *service.Service) {
 func (ic *InstanceChooser) remove(instance *service.Service) {
 	for i, in := range ic.instances {
 		if in.GetConfigPath() == instance.GetConfigPath() {
-			ic.instances[i] = ic.instances[len(ic.instances)]
+			ic.instances[i] = ic.instances[len(ic.instances)-1]
 			ic.instances = ic.instances[:len(ic.instances)-1]
 			return
 		}

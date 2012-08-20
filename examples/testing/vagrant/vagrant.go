@@ -7,11 +7,11 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
 	"github.com/bketelsen/skynet/examples/testing/fibonacci"
-  "math/rand"
+	"math/rand"
 	"os"
 	"os/signal"
 	"strconv"
-  "strings"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -52,7 +52,7 @@ func main() {
 	testserviceClient = skynetClient.GetService("TestService", "", "", "")
 	fibserviceClient = skynetClient.GetService("Fibonacci", "", "", "")
 
-  startTime := time.Now().UnixNano()
+	startTime := time.Now().UnixNano()
 	fmt.Printf("Starting %d Workers\n", *requests)
 	for i := 0; i < *requests; i++ {
 		go worker(requestChan, workerWaitGroup, workerQuitChan)
@@ -68,7 +68,7 @@ func main() {
 			}
 
 			workerWaitGroup.Wait()
-      stopTime := time.Now().UnixNano()
+			stopTime := time.Now().UnixNano()
 
 			successful, _ := strconv.Atoi(successfulRequests.String())
 			total, _ := strconv.Atoi(totalRequests.String())
@@ -78,20 +78,20 @@ func main() {
 			percentSuccess := int(float64(successful) / float64(total) * 100)
 			percentFailed := int(float64(failed) / float64(total) * 100)
 
-      runtime := (stopTime - startTime)  / 1000000
-      rqps := float64(total) / (float64(runtime) / 1000)
+			runtime := (stopTime - startTime) / 1000000
+			rqps := float64(total) / (float64(runtime) / 1000)
 
-      fmt.Println("============================================================================")
-      fmt.Printf("Completed in %d Milliseconds, %f Requests/s\n", runtime, rqps)
+			fmt.Println("============================================================================")
+			fmt.Printf("Completed in %d Milliseconds, %f Requests/s\n", runtime, rqps)
 			fmt.Printf("\nTotal Requests: %d, Successful: %d (%d%%), Failed: %d (%d%%)\n\n", total, successful, percentSuccess, failed, percentFailed)
 			return
 		default:
 
-      if(requestNum % 2 == 0){
-        requestChan <- "testservice"
-      } else {
-        requestChan <- "fibservice"
-      }
+			if requestNum%2 == 0 {
+				requestChan <- "testservice"
+			} else {
+				requestChan <- "fibservice"
+			}
 
 			requestNum++
 		}
@@ -113,43 +113,43 @@ func worker(requestChan chan string, waitGroup *sync.WaitGroup, quitChan chan bo
 			switch service {
 			case "testservice":
 
-        randString := strconv.FormatUint(uint64(rand.Uint32()), 35)
-        randString = randString + randString + randString
+				randString := strconv.FormatUint(uint64(rand.Uint32()), 35)
+				randString = randString + randString + randString
 
 				in := map[string]interface{}{
 					"data": randString,
 				}
 
-        fmt.Println("Sending TestService request: " + in["data"].(string))
+				fmt.Println("Sending TestService request: " + in["data"].(string))
 
 				out := map[string]interface{}{}
 				err := testserviceClient.Send(nil, "Upcase", in, &out)
 
 				if err == nil && out["data"].(string) == strings.ToUpper(randString) {
 					successfulRequests.Add(1)
-          fmt.Println("TestService returned: " + out["data"].(string))
+					fmt.Println("TestService returned: " + out["data"].(string))
 				}
 
 			case "fibservice":
-        req := fibonacci.Request{
-          Index: rand.Intn(50),
-        }
+				req := fibonacci.Request{
+					Index: rand.Intn(50),
+				}
 
-        // It's possible that rand could have returned 0, and we are using that as our blank Value
-        // let's set it to something else when 0 happens to get selected
-        if(req.Index == 0){
-          req.Index = 1
-        }
+				// It's possible that rand could have returned 0, and we are using that as our blank Value
+				// let's set it to something else when 0 happens to get selected
+				if req.Index == 0 {
+					req.Index = 1
+				}
 
-        fmt.Println("Sending Fibonacci request: " + strconv.Itoa(req.Index))
+				fmt.Println("Sending Fibonacci request: " + strconv.Itoa(req.Index))
 
-        resp := fibonacci.Response{}
-        err := fibserviceClient.Send(nil, "Index", req, &resp)
+				resp := fibonacci.Response{}
+				err := fibserviceClient.Send(nil, "Index", req, &resp)
 
-        if err == nil && resp.Index != 0 && resp.Value != 0 {
-          fmt.Println("Fibonacci returned: " + strconv.FormatUint(resp.Value, 10))
+				if err == nil && resp.Index != 0 && resp.Value != 0 {
+					fmt.Println("Fibonacci returned: " + strconv.FormatUint(resp.Value, 10))
 					successfulRequests.Add(1)
-        }
+				}
 			}
 
 		}

@@ -34,7 +34,7 @@ func main() {
 		Version:    *VersionFlag,
 		Host:       *HostFlag,
 		Region:     *RegionFlag,
-    Port:       *PortFlag,
+		Port:       *PortFlag,
 	}
 
 	switch flag.Arg(0) {
