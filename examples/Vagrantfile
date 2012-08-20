@@ -2,6 +2,11 @@
 # vi: set ft=ruby :
 
 NUM_SKYNET_NODES = 5
+FORCE_SKYNET_REBUILD = false
+SKYNET_BRANCH = "master"
+
+# This will make chef always deploy the current branch you're working on locally
+#SKYNET_BRANCH = (`git branch | grep '*'`).strip.gsub('* ', '')
 
 Vagrant::Config.run do |config|
   #doozerd -timeout 5 -l "127.0.0.1:10000" -w "127.0.0.1:11000" -c "dzns"
@@ -25,6 +30,11 @@ Vagrant::Config.run do |config|
     c.vm.provision :chef_solo do |chef|
       # This path will be expanded relative to the project directory
       chef.cookbooks_path = "chef/cookbooks"
+
+      chef.json = {
+        :skynet_branch => SKYNET_BRANCH,
+        :skynet_rebuild => FORCE_SKYNET_REBUILD
+      }
 
       chef.add_recipe("apt")
       chef.add_recipe("build-essential")
@@ -69,6 +79,11 @@ Vagrant::Config.run do |config|
       c.vm.provision :chef_solo do |chef|
         # This path will be expanded relative to the project directory
         chef.cookbooks_path = "chef/cookbooks"
+
+        chef.json = {
+          :skynet_branch => SKYNET_BRANCH,
+          :skynet_rebuild => FORCE_SKYNET_REBUILD
+        }
 
         chef.add_recipe("build-essential")
         chef.add_recipe("mercurial")

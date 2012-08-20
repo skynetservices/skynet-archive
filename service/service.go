@@ -26,11 +26,14 @@ type ServiceDelegate interface {
 }
 
 type ServiceStatistics struct {
-	Clients             int
-	StartTime           string
-	LastRequest         string
-	RequestsServed      int64
-	AverageResponseTime int64
+	Clients        uint
+	StartTime      string
+	LastRequest    string
+	RequestsServed uint64
+
+	// For now this will be since startup, we might change it later to be for a given sample interval
+	AverageResponseTime uint64
+	totalDuration       uint64
 }
 
 type Service struct {

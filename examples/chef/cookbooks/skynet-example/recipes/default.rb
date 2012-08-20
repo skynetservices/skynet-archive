@@ -27,7 +27,33 @@ execute "download-skynet" do
     go get github.com/bketelsen/skynet
   }
 
-  not_if "ls $GOPATH/src/github.com/bketelsen/skynet"
+  not_if do
+    File.exists?("/opt/local/gopath/src/github.com/bketelsen/skynet")
+  end
+end
+
+execute "update-skynet" do
+  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet'
+
+  branch = node[:skynet_branch] || "master"
+
+  command %Q{
+    git checkout #{branch} && git pull origin #{branch}
+  }
+end
+
+execute "forced-rebuild" do
+ cwd '/opt/local/gopath/bin'
+
+ if node[:skynet_rebuild] == true
+   command %Q{
+     rm fibservice service
+   }
+ end
+
+ not_if do
+   !File.exists?("/opt/local/gopath/bin") || !File.exists?("/opt/local/gopath/bin/service") || !File.exists?("/opt/local/gopath/bin/fibservice")
+ end
 end
 
 execute "install-example-service" do
@@ -37,7 +63,9 @@ execute "install-example-service" do
     go install  
   }
 
-  not_if "ls $GOPATH/bin/service"
+  not_if do
+    File.exists?("/opt/local/gopath/bin/service")
+  end
 end
 
 execute "install-fibonacci-service" do
@@ -47,5 +75,7 @@ execute "install-fibonacci-service" do
     go install  
   }
 
-  not_if "ls $GOPATH/bin/fibservice"
+  not_if do
+   File.exist?("/opt/local/gopath/bin/fibservice")
+  end
 end
