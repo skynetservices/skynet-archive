@@ -74,10 +74,15 @@ func (ic *InstanceChooser) remove(instance *service.Service) {
 	}
 }
 
-func (ic *InstanceChooser) Choose() (instance *service.Service) {
+func (ic *InstanceChooser) Choose(timeout chan bool) (instance *service.Service, ok bool) {
 	ich := make(chan *service.Service, 1)
 	ic.chooseCh <- ich
-	instance = <-ich
+	select {
+	case instance = <-ich:
+		ok = true
+	case <-timeout:
+		ok = false
+	}
 	return
 }
 
