@@ -197,12 +197,26 @@ type sendAttempt struct {
 
 func (c *ServiceClient) attemptSend(attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
 	// first find an available instance
-	instance := c.chooser.Choose()
-	sp := c.instances[getInstanceKey(instance)]
+	var r pools.Resource
+	var err error
+	for r == nil {
+		instance := c.chooser.Choose()
+		sp := c.instances[getInstanceKey(instance)]
 
-	// then, get a connection to that instance
-	r, err := sp.pool.Acquire()
-	defer sp.pool.Release(r)
+		// then, get a connection to that instance
+		r, err = sp.pool.Acquire()
+		defer sp.pool.Release(r)
+		if err != nil {
+			if r != nil {
+				r.Close()
+			}
+			r = nil
+			// TODO: report connection failure
+			c.chooser.Remove(instance)
+			c.Log.Item(FailedConnection{err})
+		}
+	}
+
 	if err != nil {
 		c.Log.Item(err)
 		attempts <- sendAttempt{err: err}
