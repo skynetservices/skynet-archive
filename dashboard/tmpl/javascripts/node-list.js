@@ -43,7 +43,7 @@ jQuery(document).ready(function ($) {
       },
 
       uptime: function(){
-        var startTime = this.get("startTime");
+        var startTime = this.get("stats")['StartTime'];
         return startTime == "" ? "" : startTime;
       }
     });
@@ -99,10 +99,7 @@ jQuery(document).ready(function ($) {
           address: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
           adminAddress: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
           registered: instance.Registered,
-          clients: instance.Clients,
-          startTime: instance.StartTime,
-          lastRequest: instance.LastRequest,
-          averageResponseTime: instance.AverageResponseTime,
+          stats: instance.Stats,
           node: this
         }, {silent: silent});
       },
@@ -133,10 +130,7 @@ jQuery(document).ready(function ($) {
             address: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
             adminAddress: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
             registered: instance.Registered,
-            clients: instance.Clients,
-            startTime: instance.StartTime,
-            lastRequest: instance.LastRequest,
-            averageResponseTime: instance.AverageResponseTime,
+            stats: instance.Stats,
             node: this,
           }, {silent: false});
         }
