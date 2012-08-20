@@ -195,12 +195,16 @@ type sendAttempt struct {
 	err    error
 }
 
-func (c *ServiceClient) attemptSend(attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
+func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
 	// first find an available instance
 	var r pools.Resource
 	var err error
 	for r == nil {
-		instance := c.chooser.Choose()
+		instance, ok := c.chooser.Choose(timeout)
+		if !ok {
+			// must have timed out
+			return
+		}
 		sp := c.instances[getInstanceKey(instance)]
 
 		// then, get a connection to that instance
@@ -210,7 +214,6 @@ func (c *ServiceClient) attemptSend(attempts chan sendAttempt, ri *skynet.Reques
 			if r != nil {
 				r.Close()
 			}
-			r = nil
 			// TODO: report connection failure
 			c.chooser.Remove(instance)
 			c.Log.Item(FailedConnection{err})
@@ -265,12 +268,24 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 		timeout = time.NewTimer(giveup).C
 	}
 
-	go c.attemptSend(attempts, ri, fn, in, out)
+	doneSignal := make(chan bool)
+	attemptCount := 1
+
+	defer func() {
+		go func() {
+			for i := 0; i < attemptCount; i++ {
+				doneSignal <- true
+			}
+		}()
+	}()
+
+	go c.attemptSend(doneSignal, attempts, ri, fn, in, out)
 
 	for {
 		select {
 		case <-ticker:
-			go c.attemptSend(attempts, ri, fn, in, out)
+			attemptCount++
+			go c.attemptSend(doneSignal, attempts, ri, fn, in, out)
 		case <-timeout:
 			if err == nil {
 				err = ErrRequestTimeout
