@@ -125,7 +125,7 @@ func (rp *ResourcePool) acquire(acq acquireMessage) {
 }
 
 func (rp *ResourcePool) release(resource Resource) {
-	if resource.IsClosed() {
+	if resource == nil || resource.IsClosed() {
 		// don't put it back in the pool.
 		rp.numResources--
 		return
