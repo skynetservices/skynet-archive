@@ -1,7 +1,12 @@
 package sleeper
 
+import (
+	"time"
+)
+
 type Request struct {
-	Message string
+	Duration time.Duration
+	Message  string
 }
 
 type Response struct {

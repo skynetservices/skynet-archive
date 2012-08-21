@@ -24,7 +24,7 @@ func (f *Sleeper) Started(s *service.Service)      {}
 func (f *Sleeper) Stopped(s *service.Service)      {}
 
 func (f *Sleeper) Sleep(ri *skynet.RequestInfo, req sleeper.Request, resp *sleeper.Response) (err error) {
-	time.Sleep(1 * time.Second)
+	time.Sleep(req.Duration)
 
 	resp.Message = req.Message
 
