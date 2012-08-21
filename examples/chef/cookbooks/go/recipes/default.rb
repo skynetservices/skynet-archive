@@ -24,7 +24,7 @@ end
 
 execute "install-go" do
   command %Q{
-    cd /opt/local && mkdir gopath && hg clone -u release https://code.google.com/p/go && cd go/src && ./all.bash
+    cd /opt/local && mkdir gopath && hg clone -u release https://code.google.com/p/go && cd go/src && ./make.bash
   }
   not_if "ls /opt/local/go/bin/go"
 end
