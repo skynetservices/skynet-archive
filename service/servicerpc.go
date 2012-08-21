@@ -107,6 +107,15 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 	srpc.service.activeRequests.Add(1)
 	defer srpc.service.activeRequests.Done()
 
+	mc := MethodCall{
+		MethodName:  in.Method,
+		RequestInfo: in.RequestInfo,
+	}
+
+	if srpc.service.Log != nil {
+		srpc.service.Log.Item(mc)
+	}
+
 	m, ok := srpc.methods[in.Method]
 	if !ok {
 		err = errors.New(fmt.Sprintf("No such method %q", in.Method))
@@ -154,14 +163,14 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 
 	srpc.service.Stats.AverageResponseTime = srpc.service.Stats.totalDuration / srpc.service.Stats.RequestsServed
 
-	mc := MethodCall{
+	mcp := MethodCompletion{
 		MethodName:  in.Method,
 		RequestInfo: in.RequestInfo,
 		Duration:    duration,
 	}
 
 	if srpc.service.Log != nil {
-		srpc.service.Log.Item(mc)
+		srpc.service.Log.Item(mcp)
 	}
 
 	out.Out, err = bson.Marshal(outValue.Interface())

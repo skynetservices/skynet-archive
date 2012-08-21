@@ -26,6 +26,8 @@ case node['platform']
 when "debian", "ubuntu"
   # Adds the repo: http://www.mongodb.org/display/DOCS/Ubuntu+and+Debian+packages
   execute "apt-get update" do
+    command "apt-get update"
+    ignore_failure true
     action :nothing
   end
 
@@ -36,7 +38,13 @@ when "debian", "ubuntu"
     keyserver "keyserver.ubuntu.com"
     key "7F0CEB10"
     action :add
-    notifies :run, "execute[apt-get update]", :immediately
+    notifies :run, resources(:execute => "apt-get update"), :immediately
+    immediate_cache_rebuild true
+  end
+
+  execute "apt-get update" do
+    command "sudo apt-get update"
+    ignore_failure false
   end
 
   package "mongodb" do
