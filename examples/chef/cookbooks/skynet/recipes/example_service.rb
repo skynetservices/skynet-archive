@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: skynet
-# Recipe:: default
+# Recipe:: example_service
 #
 # Copyright 2012, Erik St. Martin
 #
@@ -17,27 +17,27 @@
 # limitations under the License.
 #
 
-directory "/opt/local" do
-  mode 0755
-  recursive true
-end
+execute "rebuild-example-service" do
+  cwd '/opt/local/gopath/bin'
 
-execute "download-skynet" do
   command %Q{
-    go get github.com/bketelsen/skynet
+    rm service
   }
 
   not_if do
-    File.exists?("/opt/local/gopath/src/github.com/bketelsen/skynet")
+    node[:skynet_rebuild] != true || !File.exists?("/opt/local/gopath/bin") || !File.exists?("/opt/local/gopath/bin/service")
   end
 end
 
-execute "update-skynet" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet'
-
-  branch = node[:skynet_branch] || "master"
+execute "install-example-service" do
+  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/examples/service'
 
   command %Q{
-    git checkout #{branch} && git pull origin #{branch}
+    go install  
   }
+
+  not_if do
+    File.exists?("/opt/local/gopath/bin/service")
+  end
 end
+

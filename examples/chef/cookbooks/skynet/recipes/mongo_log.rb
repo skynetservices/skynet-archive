@@ -1,6 +1,6 @@
 #
-# Cookbook Name:: skynet-example
-# Recipe:: default
+# Cookbook Name:: skynet
+# Recipe:: mongo_log
 #
 # Copyright 2012, Erik St. Martin
 #
