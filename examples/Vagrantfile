@@ -44,8 +44,8 @@ Vagrant::Config.run do |config|
       chef.add_recipe("go")
       chef.add_recipe("mongodb::10gen_repo")
       chef.add_recipe("doozerd")
-      chef.add_recipe("skynet-example::mongo")
-      chef.add_recipe("skynet-example")
+      chef.add_recipe("skynet::mongo")
+      chef.add_recipe("skynet")
     end
 
 
@@ -92,7 +92,7 @@ Vagrant::Config.run do |config|
         chef.add_recipe("bzr")
         chef.add_recipe("go")
         chef.add_recipe("doozerd")
-        chef.add_recipe("skynet-example")
+        chef.add_recipe("skynet")
       end
 
       # Setup DZNS Node
