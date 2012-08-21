@@ -69,17 +69,6 @@ func (ic *instanceFileCollector) VisitFile(path string, f *doozer.FileInfo) {
 type servicePool struct {
 	service *service.Service
 	pool    *pools.ResourcePool
-	closed  bool
-}
-
-// this is here to make it a pools.Resource
-func (sp *servicePool) Close() {
-	sp.closed = true
-}
-
-// this is here to make it a pools.Resource
-func (sp *servicePool) IsClosed() bool {
-	return sp.closed
 }
 
 type timeoutLengths struct {
@@ -105,7 +94,6 @@ func (c *ServiceClient) removeInstanceMux(instance *service.Service) {
 	if !known {
 		return
 	}
-	c.instances[key].Close()
 	c.chooser.Remove(m.Service)
 	delete(c.instances, m.Service.Config.ServiceAddr.String())
 	c.Log.Item(m)
@@ -235,6 +223,8 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 	sr := r.(ServiceResource)
 
 	result, err := c.sendToInstance(sr, ri, fn, in)
+
+
 
 	attempts <- sendAttempt{
 		result: result,

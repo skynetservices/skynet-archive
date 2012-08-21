@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: skynet-example
+# Cookbook Name:: skynet
 # Recipe:: default
 #
 # Copyright 2012, Erik St. Martin
@@ -40,42 +40,4 @@ execute "update-skynet" do
   command %Q{
     git checkout #{branch} && git pull origin #{branch}
   }
-end
-
-execute "forced-rebuild" do
- cwd '/opt/local/gopath/bin'
-
- if node[:skynet_rebuild] == true
-   command %Q{
-     rm fibservice service
-   }
- end
-
- not_if do
-   !File.exists?("/opt/local/gopath/bin") || !File.exists?("/opt/local/gopath/bin/service") || !File.exists?("/opt/local/gopath/bin/fibservice")
- end
-end
-
-execute "install-example-service" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/examples/service'
-
-  command %Q{
-    go install  
-  }
-
-  not_if do
-    File.exists?("/opt/local/gopath/bin/service")
-  end
-end
-
-execute "install-fibonacci-service" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice'
-
-  command %Q{
-    go install  
-  }
-
-  not_if do
-   File.exist?("/opt/local/gopath/bin/fibservice")
-  end
 end
