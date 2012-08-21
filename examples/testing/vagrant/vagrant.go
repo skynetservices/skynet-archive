@@ -132,7 +132,7 @@ func worker(requestChan chan string, waitGroup *sync.WaitGroup, quitChan chan bo
 
 			case "fibservice":
 				req := fibonacci.Request{
-					Index: rand.Intn(50),
+					Index: rand.Intn(10),
 				}
 
 				// It's possible that rand could have returned 0, and we are using that as our blank Value
