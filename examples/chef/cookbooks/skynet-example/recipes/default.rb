@@ -43,17 +43,15 @@ execute "update-skynet" do
 end
 
 execute "forced-rebuild" do
- cwd '/opt/local/gopath/bin'
+  cwd '/opt/local/gopath/bin'
 
- if node[:skynet_rebuild] == true
-   command %Q{
-     rm fibservice service
-   }
- end
+  command %Q{
+    rm fibservice service
+  }
 
- not_if do
-   !File.exists?("/opt/local/gopath/bin") || !File.exists?("/opt/local/gopath/bin/service") || !File.exists?("/opt/local/gopath/bin/fibservice")
- end
+  not_if do
+    node[:skynet_rebuild] != true || !File.exists?("/opt/local/gopath/bin") || !File.exists?("/opt/local/gopath/bin/service") || !File.exists?("/opt/local/gopath/bin/fibservice")
+  end
 end
 
 execute "install-example-service" do
