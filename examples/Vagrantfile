@@ -45,6 +45,7 @@ Vagrant::Config.run do |config|
       chef.add_recipe("mongodb::10gen_repo")
       chef.add_recipe("doozerd")
       chef.add_recipe("skynet")
+      chef.add_recipe("skynet::daemon")
       chef.add_recipe("skynet::mongo_log")
       chef.add_recipe("skynet::example_service")
       chef.add_recipe("skynet::fibservice")
@@ -56,6 +57,9 @@ Vagrant::Config.run do |config|
     
     # Setup Doozer Master
     c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.126.101:8046' -w '192.168.126.101:8080' -c 'skynet' -b 'doozer:?ca=192.168.126.101:10000' 0<&- &> /var/log/doozer.log &"
+
+    # Start Daemon
+    c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/daemon --doozer=192.168.126.101:8046 -l 192.168.126.101:12000 -admin 192.168.126.101:12001 --version=1 --region=Chicago 0<&- &> /var/log/skynet_daemon.log &"
 
     # Start a couple skynet services
     5.times do |n|
@@ -95,6 +99,7 @@ Vagrant::Config.run do |config|
         chef.add_recipe("go")
         chef.add_recipe("doozerd")
         chef.add_recipe("skynet")
+        chef.add_recipe("skynet::daemon")
         chef.add_recipe("skynet::example_service")
         chef.add_recipe("skynet::fibservice")
       end
@@ -106,6 +111,9 @@ Vagrant::Config.run do |config|
       # Setup Doozer Node
       c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.126.10#{i}:8046' -w '192.168.126.10#{i}:8080' -c 'skynet' -b 'doozer:?ca=192.168.126.101:10000' 0<&- &> /var/log/doozer.log &"
       c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.126.101:8046' add '/ctl/cal/#{i-1}'  0<&- &> /dev/null &"
+
+      # Start Daemon
+      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/daemon --doozer=192.168.126.101:8046 -l 192.168.126.10#{i}:12000 -admin 192.168.126.10#{i}:12001 --version=1 --region=Chicago 0<&- &> /var/log/skynet_daemon.log &"
 
       # Start a couple skynet services
       5.times do |n|
