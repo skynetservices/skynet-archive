@@ -25,7 +25,7 @@ Vagrant::Config.run do |config|
   # This will be our doozer, and dzns master
   config.vm.define :skynet1 do |c|
     c.vm.box = "lucid64"
-    c.vm.network :hostonly, "192.168.125.101"
+    c.vm.network :hostonly, "192.168.126.101"
 
     c.vm.provision :chef_solo do |chef|
       # This path will be expanded relative to the project directory
@@ -52,18 +52,18 @@ Vagrant::Config.run do |config|
 
 
     # Setup DZNS Master
-    c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.101:10000' -w '192.168.125.101:11000' -c 'dzns' 0<&- &> /var/log/dzns.log &" 
+    c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.126.101:10000' -w '192.168.126.101:11000' -c 'dzns' 0<&- &> /var/log/dzns.log &" 
     
     # Setup Doozer Master
-    c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.101:8046' -w '192.168.125.101:8080' -c 'skynet' -b 'doozer:?ca=192.168.125.101:10000' 0<&- &> /var/log/doozer.log &"
+    c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.126.101:8046' -w '192.168.126.101:8080' -c 'skynet' -b 'doozer:?ca=192.168.126.101:10000' 0<&- &> /var/log/doozer.log &"
 
     # Start a couple skynet services
     5.times do |n|
       version = (n % 2) == 0 ? 1 : 2
       region = (n % 3) == 0 ? "Chicago" : "Dallas" 
 
-      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.125.101:8046 -l 192.168.125.101:999#{n} -admin 192.168.125.101:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_example.log &"
-      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/fibservice --doozer=192.168.125.101:8046 -l 192.168.125.101:997#{n} -admin 192.168.125.101:996#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_fibservice.log &"
+      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.126.101:8046 -l 192.168.126.101:999#{n} -admin 192.168.126.101:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_example.log &"
+      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/fibservice --doozer=192.168.126.101:8046 -l 192.168.126.101:997#{n} -admin 192.168.126.101:996#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_fibservice.log &"
     end
 
     #c.vm.share_folder "skynet", "/opt/skynet", "../"
@@ -77,7 +77,7 @@ Vagrant::Config.run do |config|
 
     config.vm.define "skynet#{i}" do |c|
       c.vm.box = "lucid64"
-      c.vm.network :hostonly, "192.168.125.10#{i}"
+      c.vm.network :hostonly, "192.168.126.10#{i}"
 
       c.vm.provision :chef_solo do |chef|
         # This path will be expanded relative to the project directory
@@ -100,20 +100,20 @@ Vagrant::Config.run do |config|
       end
 
       # Setup DZNS Node
-      c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.10#{i}:10000' -w '192.168.125.10#{i}:11000' -a '192.168.125.101:10000' -c 'dzns' 0<&- &> /var/log/dzns.log &" 
-      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.125.101:10000' add '/ctl/cal/#{i-1}' 0<&- &> /dev/null &"
+      c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.126.10#{i}:10000' -w '192.168.126.10#{i}:11000' -a '192.168.126.101:10000' -c 'dzns' 0<&- &> /var/log/dzns.log &" 
+      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.126.101:10000' add '/ctl/cal/#{i-1}' 0<&- &> /dev/null &"
       
       # Setup Doozer Node
-      c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.125.10#{i}:8046' -w '192.168.125.10#{i}:8080' -c 'skynet' -b 'doozer:?ca=192.168.125.101:10000' 0<&- &> /var/log/doozer.log &"
-      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.125.101:8046' add '/ctl/cal/#{i-1}'  0<&- &> /dev/null &"
+      c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.126.10#{i}:8046' -w '192.168.126.10#{i}:8080' -c 'skynet' -b 'doozer:?ca=192.168.126.101:10000' 0<&- &> /var/log/doozer.log &"
+      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.126.101:8046' add '/ctl/cal/#{i-1}'  0<&- &> /dev/null &"
 
       # Start a couple skynet services
       5.times do |n|
         version = (n % 2) == 0 ? 1 : 2
         region = (n % 3) == 0 ? "Chicago" : "Dallas" 
 
-        c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.125.101:8046 -l 192.168.125.10#{i}:999#{n} -admin 192.168.125.10#{i}:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_example.log &"
-        c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/fibservice --doozer=192.168.125.101:8046 -l 192.168.125.10#{i}:997#{n} -admin 192.168.125.10#{i}:996#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_fibservice.log &"
+        c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.126.101:8046 -l 192.168.126.10#{i}:999#{n} -admin 192.168.126.10#{i}:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_example.log &"
+        c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/fibservice --doozer=192.168.126.101:8046 -l 192.168.126.10#{i}:997#{n} -admin 192.168.126.10#{i}:996#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_fibservice.log &"
       end
 
 

@@ -2,6 +2,7 @@ sky/sky
 .DS_Store
 examples/service/service
 examples/client/client
+daemon/daemon
 dashboard/dashboard
 examples/.vagrant
 examples/testing/fibonacci/fibservice/fibservice

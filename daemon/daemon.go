@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/client"
 	"github.com/bketelsen/skynet/service"
 	"io"
 	"log"
@@ -14,19 +13,16 @@ import (
 	"sync"
 )
 
-// Daemon() will run and maintain skynet services.
+// Daemon will run and maintain skynet services.
 //
-// Daemon() will initially deploy those specified in the file given in the "-config" option
+// Daemon will initially deploy those specified in the file given in the "-config" option
 //
-// Daemon() will run the "SkynetDeployment" service, which can be used to remotely spawn
+// Daemon will run the "SkynetDeployment" service, which can be used to remotely spawn
 // new services on the host.
-func Daemon(q *client.Query, argv []string) {
-
-	config, args := skynet.GetServiceConfigFromFlags(argv...)
-
+func main() {
+	config, args := skynet.GetServiceConfigFromFlags()
 	config.Name = "SkynetDaemon"
 	config.Version = "1"
-	config.Region = "Jersey"
 
 	var err error
 	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)

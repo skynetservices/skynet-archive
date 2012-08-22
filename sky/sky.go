@@ -52,8 +52,6 @@ func main() {
 		ListServiceVersions(query)
 	case "topology":
 		PrintTopology(query)
-	case "daemon":
-		Daemon(query, flag.Args()[1:])
 	case "remote":
 		Remote(query, flag.Args()[1:])
 	case "register":
@@ -242,7 +240,6 @@ Commands:
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
 		-host - limit results to the specified port
-	daemon [config file]: Run the "SkynetDaemon" service, and deploy services listed in the provided config
 	remote [command]: Administer the services run by the SkynetDaemon service on the given host.
 		-host - the SkynetDaemon service to connect to
 		use "remote help" for details.
