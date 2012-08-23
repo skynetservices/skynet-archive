@@ -1,9 +1,9 @@
-sky/sky
+cmd/sky/sky
 .DS_Store
 examples/service/service
 examples/client/client
-daemon/daemon
-dashboard/dashboard
+cmd/daemon/daemon
+cmd/dashboard/dashboard
 examples/.vagrant
 examples/testing/fibonacci/fibservice/fibservice
 examples/testing/fibonacci/fibclient/fibclient
