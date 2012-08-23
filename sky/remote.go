@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"fmt"
 	"github.com/bketelsen/skynet"
@@ -284,3 +285,4 @@ func remoteHelp() {
 		- Restart all services.
 `)
 }
+*/

@@ -1,101 +1,12 @@
-package main
+package daemon
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/service"
-	"io"
-	"log"
-	"os"
-	"strings"
 	"sync"
 )
-
-// Daemon will run and maintain skynet services.
-//
-// Daemon will initially deploy those specified in the file given in the "-config" option
-//
-// Daemon will run the "SkynetDeployment" service, which can be used to remotely spawn
-// new services on the host.
-func main() {
-	config, args := skynet.GetServiceConfigFromFlags()
-	config.Name = "SkynetDaemon"
-	config.Version = "1"
-
-	var err error
-	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
-	clogger := skynet.NewConsoleLogger(os.Stdout)
-	config.Log = skynet.NewMultiLogger(mlogger, clogger)
-	if err != nil {
-		config.Log.Item("Could not connect to mongo db for logging")
-	}
-
-	deployment := &SkynetDaemon{
-		Log:      config.Log,
-		Services: map[string]*SubService{},
-	}
-
-	s := service.CreateService(deployment, config)
-
-	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
-	defer func() {
-		s.Shutdown()
-		if err := recover(); err != nil {
-			log.Println("Unrecovered error occured: ", err)
-		}
-	}()
-
-	if len(args) == 1 {
-		err := deployConfig(deployment, args[0])
-		if err != nil {
-			config.Log.Item(err)
-		}
-	}
-
-	// If we pass false here service will not be Registered
-	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
-	s.Start(true).Wait()
-}
-
-// deploy each of the services listed in the provided file
-func deployConfig(s *SkynetDaemon, cfg string) (err error) {
-	cfgFile, err := os.Open(cfg)
-	if err != nil {
-		return
-	}
-	br := bufio.NewReader(cfgFile)
-	for {
-		var bline []byte
-		var prefix bool
-		bline, prefix, err = br.ReadLine()
-		if err == io.EOF {
-			err = nil
-			break
-		}
-		if err != nil {
-			return
-		}
-		if prefix {
-			err = errors.New("Config line to long in " + cfg)
-			return
-		}
-		line := strings.TrimSpace(string(bline))
-		if len(line) == 0 {
-			continue
-		}
-
-		split := strings.Index(line, " ")
-		if split == -1 {
-			split = len(line)
-		}
-		servicePath := line[:split]
-		args := strings.TrimSpace(line[split:])
-		s.Deploy(&skynet.RequestInfo{}, DeployIn{ServicePath: servicePath, Args: args}, &DeployOut{})
-	}
-	return
-}
 
 // SkynetDaemon is a service for administering other services
 type SkynetDaemon struct {
@@ -108,19 +19,10 @@ func (sd *SkynetDaemon) Registered(s *service.Service)   {}
 func (sd *SkynetDaemon) Unregistered(s *service.Service) {}
 func (sd *SkynetDaemon) Started(s *service.Service)      {}
 func (sd *SkynetDaemon) Stopped(s *service.Service) {
-	sd.StopAllSubServices(&skynet.RequestInfo{}, StopAllSubServicesIn{}, &StopAllSubServicesOut{})
+	sd.StopAllSubServices(&skynet.RequestInfo{}, StopAllSubServicesRequest{}, &StopAllSubServicesResponse{})
 }
 
-type DeployIn struct {
-	ServicePath string
-	Args        string
-}
-
-type DeployOut struct {
-	UUID string
-}
-
-func (s *SkynetDaemon) Deploy(requestInfo *skynet.RequestInfo, in DeployIn, out *DeployOut) (err error) {
+func (s *SkynetDaemon) Deploy(requestInfo *skynet.RequestInfo, in DeployRequest, out *DeployResponse) (err error) {
 	out.UUID = skynet.UUID()
 
 	s.Log.Item(SubserviceDeployment{
@@ -156,21 +58,7 @@ func (m M) String(key string) (val string, ok bool) {
 	return
 }
 
-type ListSubServicesIn struct {
-}
-
-type ListSubServicesOut struct {
-	Services map[string]SubServiceInfo
-}
-
-type SubServiceInfo struct {
-	UUID        string
-	ServicePath string
-	Args        string
-	Running     bool
-}
-
-func (s *SkynetDaemon) ListSubServices(requestInfo *skynet.RequestInfo, in ListSubServicesIn, out *ListSubServicesOut) (err error) {
+func (s *SkynetDaemon) ListSubServices(requestInfo *skynet.RequestInfo, in ListSubServicesRequest, out *ListSubServicesResponse) (err error) {
 	out.Services = make(map[string]SubServiceInfo)
 	if len(s.Services) == 0 {
 		err = errors.New("No services deployed")
@@ -188,15 +76,7 @@ func (s *SkynetDaemon) ListSubServices(requestInfo *skynet.RequestInfo, in ListS
 	return
 }
 
-type StopAllSubServicesIn struct {
-}
-
-type StopAllSubServicesOut struct {
-	Count int
-	Stops []StopSubServiceOut
-}
-
-func (s *SkynetDaemon) StopAllSubServices(requestInfo *skynet.RequestInfo, in StopAllSubServicesIn, out *StopAllSubServicesOut) (err error) {
+func (s *SkynetDaemon) StopAllSubServices(requestInfo *skynet.RequestInfo, in StopAllSubServicesRequest, out *StopAllSubServicesResponse) (err error) {
 	var uuids []string
 	s.serviceLock.Lock()
 	for uuid := range s.Services {
@@ -204,10 +84,10 @@ func (s *SkynetDaemon) StopAllSubServices(requestInfo *skynet.RequestInfo, in St
 	}
 	s.serviceLock.Unlock()
 
-	out.Stops = make([]StopSubServiceOut, len(uuids))
+	out.Stops = make([]StopSubServiceResponse, len(uuids))
 
 	for i, uuid := range uuids {
-		err = s.StopSubService(requestInfo, StopSubServiceIn{UUID: uuid}, &out.Stops[i])
+		err = s.StopSubService(requestInfo, StopSubServiceRequest{UUID: uuid}, &out.Stops[i])
 		if err != nil {
 			return
 		}
@@ -218,15 +98,7 @@ func (s *SkynetDaemon) StopAllSubServices(requestInfo *skynet.RequestInfo, in St
 	return
 }
 
-type StartAllSubServicesIn struct {
-}
-
-type StartAllSubServicesOut struct {
-	Count  int
-	Starts []StartSubServiceOut
-}
-
-func (s *SkynetDaemon) StartAllSubServices(requestInfo *skynet.RequestInfo, in StartAllSubServicesIn, out *StartAllSubServicesOut) (err error) {
+func (s *SkynetDaemon) StartAllSubServices(requestInfo *skynet.RequestInfo, in StartAllSubServicesRequest, out *StartAllSubServicesResponse) (err error) {
 	var uuids []string
 	s.serviceLock.Lock()
 	for uuid := range s.Services {
@@ -239,10 +111,10 @@ func (s *SkynetDaemon) StartAllSubServices(requestInfo *skynet.RequestInfo, in S
 		return
 	}
 
-	out.Starts = make([]StartSubServiceOut, len(uuids))
+	out.Starts = make([]StartSubServiceResponse, len(uuids))
 
 	for i, uuid := range uuids {
-		err = s.StartSubService(requestInfo, StartSubServiceIn{UUID: uuid}, &out.Starts[i])
+		err = s.StartSubService(requestInfo, StartSubServiceRequest{UUID: uuid}, &out.Starts[i])
 		if err != nil {
 			return
 		}
@@ -253,16 +125,7 @@ func (s *SkynetDaemon) StartAllSubServices(requestInfo *skynet.RequestInfo, in S
 	return
 }
 
-type StartSubServiceIn struct {
-	UUID string
-}
-
-type StartSubServiceOut struct {
-	Ok   bool
-	UUID string
-}
-
-func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in StartSubServiceIn, out *StartSubServiceOut) (err error) {
+func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in StartSubServiceRequest, out *StartSubServiceResponse) (err error) {
 	ss := s.getSubService(in.UUID)
 	if ss != nil {
 		out.Ok = ss.Start()
@@ -273,46 +136,21 @@ func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in Start
 	return
 }
 
-type StopSubServiceIn struct {
-	UUID string
-}
-
-type StopSubServiceOut struct {
-	Ok   bool
-	UUID string
-}
-
-func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in StopSubServiceIn, out *StopSubServiceOut) (err error) {
+func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in StopSubServiceRequest, out *StopSubServiceResponse) (err error) {
 	ss := s.getSubService(in.UUID)
 	out.Ok = ss.Stop()
 	out.UUID = in.UUID
 	return
 }
 
-type RestartSubServiceIn struct {
-	UUID string
-}
-
-type RestartSubServiceOut struct {
-	UUID string
-}
-
-func (s *SkynetDaemon) RestartSubService(requestInfo *skynet.RequestInfo, in RestartSubServiceIn, out *RestartSubServiceOut) (err error) {
+func (s *SkynetDaemon) RestartSubService(requestInfo *skynet.RequestInfo, in RestartSubServiceRequest, out *RestartSubServiceResponse) (err error) {
 	ss := s.getSubService(in.UUID)
 	ss.Restart()
 	out.UUID = in.UUID
 	return
 }
 
-type RestartAllSubServicesIn struct {
-}
-
-type RestartAllSubServicesOut struct {
-	Count    int
-	Restarts []RestartSubServiceOut
-}
-
-func (s *SkynetDaemon) RestartAllSubServices(requestInfo *skynet.RequestInfo, in RestartAllSubServicesIn, out *RestartAllSubServicesOut) (err error) {
+func (s *SkynetDaemon) RestartAllSubServices(requestInfo *skynet.RequestInfo, in RestartAllSubServicesRequest, out *RestartAllSubServicesResponse) (err error) {
 	var uuids []string
 	s.serviceLock.Lock()
 	for uuid := range s.Services {
@@ -325,10 +163,10 @@ func (s *SkynetDaemon) RestartAllSubServices(requestInfo *skynet.RequestInfo, in
 		return
 	}
 
-	out.Restarts = make([]RestartSubServiceOut, len(uuids))
+	out.Restarts = make([]RestartSubServiceResponse, len(uuids))
 
 	for i, uuid := range uuids {
-		err = s.RestartSubService(requestInfo, RestartSubServiceIn{UUID: uuid}, &out.Restarts[i])
+		err = s.RestartSubService(requestInfo, RestartSubServiceRequest{UUID: uuid}, &out.Restarts[i])
 		if err != nil {
 			return
 		}

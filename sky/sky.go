@@ -52,12 +52,18 @@ func main() {
 		ListServiceVersions(query)
 	case "topology":
 		PrintTopology(query)
-	case "remote":
-		Remote(query, flag.Args()[1:])
 	case "register":
 		Register(query)
 	case "unregister":
 		Unregister(query)
+	case "deploy":
+		args := flag.Args()
+		if len(args) < 3 {
+			fmt.Println("Usage: deploy <service path> <args>")
+			return
+		}
+
+		Deploy(query, args[1], args[2])
 	case "cli":
 		InteractiveShell()
 
@@ -226,24 +232,23 @@ Commands:
 	regions: List all regions available that meet the specified criteria
 	services: List all services available that meet the specified criteria
 		-host - limit results to the specified host
-		-host - limit results to the specified port
+		-port - limit results to the specified port
 		-region - limit results to hosts in the specified region
 		-region - limit results to hosts in the specified region
 	versions: List all services available that meet the specified criteria
 		-service - service name (required)
 		-host - limit results to the specified host
-		-host - limit results to the specified port
+		-port - limit results to the specified port
 		-region - limit results to hosts in the specified region
 	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
 		-service - limit results to instances of the specified service
 		-version - limit results to instances of the specified version of service
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
-		-host - limit results to the specified port
-	remote [command]: Administer the services run by the SkynetDaemon service on the given host.
-		-host - the SkynetDaemon service to connect to
-		use "remote help" for details.
-
+		-port - limit results to the specified port
+  deploy: deploy new instances to cluster (deploy <service path> <args>)
+		-region - deploy only to the specified region
+		-host - deploy to the specified host
 		
 		
 
@@ -387,6 +392,7 @@ func InteractiveShell() {
 	}
 }
 
+// TODO: cli needs to support deploy as well
 func InteractiveShellHelp() {
 	fmt.Print(`
 Commands:
