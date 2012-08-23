@@ -55,6 +55,10 @@ body {
   width: 100%;
 }
 
+#instance-list table tr td, #instance-list table tr th{
+  font-size: 85%;
+}
+
 #loading {
   text-align: center;
   font-size: 1.2em;
