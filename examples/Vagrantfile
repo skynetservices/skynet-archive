@@ -46,6 +46,7 @@ Vagrant::Config.run do |config|
       chef.add_recipe("doozerd")
       chef.add_recipe("skynet")
       chef.add_recipe("skynet::daemon")
+      chef.add_recipe("skynet::dashboard")
       chef.add_recipe("skynet::mongo_log")
       chef.add_recipe("skynet::example_service")
       chef.add_recipe("skynet::fibservice")
@@ -60,6 +61,9 @@ Vagrant::Config.run do |config|
 
     # Start Daemon
     c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/daemon --doozer=192.168.126.101:8046 -l 192.168.126.101:12000 -admin 192.168.126.101:12001 --version=1 --region=Chicago 0<&- &> /var/log/skynet_daemon.log &"
+
+    # Start Dashboard
+    c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/dashboard --doozer=192.168.126.101:8046 -addr 192.168.126.101:80 -mgoserver 192.168.126.101:27017 --webroot=/opt/local/gopath/src/github.com/bketelsen/skynet/cmd/dashboard 0<&- &> /var/log/skynet_dashboard.log &"
 
     # Start a couple skynet services
     5.times do |n|
