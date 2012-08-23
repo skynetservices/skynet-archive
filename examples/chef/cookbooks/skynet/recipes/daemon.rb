@@ -36,7 +36,7 @@ execute "rebuild-daemon" do
 end
 
 execute "install-daemon" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/daemon'
+  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/cmd/daemon'
 
   command %Q{
     go install  
