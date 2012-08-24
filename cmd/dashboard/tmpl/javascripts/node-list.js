@@ -115,7 +115,7 @@ jQuery(document).ready(function ($) {
           service: instance.Config.Name,
           version: instance.Config.Version,
           address: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
-          adminAddress: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
+          adminAddress: instance.Config.AdminAddr.IPAddress + ":" + instance.Config.AdminAddr.Port,
           registered: instance.Registered,
           stats: instance.Stats,
           node: this
