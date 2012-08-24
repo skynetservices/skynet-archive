@@ -145,5 +145,5 @@ func (ss *SubService) rerunner(rerunChan chan bool) {
 		}(proc)
 	}
 
-	proc.Signal(syscall.SIGKILL)
+	proc.Signal(syscall.SIGQUIT)
 }
