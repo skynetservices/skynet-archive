@@ -63,7 +63,7 @@ func main() {
 			return
 		}
 
-		Deploy(query, args[1], args[2])
+		Deploy(query, args[1], args[2:]...)
 	case "cli":
 		InteractiveShell()
 

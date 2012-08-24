@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"strings"
 	"text/template"
 )
 
@@ -60,8 +61,8 @@ var deployTemplate = template.Must(template.New("").Parse(
 `))
 
 // TODO: this should be smarter about which hosts it deploys to
-func Deploy(q *client.Query, path string, args string) {
-	fmt.Println("deploying " + path + " " + args)
+func Deploy(q *client.Query, path string, args ...string) {
+	fmt.Println("deploying " + path + " " + strings.Join(args, ""))
 
 	config := &skynet.ClientConfig{
 		DoozerConfig: q.DoozerConn.Config,
@@ -82,7 +83,7 @@ func Deploy(q *client.Query, path string, args string) {
 
 		in := daemon.DeployRequest{
 			ServicePath: path,
-			Args:        shellquote.Join(args),
+			Args:        shellquote.Join(args...),
 		}
 		var out daemon.DeployResponse
 

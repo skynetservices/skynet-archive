@@ -46,8 +46,8 @@ execute "set-go-paths" do
 
 
   command %Q{
-    echo "GOPATH=#{gopath}\nGOROOT=#{goroot}\nPATH=$PATH:#{path}" > /etc/profile.d/go_env.sh
+    echo "export GOPATH=#{gopath}\nexport GOROOT=#{goroot}\nexport PATH=$PATH:#{path}" > /etc/profile.d/go_env.sh
   }
 
-  #not_if "ls /etc/profile.d/go_env.sh"
+  not_if "ls /etc/profile.d/go_env.sh"
 end

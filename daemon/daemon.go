@@ -34,9 +34,15 @@ func (s *SkynetDaemon) Deploy(requestInfo *skynet.RequestInfo, in DeployRequest,
 	if err != nil {
 		return
 	}
+
 	s.serviceLock.Lock()
 	s.Services[out.UUID] = ss
 	s.serviceLock.Unlock()
+
+	if !ss.Start() {
+		return errors.New("Service failed to start")
+	}
+
 	return
 }
 
