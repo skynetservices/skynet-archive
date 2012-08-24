@@ -144,15 +144,24 @@ func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in Start
 
 func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in StopSubServiceRequest, out *StopSubServiceResponse) (err error) {
 	ss := s.getSubService(in.UUID)
-	out.Ok = ss.Stop()
-	out.UUID = in.UUID
+	if ss != nil {
+		out.Ok = ss.Stop()
+		out.UUID = in.UUID
+	} else {
+		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
+	}
+
 	return
 }
 
 func (s *SkynetDaemon) RestartSubService(requestInfo *skynet.RequestInfo, in RestartSubServiceRequest, out *RestartSubServiceResponse) (err error) {
 	ss := s.getSubService(in.UUID)
-	ss.Restart()
-	out.UUID = in.UUID
+	if ss != nil {
+		ss.Restart()
+		out.UUID = in.UUID
+	} else {
+		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
+	}
 	return
 }
 

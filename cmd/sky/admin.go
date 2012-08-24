@@ -56,6 +56,24 @@ func doSomething(q *client.Query, do func(*rpc.Client, skynet.Logger)) {
 	}
 }
 
+func getDaemonServiceClientForHost(dc *skynet.DoozerConfig, host string) *client.ServiceClient {
+	config := &skynet.ClientConfig{
+		DoozerConfig: dc,
+	}
+
+	c := client.NewClient(config)
+	registered := true
+	query := &client.Query{
+		DoozerConn: c.DoozerConn,
+		Service:    "SkynetDaemon",
+		Host:       host,
+		Registered: &registered,
+	}
+
+	s := c.GetServiceFromQuery(query)
+	return s
+}
+
 var deployTemplate = template.Must(template.New("").Parse(
 	`Deployed service with UUID {{.UUID}}.
 `))
@@ -64,22 +82,12 @@ var deployTemplate = template.Must(template.New("").Parse(
 func Deploy(q *client.Query, path string, args ...string) {
 	fmt.Println("deploying " + path + " " + strings.Join(args, ""))
 
-	config := &skynet.ClientConfig{
-		DoozerConfig: q.DoozerConn.Config,
-	}
-
 	for _, host := range q.FindHosts() {
-		c := client.NewClient(config)
-
-		registered := true
-		query := &client.Query{
-			DoozerConn: c.DoozerConn,
-			Service:    "SkynetDaemon",
-			Host:       host,
-			Registered: &registered,
+		if _, ok := serviceClients[host]; !ok {
+			serviceClients[host] = getDaemonServiceClientForHost(q.DoozerConn.Config, host)
 		}
 
-		s := c.GetServiceFromQuery(query)
+		s := serviceClients[host]
 
 		in := daemon.DeployRequest{
 			ServicePath: path,
@@ -95,5 +103,33 @@ func Deploy(q *client.Query, path string, args ...string) {
 		}
 
 		deployTemplate.Execute(os.Stdout, out)
+	}
+}
+
+var stopTemplate = template.Must(template.New("").Parse(
+	`{{if .Ok}}Stopped service with UUID {{.UUID}}.
+{{else}}Service with UUID {{.UUID}} is already stopped.
+{{end}}`))
+
+var serviceClients = make(map[string]*client.ServiceClient)
+
+func Stop(q *client.Query) {
+	for _, instance := range q.FindInstances() {
+		if _, ok := serviceClients[instance.Config.ServiceAddr.IPAddress]; !ok {
+			serviceClients[instance.Config.ServiceAddr.IPAddress] = getDaemonServiceClientForHost(q.DoozerConn.Config, instance.Config.ServiceAddr.IPAddress)
+		}
+
+		s := serviceClients[instance.Config.ServiceAddr.IPAddress]
+
+		in := daemon.StopSubServiceRequest{UUID: instance.Config.UUID}
+		out := daemon.StopSubServiceResponse{}
+
+		err := s.Send(nil, "StopSubService", in, &out)
+
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			stopTemplate.Execute(os.Stdout, out)
+		}
 	}
 }

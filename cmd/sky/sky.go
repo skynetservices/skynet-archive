@@ -56,6 +56,8 @@ func main() {
 		Register(query)
 	case "unregister":
 		Unregister(query)
+	case "stop":
+		Stop(query)
 	case "deploy":
 		args := flag.Args()
 		if len(args) < 3 {
@@ -249,6 +251,13 @@ Commands:
   deploy: deploy new instances to cluster (deploy <service path> <args>)
 		-region - deploy only to the specified region
 		-host - deploy to the specified host
+	stop: Stop all instances available that meet the specified criteria
+		-service - limit command to instances of the specified service
+		-version - limit command to instances of the specified version of service
+		-region - limit command to instances in the specified region
+		-host - limit command to instances on the specified host
+		-port - limit command to instances on the specified port
+		-registered - (true, false) limit command to instances that are registered (accepting requests)
 		
 		
 

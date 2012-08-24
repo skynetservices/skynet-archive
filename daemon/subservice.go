@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -143,5 +144,6 @@ func (ss *SubService) rerunner(rerunChan chan bool) {
 			}
 		}(proc)
 	}
-	proc.Kill()
+
+	proc.Signal(syscall.SIGKILL)
 }
