@@ -10,11 +10,12 @@ import (
 
 func main() {
 	config, _ := skynet.GetClientConfigFromFlags()
+	config.MaxConnectionsToInstance = 5
 	client := client.NewClient(config)
 
 	service := client.GetService("Sleeper", "", "", "")
 
-	service.SetTimeout(1*time.Second, 10*time.Second)
+	service.SetTimeout(1*time.Second, 30*time.Second)
 
 	req := sleeper.Request{
 		Message:  "Hello!",

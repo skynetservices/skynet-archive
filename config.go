@@ -106,10 +106,11 @@ type ServiceConfig struct {
 }
 
 type ClientConfig struct {
-	Log                Logger        `json:"-"`
-	DoozerConfig       *DoozerConfig `json:"-"`
-	ConnectionPoolSize int
-	IdleTimeout        time.Duration
+	Log                       Logger        `json:"-"`
+	DoozerConfig              *DoozerConfig `json:"-"`
+	IdleConnectionsToInstance int
+	MaxConnectionsToInstance  int
+	IdleTimeout               time.Duration
 }
 
 func GetDefaultEnvVar(name, def string) (v string) {

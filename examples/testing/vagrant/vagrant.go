@@ -35,9 +35,10 @@ func main() {
 	}
 
 	clientConfig := &skynet.ClientConfig{
-		DoozerConfig:       doozerConfig,
-		ConnectionPoolSize: *requests,
-		IdleTimeout:        (2 * time.Minute),
+		DoozerConfig:              doozerConfig,
+		IdleConnectionsToInstance: *requests,
+		MaxConnectionsToInstance:  *requests,
+		IdleTimeout:               (2 * time.Minute),
 	}
 
 	c := make(chan os.Signal, 1)

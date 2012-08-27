@@ -47,8 +47,12 @@ func NewClient(config *skynet.ClientConfig) *Client {
 		config.Log = skynet.NewConsoleLogger(os.Stderr)
 	}
 
-	if config.ConnectionPoolSize == 0 {
-		config.ConnectionPoolSize = 1
+	if config.IdleConnectionsToInstance == 0 {
+		config.IdleConnectionsToInstance = 1
+	}
+
+	if config.MaxConnectionsToInstance == 0 {
+		config.MaxConnectionsToInstance = 1
 	}
 
 	client := &Client{
@@ -90,9 +94,11 @@ func (c *Client) getServicePool(instance *service.Service) (sp *servicePool) {
 		return
 	}
 
+	dbgf("making service pool, size = %d, %d\n", c.Config.IdleConnectionsToInstance, c.Config.MaxConnectionsToInstance)
+
 	sp = &servicePool{
 		service: instance,
-		pool:    pools.NewResourcePool(getConnectionFactory(instance), c.Config.ConnectionPoolSize, c.Config.ConnectionPoolSize),
+		pool:    pools.NewResourcePool(getConnectionFactory(instance), c.Config.IdleConnectionsToInstance, c.Config.MaxConnectionsToInstance),
 	}
 	return
 }

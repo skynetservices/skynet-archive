@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"github.com/4ad/doozer"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/pools"
@@ -8,6 +9,33 @@ import (
 	"labix.org/v2/mgo/bson"
 	"time"
 )
+
+const DEBUG = false
+
+func dbg(items ...interface{}) {
+	if DEBUG {
+		fmt.Println(items...)
+	}
+}
+
+func dbgf(format string, items ...interface{}) {
+	if DEBUG {
+		fmt.Printf(format, items...)
+	}
+}
+
+const TRACE = false
+
+func ts(name string, items ...interface{}) {
+	if TRACE {
+		fmt.Printf("+%s %v\n", name, items)
+	}
+}
+func te(name string, items ...interface{}) {
+	if TRACE {
+		fmt.Printf("-%s %v\n", name, items)
+	}
+}
 
 type serviceError struct {
 	msg string
@@ -149,89 +177,6 @@ func (c *ServiceClient) GetTimeout() (retry, giveup time.Duration) {
 	return
 }
 
-// ServiceClient.sendToInstance() tries to make an RPC request on a particular connection to an instance
-func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.RequestInfo, funcName string, in interface{}) (result []byte, err error) {
-	if requestInfo == nil {
-		requestInfo = &skynet.RequestInfo{
-			RequestID: skynet.UUID(),
-		}
-	}
-
-	sin := service.ServiceRPCIn{
-		RequestInfo: requestInfo,
-		Method:      funcName,
-	}
-
-	sin.In, err = bson.Marshal(in)
-	if err != nil {
-		return
-	}
-
-	sout := service.ServiceRPCOut{}
-
-	err = sr.rpcClient.Call(sr.service.Config.Name+".Forward", sin, &sout)
-	if err != nil {
-		sr.Close()
-		c.Log.Item(err)
-	}
-
-	if sout.ErrString != "" {
-		err = serviceError{sout.ErrString}
-	}
-
-	result = sout.Out
-
-	return
-}
-
-type sendAttempt struct {
-	result []byte
-	err    error
-}
-
-func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}) {
-	// first find an available instance
-	var r pools.Resource
-	var err error
-	for r == nil {
-		instance, ok := c.chooser.Choose(timeout)
-		if !ok {
-			// must have timed out
-			return
-		}
-		sp := c.instances[getInstanceKey(instance)]
-
-		// then, get a connection to that instance
-		r, err = sp.pool.Acquire()
-		defer sp.pool.Release(r)
-		if err != nil {
-			if r != nil {
-				r.Close()
-			}
-			// TODO: report connection failure
-			c.chooser.Remove(instance)
-			c.Log.Item(FailedConnection{err})
-		}
-	}
-
-	if err != nil {
-		c.Log.Item(err)
-		attempts <- sendAttempt{err: err}
-		return
-	}
-
-	sr := r.(ServiceResource)
-
-	result, err := c.sendToInstance(sr, ri, fn, in)
-
-
-
-	attempts <- sendAttempt{
-		result: result,
-		err:    err,
-	}
-}
-
 /*
 ServiceClient.Send() will send a request to one of the available instances. In intervals of retry time,
 it will send additional requests to other known instances. If no response is heard after
@@ -252,6 +197,12 @@ func (c *ServiceClient) SendOnce(ri *skynet.RequestInfo, fn string, in interface
 }
 
 func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
+	if ri == nil {
+		ri = &skynet.RequestInfo{
+			RequestID: skynet.UUID(),
+		}
+	}
+
 	attempts := make(chan sendAttempt)
 
 	var ticker <-chan time.Time
@@ -307,6 +258,92 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 			return
 		}
 	}
+
+	return
+}
+
+type sendAttempt struct {
+	result []byte
+	err    error
+}
+
+func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}) {
+
+	ts("attemptSend")
+	defer te("attemptSend")
+
+	// first find an available instance
+	var r pools.Resource
+	var err error
+	for r == nil {
+		instance, ok := c.chooser.Choose(timeout)
+		if !ok {
+			dbg("timed out")
+			// must have timed out
+			return
+		}
+		dbg("chose", getInstanceKey(instance))
+		sp := c.instances[getInstanceKey(instance)]
+
+		// then, get a connection to that instance
+		dbg("acquiring connection")
+		r, err = sp.pool.Acquire()
+		dbg("acquired connection")
+		defer sp.pool.Release(r)
+		if err != nil {
+			if r != nil {
+				r.Close()
+			}
+			// TODO: report connection failure
+			c.chooser.Remove(instance)
+			c.Log.Item(FailedConnection{err})
+		}
+	}
+
+	if err != nil {
+		c.Log.Item(err)
+		attempts <- sendAttempt{err: err}
+		return
+	}
+
+	sr := r.(ServiceResource)
+
+	result, err := c.sendToInstance(sr, ri, fn, in)
+
+	attempts <- sendAttempt{
+		result: result,
+		err:    err,
+	}
+}
+
+// ServiceClient.sendToInstance() tries to make an RPC request on a particular connection to an instance
+func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.RequestInfo, funcName string, in interface{}) (result []byte, err error) {
+	ts("sendToInstance", requestInfo)
+	defer te("sendToInstance", requestInfo)
+
+	sin := service.ServiceRPCIn{
+		RequestInfo: requestInfo,
+		Method:      funcName,
+	}
+
+	sin.In, err = bson.Marshal(in)
+	if err != nil {
+		return
+	}
+
+	sout := service.ServiceRPCOut{}
+
+	err = sr.rpcClient.Call(sr.service.Config.Name+".Forward", sin, &sout)
+	if err != nil {
+		sr.Close()
+		c.Log.Item(err)
+	}
+
+	if sout.ErrString != "" {
+		err = serviceError{sout.ErrString}
+	}
+
+	result = sout.Out
 
 	return
 }
