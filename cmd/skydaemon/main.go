@@ -31,9 +31,9 @@ func main() {
 		config.Log.Item("Could not connect to mongo db for logging")
 	}
 
-	deployment := &daemon.SkynetDaemon{
+	deployment := &SkynetDaemon{
 		Log:      config.Log,
-		Services: map[string]*daemon.SubService{},
+		Services: map[string]*SubService{},
 	}
 
 	s := service.CreateService(deployment, config)
@@ -59,7 +59,7 @@ func main() {
 }
 
 // deploy each of the services listed in the provided file
-func deployConfig(s *daemon.SkynetDaemon, cfg string) (err error) {
+func deployConfig(s *SkynetDaemon, cfg string) (err error) {
 	cfgFile, err := os.Open(cfg)
 	if err != nil {
 		return

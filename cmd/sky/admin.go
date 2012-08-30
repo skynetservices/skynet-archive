@@ -33,6 +33,15 @@ func doUnregister(rpcClient *rpc.Client, log skynet.Logger) {
 	}
 }
 
+func doStop(rpcClient *rpc.Client, log skynet.Logger) {
+	var args service.UnregisterParams
+	var reply service.UnregisterReturns
+	err := rpcClient.Call("Admin.Stop", args, &reply)
+	if err != nil {
+		log.Item(err)
+	}
+}
+
 func Register(q *client.Query) {
 	doSomething(q, doRegister)
 }
@@ -80,22 +89,18 @@ var deployTemplate = template.Must(template.New("").Parse(
 
 // TODO: this should be smarter about which hosts it deploys to
 func Deploy(q *client.Query, path string, args ...string) {
+	cl := client.NewClient(&skynet.ClientConfig{})
+
 	fmt.Println("deploying " + path + " " + strings.Join(args, ""))
 
 	for _, host := range q.FindHosts() {
-		if _, ok := serviceClients[host]; !ok {
-			serviceClients[host] = getDaemonServiceClientForHost(q.DoozerConn.Config, host)
-		}
-
-		s := serviceClients[host]
+		cdaemon := daemon.GetDaemonForHost(cl, host)
 
 		in := daemon.DeployRequest{
 			ServicePath: path,
 			Args:        shellquote.Join(args...),
 		}
-		var out daemon.DeployResponse
-
-		err := s.Send(nil, "Deploy", in, &out)
+		out, err := cdaemon.Deploy(in)
 
 		if err != nil {
 			fmt.Println(err)
@@ -111,23 +116,24 @@ var stopTemplate = template.Must(template.New("").Parse(
 {{else}}Service with UUID {{.UUID}} is already stopped.
 {{end}}`))
 
-var serviceClients = make(map[string]*client.ServiceClient)
+var serviceClients = make(map[string]daemon.Client)
 
 func Stop(q *client.Query) {
-	for _, instance := range q.FindInstances() {
-		if _, ok := serviceClients[instance.Config.ServiceAddr.IPAddress]; !ok {
-			serviceClients[instance.Config.ServiceAddr.IPAddress] = getDaemonServiceClientForHost(q.DoozerConn.Config, instance.Config.ServiceAddr.IPAddress)
-		}
+	cl := client.NewClient(&skynet.ClientConfig{})
 
-		s := serviceClients[instance.Config.ServiceAddr.IPAddress]
+	for _, instance := range q.FindInstances() {
+		cdaemon := daemon.GetDaemonForService(cl, instance)
 
 		in := daemon.StopSubServiceRequest{UUID: instance.Config.UUID}
-		out := daemon.StopSubServiceResponse{}
-
-		err := s.Send(nil, "StopSubService", in, &out)
+		out, err := cdaemon.StopSubService(in)
 
 		if err != nil {
-			fmt.Println(err)
+			if strings.HasPrefix(err.Error(), "No such service UUID") {
+				// no daemon on the service's machine, shut it down directly
+				doSomething(q, doStop)
+			} else {
+				fmt.Println(err)
+			}
 		} else {
 			stopTemplate.Execute(os.Stdout, out)
 		}

@@ -58,14 +58,6 @@ func main() {
 		Unregister(query)
 	case "stop":
 		Stop(query)
-	case "deploy":
-		args := flag.Args()
-		if len(args) < 3 {
-			fmt.Println("Usage: deploy <service path> <args>")
-			return
-		}
-
-		Deploy(query, args[1], args[2:]...)
 	case "cli":
 		InteractiveShell()
 

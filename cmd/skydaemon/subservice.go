@@ -1,4 +1,4 @@
-package daemon
+package main
 
 import (
 	"github.com/bketelsen/skynet"
@@ -30,13 +30,6 @@ type SubService struct {
 	rerunChan chan bool
 
 	startMutex sync.Mutex
-}
-
-type SubServiceInfo struct {
-	UUID        string
-	ServicePath string
-	Args        string
-	Running     bool
 }
 
 func NewSubService(log skynet.Logger, servicePath, args, uuid string) (ss *SubService, err error) {
