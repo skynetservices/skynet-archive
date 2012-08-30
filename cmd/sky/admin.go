@@ -116,8 +116,6 @@ var stopTemplate = template.Must(template.New("").Parse(
 {{else}}Service with UUID {{.UUID}} is already stopped.
 {{end}}`))
 
-var serviceClients = make(map[string]daemon.Client)
-
 func Stop(q *client.Query) {
 	cl := client.NewClient(&skynet.ClientConfig{})
 
