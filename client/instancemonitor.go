@@ -85,6 +85,9 @@ func (im *InstanceMonitor) mux() {
 			}
 
 			for _, c := range im.clients {
+				if notification.Service.Config == nil {
+					panic("nil service config")
+				}
 				if c.Query.ServiceMatches(notification.Service) {
 					c.notify(notification)
 				}

@@ -45,39 +45,41 @@ type Admin struct {
 	service *Service
 }
 
-type RegisterParams struct {
+type RegisterRequest struct {
 }
 
-type RegisterReturns struct {
+type RegisterResponse struct {
 }
 
-func (sa *Admin) Register(in RegisterParams, out *RegisterReturns) (err error) {
+func (sa *Admin) Register(in RegisterRequest, out *RegisterResponse) (err error) {
 	sa.service.Log.Println("Got RPC admin command Register")
 	sa.service.Register()
 	return
 }
 
-type UnregisterParams struct {
+type UnregisterRequest struct {
 }
 
-type UnregisterReturns struct {
+type UnregisterResponse struct {
 }
 
-func (sa *Admin) Unregister(in UnregisterParams, out *UnregisterReturns) (err error) {
+func (sa *Admin) Unregister(in UnregisterRequest, out *UnregisterResponse) (err error) {
 	sa.service.Log.Println("Got RPC admin command Unregister")
 	sa.service.Unregister()
 	return
 }
 
-type StopParams struct {
+type StopRequest struct {
 	WaitForClients bool
 }
 
-type StopReturns struct {
+type StopResponse struct {
 }
 
-func (sa *Admin) Stop(in StopParams, out *StopReturns) (err error) {
+func (sa *Admin) Stop(in StopRequest, out *StopResponse) (err error) {
 	sa.service.Log.Println("Got RPC admin command Stop")
+
+	// TODO: if in.WaitForClients is true, do it
 
 	sa.service.Shutdown()
 	return

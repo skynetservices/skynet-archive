@@ -38,6 +38,8 @@ func main() {
 
 	s := service.CreateService(deployment, config)
 
+	deployment.Service = s
+
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
 	defer func() {
 		s.Shutdown()

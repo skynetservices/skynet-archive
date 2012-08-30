@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"github.com/bketelsen/skynet/daemon"
 	"github.com/bketelsen/skynet/service"
 	"sync"
@@ -14,6 +15,7 @@ type SkynetDaemon struct {
 	Log         skynet.Logger
 	Services    map[string]*SubService
 	serviceLock sync.Mutex
+	Service     *service.Service
 }
 
 func (sd *SkynetDaemon) Registered(s *service.Service)   {}
@@ -135,7 +137,26 @@ func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in daemo
 func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon.StopSubServiceRequest, out *daemon.StopSubServiceResponse) (err error) {
 	ss := s.getSubService(in.UUID)
 	if ss != nil {
+		fmt.Println("+Stop")
 		out.Ok = ss.Stop()
+		fmt.Println("-Stop")
+
+		q := client.Query{
+			UUID:       in.UUID,
+			DoozerConn: s.Service.DoozerConn,
+		}
+		instances := q.FindInstances()
+		for _, instance := range instances {
+			fmt.Println("matching instance:", instance.Config.ServiceAddr, instance.Config.AdminAddr)
+			cladmin := client.Admin{
+				Instance: instance,
+			}
+
+			cladmin.Stop(service.StopRequest{
+				WaitForClients: true,
+			})
+		}
+
 		out.UUID = in.UUID
 	} else {
 		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
