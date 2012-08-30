@@ -137,9 +137,7 @@ func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in daemo
 func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon.StopSubServiceRequest, out *daemon.StopSubServiceResponse) (err error) {
 	ss := s.getSubService(in.UUID)
 	if ss != nil {
-		fmt.Println("+Stop")
 		out.Ok = ss.Stop()
-		fmt.Println("-Stop")
 
 		q := client.Query{
 			UUID:       in.UUID,
@@ -147,7 +145,6 @@ func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon
 		}
 		instances := q.FindInstances()
 		for _, instance := range instances {
-			fmt.Println("matching instance:", instance.Config.ServiceAddr, instance.Config.AdminAddr)
 			cladmin := client.Admin{
 				Instance: instance,
 			}
