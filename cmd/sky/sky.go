@@ -14,22 +14,32 @@ import (
 )
 
 var (
-	DoozerHost      *string = flag.String("doozer", skynet.GetDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
-	VersionFlag     *string = flag.String("version", "", "service version")
-	ServiceNameFlag *string = flag.String("service", "", "service name")
-	HostFlag        *string = flag.String("host", "", "host")
-	PortFlag        *string = flag.String("port", "", "port")
-	RegionFlag      *string = flag.String("region", "", "region")
-	RegisteredFlag  *string = flag.String("registered", "", "registered")
+	flagset                 = flag.NewFlagSet("sky", flag.ExitOnError)
+	VersionFlag     *string = flagset.String("version", "", "service version")
+	ServiceNameFlag *string = flagset.String("service", "", "service name")
+	HostFlag        *string = flagset.String("host", "", "host")
+	PortFlag        *string = flagset.String("port", "", "port")
+	RegionFlag      *string = flagset.String("region", "", "region")
+	RegisteredFlag  *string = flagset.String("registered", "", "registered")
 )
 
 var DC *skynet.DoozerConnection
+var config skynet.ClientConfig
 
 func main() {
-	flag.Parse()
+	config = skynet.ClientConfig{
+		DoozerConfig: &skynet.DoozerConfig{},
+	}
+	skynet.FlagsForClient(&config, flagset)
+
+	err := flagset.Parse(os.Args[1:])
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	query := &client.Query{
-		DoozerConn: Doozer(),
+		DoozerConn: Doozer(config.DoozerConfig),
 		Service:    *ServiceNameFlag,
 		Version:    *VersionFlag,
 		Host:       *HostFlag,
@@ -37,7 +47,9 @@ func main() {
 		Port:       *PortFlag,
 	}
 
-	switch flag.Arg(0) {
+	fmt.Println(flagset.Args())
+
+	switch flagset.Arg(0) {
 	case "help", "h":
 		CommandLineHelp()
 	case "services":
@@ -73,15 +85,15 @@ func main() {
 	}
 }
 
-func Doozer() *skynet.DoozerConnection {
+func Doozer(dcfg *skynet.DoozerConfig) *skynet.DoozerConnection {
 	if DC == nil {
-		DC = Connect()
+		DC = Connect(dcfg)
 	}
 
 	return DC
 }
 
-func Connect() *skynet.DoozerConnection {
+func Connect(dcfg *skynet.DoozerConfig) *skynet.DoozerConnection {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Failed to connect to Doozer")
@@ -90,7 +102,7 @@ func Connect() *skynet.DoozerConnection {
 	}()
 
 	// TODO: This needs to come from command line, or environment variable
-	conn := skynet.NewDoozerConnection(*DoozerHost, "", false, nil) // nil as the last param will default to a Stdout logger
+	conn := skynet.NewDoozerConnection(dcfg.Uri, "", false, nil) // nil as the last param will default to a Stdout logger
 	conn.Connect()
 
 	return conn
@@ -270,7 +282,7 @@ Commands:
 
 func InteractiveShell() {
 	lineReader := bufio.NewReader(os.Stdin)
-	doozer := Doozer()
+	doozer := Doozer(config.DoozerConfig)
 
 	fmt.Println("Skynet Interactive Shell")
 	prompt()

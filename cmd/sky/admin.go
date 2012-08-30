@@ -89,7 +89,7 @@ var deployTemplate = template.Must(template.New("").Parse(
 
 // TODO: this should be smarter about which hosts it deploys to
 func Deploy(q *client.Query, path string, args ...string) {
-	cl := client.NewClient(&skynet.ClientConfig{})
+	cl := client.NewClient(&config)
 
 	fmt.Println("deploying " + path + " " + strings.Join(args, ""))
 
@@ -117,7 +117,7 @@ var stopTemplate = template.Must(template.New("").Parse(
 {{end}}`))
 
 func Stop(q *client.Query) {
-	cl := client.NewClient(&skynet.ClientConfig{})
+	cl := client.NewClient(&config)
 
 	for _, instance := range q.FindInstances() {
 		cdaemon := daemon.GetDaemonForService(cl, instance)
