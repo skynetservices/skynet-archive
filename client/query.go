@@ -17,6 +17,7 @@ type Query struct {
 	Host       string
 	Port       string
 	Region     string
+	UUID       string
 	Registered *bool
 	DoozerConn *skynet.DoozerConnection
 	DoozerRev  int64
@@ -249,6 +250,10 @@ func (q *Query) ServiceMatches(s service.Service) bool {
 	}
 
 	if q.Registered != nil && s.Registered != *q.Registered {
+		return false
+	}
+
+	if q.UUID != "" && s.Config.UUID != q.UUID {
 		return false
 	}
 

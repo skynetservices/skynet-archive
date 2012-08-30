@@ -1,4 +1,4 @@
-package daemon
+package main
 
 import (
 	"github.com/bketelsen/skynet"
@@ -9,7 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
-	"syscall"
+	//	"syscall"
 	"time"
 )
 
@@ -30,13 +30,8 @@ type SubService struct {
 	rerunChan chan bool
 
 	startMutex sync.Mutex
-}
 
-type SubServiceInfo struct {
-	UUID        string
-	ServicePath string
-	Args        string
-	Running     bool
+	runSignal sync.WaitGroup
 }
 
 func NewSubService(log skynet.Logger, servicePath, args, uuid string) (ss *SubService, err error) {
@@ -89,7 +84,9 @@ func (ss *SubService) Stop() bool {
 
 	ss.Deregister()
 	// halt the rerunner so we can kill the processes without it relaunching
+	ss.runSignal.Add(1)
 	ss.rerunChan <- false
+	ss.runSignal.Wait()
 	return true
 }
 
@@ -145,5 +142,8 @@ func (ss *SubService) rerunner(rerunChan chan bool) {
 		}(proc)
 	}
 
-	proc.Signal(syscall.SIGQUIT)
+	ss.runSignal.Done()
+
+	// proc.Signal(syscall.SIGQUIT)
+	// proc.Kill()
 }

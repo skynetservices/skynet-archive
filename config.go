@@ -120,10 +120,15 @@ func GetDefaultEnvVar(name, def string) (v string) {
 	return
 }
 
-func flagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
+func FlagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
 	flagset.StringVar(&dcfg.Uri, "doozer", GetDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
 	flagset.StringVar(&dcfg.BootUri, "doozerboot", GetDefaultEnvVar("DZNSHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
 	flagset.BoolVar(&dcfg.AutoDiscover, "autodiscover", GetDefaultEnvVar("DZDISCOVER", "true") == "true", "auto discover new doozer instances")
+}
+
+func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
+	FlagsForDoozer(ccfg.DoozerConfig, flagset)
+	flagset.DurationVar(&ccfg.IdleTimeout, "timeout", 0, "amount of idle time before timeout")
 }
 
 func GetClientConfigFromFlags(argv ...string) (config *ClientConfig, args []string) {
@@ -134,12 +139,7 @@ func GetClientConfigFromFlags(argv ...string) (config *ClientConfig, args []stri
 
 	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
 
-	flagsForDoozer(config.DoozerConfig, flagset)
-	idleTimeout := flagset.Int("timeout", 0, "amount of idle time before timeout")
-
-	if len(argv) == 0 {
-		argv = os.Args[1:]
-	}
+	FlagsForClient(config, flagset)
 
 	err := flagset.Parse(argv)
 	args = flagset.Args()
@@ -149,9 +149,15 @@ func GetClientConfigFromFlags(argv ...string) (config *ClientConfig, args []stri
 		args = append(args, "-help")
 	}
 
-	config.IdleTimeout = time.Duration(*idleTimeout)
-
 	return
+}
+
+func FlagsForService(scfg *ServiceConfig, flagset *flag.FlagSet) {
+	FlagsForDoozer(scfg.DoozerConfig, flagset)
+	flagset.StringVar(&scfg.UUID, "uuid", UUID(), "UUID for this service")
+	flagset.StringVar(&scfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", "unknown"), "region service is located in")
+	flagset.StringVar(&scfg.Version, "version", "unknown", "version of service")
+	flagset.DurationVar(&scfg.DoozerUpdateInterval, "dzupdate", 5e9, "ns to wait before sending the next status update")
 }
 
 func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []string) {
@@ -162,13 +168,10 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 
 	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
 
-	flagsForDoozer(config.DoozerConfig, flagset)
+	FlagsForService(config, flagset)
+
 	rpcAddr := flagset.String("l", GetDefaultEnvVar("SKYNET_LISTEN", ":9999"), "host:port to listen on for RPC")
 	adminAddr := flagset.String("admin", GetDefaultEnvVar("SKYNET_ADMIN", ":9998"), "host:port to listen on for admin")
-	flagset.StringVar(&config.UUID, "uuid", UUID(), "UUID for this service")
-	flagset.StringVar(&config.Region, "region", GetDefaultEnvVar("SKYNET_REGION", "unknown"), "region service is located in")
-	flagset.StringVar(&config.Version, "version", "unknown", "version of service")
-	flagset.DurationVar(&config.DoozerUpdateInterval, "dzupdate", 5e9, "ns to wait before sending the next status update")
 
 	if len(argv) == 0 {
 		argv = os.Args[1:]
