@@ -9,6 +9,13 @@ type DeployResponse struct {
 	UUID string
 }
 
+type SubServiceInfo struct {
+	UUID        string
+	ServicePath string
+	Args        string
+	Running     bool
+}
+
 type ListSubServicesRequest struct {
 }
 
