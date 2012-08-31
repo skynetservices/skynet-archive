@@ -60,6 +60,8 @@ func main() {
 		Register(query)
 	case "unregister":
 		Unregister(query)
+	case "stop":
+		Stop(query)
 	case "cli":
 		InteractiveShell()
 
