@@ -121,9 +121,9 @@ func GetDefaultEnvVar(name, def string) (v string) {
 }
 
 func FlagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
-	flagset.StringVar(&dcfg.Uri, "doozer", GetDefaultEnvVar("DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
-	flagset.StringVar(&dcfg.BootUri, "doozerboot", GetDefaultEnvVar("DZNSHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
-	flagset.BoolVar(&dcfg.AutoDiscover, "autodiscover", GetDefaultEnvVar("DZDISCOVER", "true") == "true", "auto discover new doozer instances")
+	flagset.StringVar(&dcfg.Uri, "doozer", GetDefaultEnvVar("SKYNET_DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
+	flagset.StringVar(&dcfg.BootUri, "doozerboot", GetDefaultEnvVar("SKYNET_DZNSHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
+	flagset.BoolVar(&dcfg.AutoDiscover, "autodiscover", GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true", "auto discover new doozer instances")
 }
 
 func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
