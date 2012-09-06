@@ -21,6 +21,8 @@ type SkynetDaemon struct {
 func (sd *SkynetDaemon) Registered(s *service.Service)   {}
 func (sd *SkynetDaemon) Unregistered(s *service.Service) {}
 func (sd *SkynetDaemon) Started(s *service.Service)      {}
+
+// TODO: Should we stop all services? how do we account for graceful restarts?
 func (sd *SkynetDaemon) Stopped(s *service.Service) {
 	sd.StopAllSubServices(&skynet.RequestInfo{}, daemon.StopAllSubServicesRequest{}, &daemon.StopAllSubServicesResponse{})
 }
@@ -42,7 +44,11 @@ func (s *SkynetDaemon) Deploy(requestInfo *skynet.RequestInfo, in daemon.DeployR
 	s.Services[out.UUID] = ss
 	s.serviceLock.Unlock()
 
-	if !ss.Start() {
+	start, startErr := ss.Start()
+
+	if startErr != nil {
+		return errors.New("Service failed to start: " + startErr.Error())
+	} else if !start {
 		return errors.New("Service failed to start")
 	}
 
@@ -93,6 +99,7 @@ func (s *SkynetDaemon) StopAllSubServices(requestInfo *skynet.RequestInfo, in da
 			out.Count++
 		}
 	}
+
 	return
 }
 
@@ -126,7 +133,7 @@ func (s *SkynetDaemon) StartAllSubServices(requestInfo *skynet.RequestInfo, in d
 func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in daemon.StartSubServiceRequest, out *daemon.StartSubServiceResponse) (err error) {
 	ss := s.getSubService(in.UUID)
 	if ss != nil {
-		out.Ok = ss.Start()
+		out.Ok, _ = ss.Start()
 		out.UUID = in.UUID
 	} else {
 		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
@@ -149,6 +156,7 @@ func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon
 				Instance: instance,
 			}
 
+			fmt.Println("waiting for service to stop: " + instance)
 			cladmin.Stop(service.StopRequest{
 				WaitForClients: true,
 			})

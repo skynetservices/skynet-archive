@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"github.com/bketelsen/skynet"
 	"github.com/kballard/go-shellquote"
 	"go/build"
@@ -46,19 +48,20 @@ func NewSubService(log skynet.Logger, servicePath, args, uuid string) (ss *SubSe
 
 	ss.argv = append([]string{"-uuid", uuid}, ss.argv...)
 
-	//verify that it exists on the local system
-
+	// verify that it exists on the local system
+	// TODO: go get package?
 	pkg, err := build.Import(ss.ServicePath, "", 0)
 	if err != nil {
 		return
 	}
 
 	if pkg.Name != "main" {
-		return
+		return nil, errors.New("This package is not a binary")
 	}
 
 	_, binName := path.Split(ss.ServicePath)
 	binPath := filepath.Join(pkg.BinDir, binName)
+
 	ss.binPath = binPath
 
 	return
@@ -84,25 +87,35 @@ func (ss *SubService) Stop() bool {
 	ss.Deregister()
 	// halt the rerunner so we can kill the processes without it relaunching
 	ss.runSignal.Add(1)
+
 	ss.rerunChan <- false
+
 	ss.runSignal.Wait()
+
 	return true
 }
 
-func (ss *SubService) Start() bool {
+func (ss *SubService) Start() (success bool, err error) {
+	success = false
+
 	ss.startMutex.Lock()
 	defer ss.startMutex.Unlock()
 
 	if ss.running {
-		return false
+		return
 	}
 	ss.running = true
 	ss.rerunChan = make(chan bool)
+	go ss.rerunner()
 
-	go ss.rerunner(ss.rerunChan)
-	// send a signal to launch the service
-	ss.rerunChan <- true
-	return true
+	// Block for first start so we can make sure binary exists etc
+	_, err = ss.startProcess()
+
+	if err == nil {
+		success = true
+	}
+
+	return
 }
 
 func (ss *SubService) Restart() {
@@ -110,36 +123,52 @@ func (ss *SubService) Restart() {
 	ss.Start()
 }
 
-func (ss *SubService) rerunner(rerunChan chan bool) {
-	var proc *os.Process
-	for rerun := range rerunChan {
+func (ss *SubService) startProcess() (proc *os.Process, err error) {
+	cmd := exec.Command(ss.binPath, ss.argv...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Start()
+	proc = cmd.Process
+	startupTimer := time.NewTimer(RerunWait)
+
+	if proc != nil {
+		go ss.watchProcess(proc, startupTimer)
+	}
+
+	return
+}
+
+func (ss *SubService) watchProcess(proc *os.Process, startupTimer *time.Timer) {
+	proc.Wait()
+
+	if !ss.running {
+		return
+	}
+
+	select {
+	case <-startupTimer.C:
+		// we let it run long enough that it might not be a recurring error, try again
+		if !ss.running {
+			ss.rerunChan <- true
+		}
+	default:
+		// error happened too quickly - must be startup issue
+		startupTimer.Stop()
+	}
+}
+
+func (ss *SubService) rerunner() {
+	for rerun := range ss.rerunChan {
 		if !rerun {
 			break
 		}
 
-		cmd := exec.Command(ss.binPath, ss.argv...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		fmt.Println("Restarting SubService: " + ss.binPath)
+		_, err := ss.startProcess()
 
-		startupTimer := time.NewTimer(RerunWait)
-
-		cmd.Start()
-		proc = cmd.Process
-
-		if proc != nil {
-			// In another goroutine, wait for the process to complete and send a relaunch signal.
-			// If this signal is sent after the stop signal, it is ignored.
-			go func(proc *os.Process) {
-				proc.Wait()
-				select {
-				case <-startupTimer.C:
-					// we let it run long enough that it might not be a recurring error, try again
-					rerunChan <- true
-				default:
-					// error happened too quickly - must be startup issue
-					startupTimer.Stop()
-				}
-			}(proc)
+		if err != nil {
+			fmt.Println(err)
 		}
 	}
 
