@@ -120,6 +120,14 @@ func GetDefaultEnvVar(name, def string) (v string) {
 	return
 }
 
+func GetDefaultBindAddr() string {
+  host := GetDefaultEnvVar("SKYNET_BIND_IP","127.0.0.1")
+  minPort := GetDefaultEnvVar("SKYNET_MIN_PORT", "9000")
+  maxPort := GetDefaultEnvVar("SKYNET_MAX_PORT", "9999")
+
+  return host + ":" + minPort + "-" + maxPort
+}
+
 func FlagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
 	flagset.StringVar(&dcfg.Uri, "doozer", GetDefaultEnvVar("SKYNET_DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
 	flagset.StringVar(&dcfg.BootUri, "doozerboot", GetDefaultEnvVar("SKYNET_DZNSHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
@@ -170,8 +178,8 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 
 	FlagsForService(config, flagset)
 
-	rpcAddr := flagset.String("l", GetDefaultEnvVar("SKYNET_LISTEN", ":9999"), "host:port to listen on for RPC")
-	adminAddr := flagset.String("admin", GetDefaultEnvVar("SKYNET_ADMIN", ":9998"), "host:port to listen on for admin")
+	rpcAddr := flagset.String("l", GetDefaultBindAddr(), "host:port to listen on for RPC")
+	adminAddr := flagset.String("admin", GetDefaultBindAddr(), "host:port to listen on for admin")
 
 	if len(argv) == 0 {
 		argv = os.Args[1:]
