@@ -27,22 +27,22 @@ execute "rebuild-daemon" do
   cwd '/opt/local/gopath/bin'
 
   command %Q{
-    rm daemon
+    rm skydaemon
   }
 
   not_if do
-    node[:skynet_rebuild] != true || !File.exists?("/opt/local/gopath/bin") || !File.exists?("/opt/local/gopath/bin/daemon")
+    node[:skynet_rebuild] != true || !File.exists?("/opt/local/gopath/bin") || !File.exists?("/opt/local/gopath/bin/skydaemon")
   end
 end
 
 execute "install-daemon" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/cmd/daemon'
+  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/cmd/skydaemon'
 
   command %Q{
     go install  
   }
 
   not_if do
-    File.exists?("/opt/local/gopath/bin/daemon")
+    File.exists?("/opt/local/gopath/bin/skydaemon")
   end
 end

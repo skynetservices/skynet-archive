@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 NUM_SKYNET_NODES = 5
-FORCE_SKYNET_REBUILD = false
+FORCE_SKYNET_REBUILD = true
 SKYNET_BRANCH = "master"
 
 # This will make chef always deploy the current branch you're working on locally
@@ -33,7 +33,16 @@ Vagrant::Config.run do |config|
 
       chef.json = {
         :skynet_branch => SKYNET_BRANCH,
-        :skynet_rebuild => FORCE_SKYNET_REBUILD
+        :skynet_rebuild => FORCE_SKYNET_REBUILD,
+        :skynet_region => 'Chicago',
+        :skynet_dzhost => '192.168.126.101:8046',
+        :skynet_dznshost => '',
+        :skynet_dzdizcover => 'true',
+        :skynet_min_port => '9000',
+        :skynet_max_port => '9999',
+        :skynet_bind_ip => '192.168.126.101',
+        :skynet_mgoserver => '192.168.126.101:27017',
+        :skynet_mgodb => ''
       }
 
       chef.add_recipe("apt")
@@ -52,7 +61,6 @@ Vagrant::Config.run do |config|
       chef.add_recipe("skynet::fibservice")
     end
 
-
     # Setup DZNS Master
     c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.126.101:10000' -w '192.168.126.101:11000' -c 'dzns' 0<&- &> /var/log/dzns.log &" 
     
@@ -60,21 +68,22 @@ Vagrant::Config.run do |config|
     c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.126.101:8046' -w '192.168.126.101:8080' -c 'skynet' -b 'doozer:?ca=192.168.126.101:10000' 0<&- &> /var/log/doozer.log &"
 
     # Start Daemon
-    c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/daemon --doozer=192.168.126.101:8046 -l 192.168.126.101:12000 -admin 192.168.126.101:12001 --version=1 --region=Chicago 0<&- &> /var/log/skynet_daemon.log &"
+    c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/skydaemon --version=1 0<&- &> /var/log/skynet_daemon.log &"
 
     # Start Dashboard
-    c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/dashboard --doozer=192.168.126.101:8046 -addr 192.168.126.101:80 -mgoserver 192.168.126.101:27017 --webroot=/opt/local/gopath/src/github.com/bketelsen/skynet/cmd/dashboard 0<&- &> /var/log/skynet_dashboard.log &"
+    c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/dashboard -addr 192.168.126.101:80 --webroot=/opt/local/gopath/src/github.com/bketelsen/skynet/cmd/dashboard 0<&- &> /var/log/skynet_dashboard.log &"
 
-    # Start a couple skynet services
-    5.times do |n|
-      version = (n % 2) == 0 ? 1 : 2
-      region = (n % 3) == 0 ? "Chicago" : "Dallas" 
+    # Start Services
+    sleep 5 # Give daemon time to start up
+    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=1"
+    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=1"
+    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=2"
 
-      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.126.101:8046 -l 192.168.126.101:999#{n} -admin 192.168.126.101:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_example.log &"
-      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/fibservice --doozer=192.168.126.101:8046 -l 192.168.126.101:997#{n} -admin 192.168.126.101:996#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_fibservice.log &"
-    end
+    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
+    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
+    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=2"
 
-    #c.vm.share_folder "skynet", "/opt/skynet", "../"
+    c.vm.share_folder "skynet", "/opt/skynet", "../"
     #c.vm.share_folder "gopath", "/opt/gopath", ENV['GOPATH']
   end
 
@@ -93,7 +102,16 @@ Vagrant::Config.run do |config|
 
         chef.json = {
           :skynet_branch => SKYNET_BRANCH,
-          :skynet_rebuild => FORCE_SKYNET_REBUILD
+          :skynet_rebuild => FORCE_SKYNET_REBUILD,
+          :skynet_region => 'Dallas',
+          :skynet_dzhost => '192.168.126.101:8046',
+          :skynet_dznshost => '',
+          :skynet_dzdizcover => 'true',
+          :skynet_min_port => '9000',
+          :skynet_max_port => '9999',
+          :skynet_bind_ip => "192.168.126.10#{i}",
+          :skynet_mgoserver => '192.168.126.101:27017',
+          :skynet_mgodb => ''
         }
 
         chef.add_recipe("build-essential")
@@ -117,16 +135,16 @@ Vagrant::Config.run do |config|
       c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.126.101:8046' add '/ctl/cal/#{i-1}'  0<&- &> /dev/null &"
 
       # Start Daemon
-      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/daemon --doozer=192.168.126.101:8046 -l 192.168.126.10#{i}:12000 -admin 192.168.126.10#{i}:12001 --version=1 --region=Chicago 0<&- &> /var/log/skynet_daemon.log &"
+      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/daemon --version=1 0<&- &> /var/log/skynet_daemon.log &"
 
-      # Start a couple skynet services
-      5.times do |n|
-        version = (n % 2) == 0 ? 1 : 2
-        region = (n % 3) == 0 ? "Chicago" : "Dallas" 
+      # Start Services
+      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=1"
+      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=1"
+      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=2"
 
-        c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/service --doozer=192.168.126.101:8046 -l 192.168.126.10#{i}:999#{n} -admin 192.168.126.10#{i}:998#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_example.log &"
-        c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/fibservice --doozer=192.168.126.101:8046 -l 192.168.126.10#{i}:997#{n} -admin 192.168.126.10#{i}:996#{n} --version=#{version} --region=#{region} 0<&- &> /var/log/skynet#{n}_fibservice.log &"
-      end
+      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
+      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
+      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=2"
 
 
       #c.vm.share_folder "skynet", "/opt/skynet", "../"
