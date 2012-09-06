@@ -16,8 +16,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+var portMutex sync.Mutex
 
 type BindAddr struct {
 	IPAddress string
@@ -73,6 +76,10 @@ func (ba BindAddr) String() string {
 }
 
 func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
+	// Ensure Admin, and RPC don't fight over the same port
+	portMutex.Lock()
+	defer portMutex.Unlock()
+
 	for {
 		var laddr *net.TCPAddr
 		laddr, err = net.ResolveTCPAddr("tcp", ba.String())
@@ -121,11 +128,11 @@ func GetDefaultEnvVar(name, def string) (v string) {
 }
 
 func GetDefaultBindAddr() string {
-  host := GetDefaultEnvVar("SKYNET_BIND_IP","127.0.0.1")
-  minPort := GetDefaultEnvVar("SKYNET_MIN_PORT", "9000")
-  maxPort := GetDefaultEnvVar("SKYNET_MAX_PORT", "9999")
+	host := GetDefaultEnvVar("SKYNET_BIND_IP", "127.0.0.1")
+	minPort := GetDefaultEnvVar("SKYNET_MIN_PORT", "9000")
+	maxPort := GetDefaultEnvVar("SKYNET_MAX_PORT", "9999")
 
-  return host + ":" + minPort + "-" + maxPort
+	return host + ":" + minPort + "-" + maxPort
 }
 
 func FlagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
