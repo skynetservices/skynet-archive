@@ -2,7 +2,7 @@ cmd/sky/sky
 .DS_Store
 examples/service/service
 examples/client/client
-cmd/daemon/daemon
+cmd/skydaemon/skydaemon
 cmd/dashboard/dashboard
 examples/.vagrant
 examples/testing/fibonacci/fibservice/fibservice

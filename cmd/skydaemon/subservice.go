@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
-	//	"syscall"
 	"time"
 )
 
@@ -127,23 +126,22 @@ func (ss *SubService) rerunner(rerunChan chan bool) {
 		cmd.Start()
 		proc = cmd.Process
 
-		// In another goroutine, wait for the process to complete and send a relaunch signal.
-		// If this signal is sent after the stop signal, it is ignored.
-		go func(proc *os.Process) {
-			proc.Wait()
-			select {
-			case <-startupTimer.C:
-				// we let it run long enough that it might not be a recurring error, try again
-				rerunChan <- true
-			default:
-				// error happened too quickly - must be startup issue
-				startupTimer.Stop()
-			}
-		}(proc)
+		if proc != nil {
+			// In another goroutine, wait for the process to complete and send a relaunch signal.
+			// If this signal is sent after the stop signal, it is ignored.
+			go func(proc *os.Process) {
+				proc.Wait()
+				select {
+				case <-startupTimer.C:
+					// we let it run long enough that it might not be a recurring error, try again
+					rerunChan <- true
+				default:
+					// error happened too quickly - must be startup issue
+					startupTimer.Stop()
+				}
+			}(proc)
+		}
 	}
 
 	ss.runSignal.Done()
-
-	// proc.Signal(syscall.SIGQUIT)
-	// proc.Kill()
 }
