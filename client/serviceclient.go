@@ -224,8 +224,6 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 
 	result, err := c.sendToInstance(sr, ri, fn, in)
 
-
-
 	attempts <- sendAttempt{
 		result: result,
 		err:    err,

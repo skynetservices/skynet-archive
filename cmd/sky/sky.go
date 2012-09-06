@@ -72,17 +72,17 @@ func main() {
 		Stop(query)
 	case "deploy":
 		args := flagset.Args()
-    fmt.Println(args)
+		fmt.Println(args)
 		if len(args) < 2 {
 			fmt.Println("Usage: deploy <service path> <args>")
 			return
 		}
 
-    if len(args) > 2 {
-      Deploy(query, args[1], args[2:]...)
-    } else {
-      Deploy(query, args[1], args[:]...)
-    }
+		if len(args) > 2 {
+			Deploy(query, args[1], args[2:]...)
+		} else {
+			Deploy(query, args[1], args[:]...)
+		}
 	case "cli":
 		InteractiveShell()
 
