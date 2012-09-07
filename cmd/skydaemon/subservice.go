@@ -25,7 +25,9 @@ type SubService struct {
 	// argv is Args after it is properly split up
 	argv []string
 
-	running bool
+	running      bool
+	runningMutex sync.Mutex
+
 	binPath string
 
 	rerunChan chan bool
@@ -79,6 +81,9 @@ func (ss *SubService) Stop() bool {
 	ss.startMutex.Lock()
 	defer ss.startMutex.Unlock()
 
+	ss.runningMutex.Lock()
+	defer ss.runningMutex.Unlock()
+
 	if !ss.running {
 		return false
 	}
@@ -100,6 +105,9 @@ func (ss *SubService) Start() (success bool, err error) {
 
 	ss.startMutex.Lock()
 	defer ss.startMutex.Unlock()
+
+	ss.runningMutex.Lock()
+	defer ss.runningMutex.Unlock()
 
 	if ss.running {
 		return
@@ -142,14 +150,18 @@ func (ss *SubService) startProcess() (proc *os.Process, err error) {
 func (ss *SubService) watchProcess(proc *os.Process, startupTimer *time.Timer) {
 	proc.Wait()
 
+	ss.runningMutex.Lock()
+	defer ss.runningMutex.Unlock()
+
 	if !ss.running {
+		startupTimer.Stop()
 		return
 	}
 
 	select {
 	case <-startupTimer.C:
 		// we let it run long enough that it might not be a recurring error, try again
-		if !ss.running {
+		if ss.running {
 			ss.rerunChan <- true
 		}
 	default:
@@ -160,6 +172,7 @@ func (ss *SubService) watchProcess(proc *os.Process, startupTimer *time.Timer) {
 
 func (ss *SubService) rerunner() {
 	for rerun := range ss.rerunChan {
+
 		if !rerun {
 			break
 		}
