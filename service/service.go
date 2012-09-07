@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -26,7 +27,7 @@ type ServiceDelegate interface {
 
 type Service struct {
 	DoozerConn *skynet.DoozerConnection `json:"-"`
-	*skynet.ServiceInfo
+	skynet.ServiceInfo
 
 	doneChan chan bool `json:"-"`
 
@@ -232,6 +233,10 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 
 	s.doneChan = make(chan bool, 1)
 
+	// If doozer contains instances with the same ip:port we just bound to then they are no longer alive and need to be cleaned up
+	s.cleanupDoozerEntriesForAddr(s.Config.ServiceAddr.IPAddress, s.Config.ServiceAddr.Port)
+	s.cleanupDoozerEntriesForAddr(s.Config.AdminAddr.IPAddress, s.Config.AdminAddr.Port)
+
 	go s.Delegate.Started(s) // Call user defined callback
 
 	s.doozerWaiter.Add(1)
@@ -252,8 +257,23 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	return
 }
 
+func (s *Service) cleanupDoozerEntriesForAddr(ip string, port int) {
+	q := skynet.Query{
+		Host:       ip,
+		Port:       strconv.Itoa(port),
+		DoozerConn: s.doozer(),
+	}
+
+	instances := q.FindInstances()
+
+	for _, i := range instances {
+		s.Log.Println("Cleaning up old doozer entry with conflicting addr " + ip + ":" + strconv.Itoa(port) + "(" + i.GetConfigPath() + ")")
+		s.doozer().Del(i.GetConfigPath(), s.doozer().GetCurrentRevision())
+	}
+}
+
 func (s *Service) UpdateCluster() {
-	b, err := json.Marshal(s)
+	b, err := json.Marshal(s.ServiceInfo)
 	if err != nil {
 		s.Log.Panic(err.Error())
 	}
