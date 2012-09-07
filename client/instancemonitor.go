@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/service"
 	"path"
 )
 
 type InstanceMonitorNotification struct {
 	Path    string
-	Service service.Service
+	Service skynet.ServiceInfo
 	Type    InstanceNotificationType
 }
 
@@ -39,8 +38,8 @@ const (
 )
 
 type instanceListRequest struct {
-	q *Query
-	r chan []service.Service
+	q *skynet.Query
+	r chan []skynet.ServiceInfo
 }
 
 type InstanceMonitor struct {
@@ -49,7 +48,7 @@ type InstanceMonitor struct {
 	ilqChan          chan instanceListRequest
 	listChan         chan *InstanceListener
 	listCloseChan    chan string
-	instances        map[string]service.Service
+	instances        map[string]skynet.ServiceInfo
 	notificationChan chan InstanceMonitorNotification
 }
 
@@ -61,7 +60,7 @@ func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 		ilqChan:          make(chan instanceListRequest),
 		listChan:         make(chan *InstanceListener),
 		listCloseChan:    make(chan string, 1),
-		instances:        make(map[string]service.Service, 0),
+		instances:        make(map[string]skynet.ServiceInfo, 0),
 	}
 
 	go im.mux()
@@ -123,7 +122,7 @@ func (im *InstanceMonitor) mux() {
 	}
 }
 
-func (im *InstanceMonitor) getQueryListMux(q *Query) (r []service.Service) {
+func (im *InstanceMonitor) getQueryListMux(q *skynet.Query) (r []skynet.ServiceInfo) {
 	for _, s := range im.instances {
 		if q.ServiceMatches(s) {
 			r = append(r, s)
@@ -132,10 +131,10 @@ func (im *InstanceMonitor) getQueryListMux(q *Query) (r []service.Service) {
 	return
 }
 
-func (im *InstanceMonitor) GetQueryList(q *Query) (r []service.Service) {
+func (im *InstanceMonitor) GetQueryList(q *skynet.Query) (r []skynet.ServiceInfo) {
 	ilq := instanceListRequest{
 		q: q,
-		r: make(chan []service.Service, 1),
+		r: make(chan []skynet.ServiceInfo, 1),
 	}
 	im.ilqChan <- ilq
 	r = <-ilq.r
@@ -168,7 +167,7 @@ func (im *InstanceMonitor) monitorInstances() {
 			continue
 		}
 
-		var s service.Service
+		var s skynet.ServiceInfo
 		err = json.Unmarshal(buf, &s)
 		if err != nil {
 			fmt.Println("error unmarshalling service")
@@ -192,7 +191,7 @@ func (im *InstanceMonitor) monitorInstances() {
 		ev, err := im.doozer.Wait(watchPath, rev+1)
 		rev = ev.Rev
 
-		var s service.Service
+		var s skynet.ServiceInfo
 
 		if err != nil {
 			continue
@@ -236,7 +235,7 @@ func (im *InstanceMonitor) buildInstanceList(l *InstanceListener) {
 	<-l.doneInitializing
 }
 
-func (im *InstanceMonitor) Listen(id string, q *Query) (l *InstanceListener) {
+func (im *InstanceMonitor) Listen(id string, q *skynet.Query) (l *InstanceListener) {
 	l = NewInstanceListener(im, id, q)
 
 	im.buildInstanceList(l)

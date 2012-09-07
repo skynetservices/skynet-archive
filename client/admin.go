@@ -1,16 +1,16 @@
 package client
 
 import (
+	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
-	"github.com/bketelsen/skynet/service"
 	"net"
 )
 
 type Admin struct {
-	Instance *service.Service
+	Instance *skynet.ServiceInfo
 }
 
-func (a *Admin) Register(in service.RegisterRequest) (out service.RegisterResponse, err error) {
+func (a *Admin) Register(in skynet.RegisterRequest) (out skynet.RegisterResponse, err error) {
 	conn, err := net.Dial("tcp", a.Instance.Config.AdminAddr.String())
 	if err != nil {
 		return
@@ -21,7 +21,7 @@ func (a *Admin) Register(in service.RegisterRequest) (out service.RegisterRespon
 	return
 }
 
-func (a *Admin) Unregister(in service.UnregisterRequest) (out service.UnregisterResponse, err error) {
+func (a *Admin) Unregister(in skynet.UnregisterRequest) (out skynet.UnregisterResponse, err error) {
 	conn, err := net.Dial("tcp", a.Instance.Config.AdminAddr.String())
 	if err != nil {
 		return
@@ -32,7 +32,7 @@ func (a *Admin) Unregister(in service.UnregisterRequest) (out service.Unregister
 	return
 }
 
-func (a *Admin) Stop(in service.StopRequest) (out service.StopResponse, err error) {
+func (a *Admin) Stop(in skynet.StopRequest) (out skynet.StopResponse, err error) {
 	conn, err := net.Dial("tcp", a.Instance.Config.AdminAddr.String())
 	if err != nil {
 		return

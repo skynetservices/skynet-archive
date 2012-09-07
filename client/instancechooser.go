@@ -1,24 +1,24 @@
 package client
 
 import (
-	"github.com/bketelsen/skynet/service"
+	"github.com/bketelsen/skynet"
 	//"math/rand"
 )
 
 type InstanceChooser struct {
-	instances []*service.Service
+	instances []*skynet.ServiceInfo
 	count     int
 
-	addCh    chan *service.Service
-	remCh    chan *service.Service
-	chooseCh chan chan *service.Service
+	addCh    chan *skynet.ServiceInfo
+	remCh    chan *skynet.ServiceInfo
+	chooseCh chan chan *skynet.ServiceInfo
 }
 
 func NewInstanceChooser() (ic *InstanceChooser) {
 	ic = &InstanceChooser{
-		addCh:    make(chan *service.Service, 1),
-		remCh:    make(chan *service.Service, 1),
-		chooseCh: make(chan chan *service.Service),
+		addCh:    make(chan *skynet.ServiceInfo, 1),
+		remCh:    make(chan *skynet.ServiceInfo, 1),
+		chooseCh: make(chan chan *skynet.ServiceInfo),
 	}
 
 	go ic.mux()
@@ -27,7 +27,7 @@ func NewInstanceChooser() (ic *InstanceChooser) {
 }
 
 func (ic *InstanceChooser) mux() {
-	var activeWaits []chan *service.Service
+	var activeWaits []chan *skynet.ServiceInfo
 	for {
 		select {
 		case instance := <-ic.addCh:
@@ -48,11 +48,11 @@ func (ic *InstanceChooser) mux() {
 	}
 }
 
-func (ic *InstanceChooser) Add(instance *service.Service) {
+func (ic *InstanceChooser) Add(instance *skynet.ServiceInfo) {
 	ic.addCh <- instance
 }
 
-func (ic *InstanceChooser) add(instance *service.Service) {
+func (ic *InstanceChooser) add(instance *skynet.ServiceInfo) {
 	for _, in := range ic.instances {
 		if in.GetConfigPath() == instance.GetConfigPath() {
 			return
@@ -61,11 +61,11 @@ func (ic *InstanceChooser) add(instance *service.Service) {
 	ic.instances = append(ic.instances, instance)
 }
 
-func (ic *InstanceChooser) Remove(instance *service.Service) {
+func (ic *InstanceChooser) Remove(instance *skynet.ServiceInfo) {
 	ic.remCh <- instance
 }
 
-func (ic *InstanceChooser) remove(instance *service.Service) {
+func (ic *InstanceChooser) remove(instance *skynet.ServiceInfo) {
 	for i, in := range ic.instances {
 		if in.GetConfigPath() == instance.GetConfigPath() {
 			ic.instances[i] = ic.instances[len(ic.instances)-1]
@@ -75,8 +75,8 @@ func (ic *InstanceChooser) remove(instance *service.Service) {
 	}
 }
 
-func (ic *InstanceChooser) Choose(timeout chan bool) (instance *service.Service, ok bool) {
-	ich := make(chan *service.Service, 1)
+func (ic *InstanceChooser) Choose(timeout chan bool) (instance *skynet.ServiceInfo, ok bool) {
+	ich := make(chan *skynet.ServiceInfo, 1)
 	ic.chooseCh <- ich
 	select {
 	case instance = <-ich:
@@ -87,7 +87,7 @@ func (ic *InstanceChooser) Choose(timeout chan bool) (instance *service.Service,
 	return
 }
 
-func (ic *InstanceChooser) choose() (instance *service.Service) {
+func (ic *InstanceChooser) choose() (instance *skynet.ServiceInfo) {
 	i := ic.count % len(ic.instances) //rand.Intn(len(ic.instances))
 	instance = ic.instances[i]
 	ic.count++

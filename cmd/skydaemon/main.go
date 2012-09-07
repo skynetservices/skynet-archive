@@ -7,7 +7,7 @@ import (
 	"github.com/bketelsen/skynet/daemon"
 	"github.com/bketelsen/skynet/service"
 	"io"
-	"log"
+	//"log"
 	"os"
 	"strings"
 )
@@ -41,12 +41,12 @@ func main() {
 	deployment.Service = s
 
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
-	defer func() {
+	/*defer func() {
 		s.Shutdown()
 		if err := recover(); err != nil {
 			log.Println("Unrecovered error occured: ", err)
 		}
-	}()
+	}()*/
 
 	if len(args) == 1 {
 		err := deployConfig(deployment, args[0])

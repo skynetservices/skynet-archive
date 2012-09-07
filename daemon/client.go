@@ -3,7 +3,6 @@ package daemon
 import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
-	"github.com/bketelsen/skynet/service"
 )
 
 type Client struct {
@@ -11,13 +10,13 @@ type Client struct {
 	requestInfo *skynet.RequestInfo
 }
 
-func GetDaemonForService(cl *client.Client, s *service.Service) (c Client) {
+func GetDaemonForService(cl *client.Client, s *skynet.ServiceInfo) (c Client) {
 	return GetDaemonForHost(cl, s.Config.ServiceAddr.IPAddress)
 }
 
 func GetDaemonForHost(cl *client.Client, host string) (c Client) {
 	registered := true
-	query := &client.Query{
+	query := &skynet.Query{
 		DoozerConn: cl.DoozerConn,
 		Service:    "SkynetDaemon",
 		Host:       host,

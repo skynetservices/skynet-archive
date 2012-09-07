@@ -25,22 +25,9 @@ type ServiceDelegate interface {
 	Unregistered(s *Service)
 }
 
-type ServiceStatistics struct {
-	Clients        uint
-	StartTime      string
-	LastRequest    string
-	RequestsServed uint64
-
-	// For now this will be since startup, we might change it later to be for a given sample interval
-	AverageResponseTime uint64
-	totalDuration       uint64
-}
-
 type Service struct {
-	Config     *skynet.ServiceConfig
 	DoozerConn *skynet.DoozerConnection `json:"-"`
-	Registered bool
-	Stats      ServiceStatistics
+	skynet.ServiceInfo
 
 	doneChan chan bool `json:"-"`
 
@@ -70,7 +57,6 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	initializeConfig(c)
 
 	s = &Service{
-		Config:         c,
 		Delegate:       sd,
 		Log:            c.Log,
 		methods:        make(map[string]reflect.Value),
@@ -78,15 +64,17 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		registeredChan: make(chan bool),
 		doozerChan:     make(chan interface{}),
 		updateTicker:   time.NewTicker(c.DoozerUpdateInterval),
-
-		Stats: ServiceStatistics{
-			StartTime: time.Now().Format("2006-01-02T15:04:05Z-0700"),
-		},
 	}
 
-	c.Log.Item(ServiceCreated{
+	s.Config = c
+	s.Stats = skynet.ServiceStatistics{
+		StartTime: time.Now().Format("2006-01-02T15:04:05Z-0700"),
+	}
+
+	c.Log.Item(skynet.ServiceCreated{
 		ServiceConfig: s.Config,
 	})
+
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
 	rpcForwarder := NewServiceRPC(s)
@@ -98,17 +86,19 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	return
 }
 
-func (s *Service) listen(addr *skynet.BindAddr) {
+func (s *Service) listen(addr *skynet.BindAddr, bindChan chan bool) {
 	var err error
 	s.rpcListener, err = addr.Listen()
 	if err != nil {
 		panic(err)
 	}
 
-	s.Log.Item(ServiceListening{
+	s.Log.Item(skynet.ServiceListening{
 		Addr:          addr,
 		ServiceConfig: s.Config,
 	})
+
+	bindChan <- true
 
 	for {
 		conn, err := s.rpcListener.AcceptTCP()
@@ -230,13 +220,14 @@ func (s *Service) doozer() *skynet.DoozerConnection {
 }
 
 func (s *Service) Start(register bool) (done *sync.WaitGroup) {
+	bindChan := make(chan bool)
 
-	go s.listen(s.Config.ServiceAddr)
+	go s.listen(s.Config.ServiceAddr, bindChan)
 
 	// the admin server
 	if s.Config.AdminAddr != nil {
 		s.Admin = NewServiceAdmin(s)
-		go s.Admin.Listen(s.Config.AdminAddr)
+		go s.Admin.Listen(s.Config.AdminAddr, bindChan)
 	}
 
 	// Watch signals for shutdown
@@ -244,6 +235,14 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	go watchSignals(c, s)
 
 	s.doneChan = make(chan bool, 1)
+
+	// We must block here, we don't want to register with doozer, until we've actually bound to an ip:port
+	<-bindChan
+	<-bindChan
+
+	// If doozer contains instances with the same ip:port we just bound to then they are no longer alive and need to be cleaned up
+	s.cleanupDoozerEntriesForAddr(s.Config.ServiceAddr.IPAddress, s.Config.ServiceAddr.Port)
+	s.cleanupDoozerEntriesForAddr(s.Config.AdminAddr.IPAddress, s.Config.AdminAddr.Port)
 
 	go s.Delegate.Started(s) // Call user defined callback
 
@@ -265,8 +264,23 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	return
 }
 
+func (s *Service) cleanupDoozerEntriesForAddr(ip string, port int) {
+	q := skynet.Query{
+		Host:       ip,
+		Port:       strconv.Itoa(port),
+		DoozerConn: s.doozer(),
+	}
+
+	instances := q.FindInstances()
+
+	for _, i := range instances {
+		s.Log.Item("Cleaning up old doozer entry with conflicting addr " + ip + ":" + strconv.Itoa(port) + "(" + i.GetConfigPath() + ")")
+		s.doozer().Del(i.GetConfigPath(), s.doozer().GetCurrentRevision())
+	}
+}
+
 func (s *Service) UpdateCluster() {
-	b, err := json.Marshal(s)
+	b, err := json.Marshal(s.ServiceInfo)
 	if err != nil {
 		s.Log.Panic(err.Error())
 	}
@@ -357,10 +371,6 @@ func initializeConfig(c *skynet.ServiceConfig) {
 	if c.DoozerUpdateInterval == 0 {
 		c.DoozerUpdateInterval = 5 * time.Second
 	}
-}
-
-func (s *Service) GetConfigPath() string {
-	return "/services/" + s.Config.Name + "/" + s.Config.Version + "/" + s.Config.Region + "/" + s.Config.ServiceAddr.IPAddress + "/" + strconv.Itoa(s.Config.ServiceAddr.Port)
 }
 
 func (r *Service) Equal(that *Service) bool {

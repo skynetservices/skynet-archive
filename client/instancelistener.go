@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/bketelsen/skynet/service"
+	"github.com/bketelsen/skynet"
 )
 
 type NotificationChan chan InstanceListenerNotification
@@ -60,14 +60,14 @@ func NewInstanceListenerNotification(notification InstanceMonitorNotification) (
 }
 
 type InstanceListener struct {
-	Query            *Query
+	Query            *skynet.Query
 	NotificationChan NotificationChan
 	monitor          *InstanceMonitor
 	id               string
 	doneInitializing chan bool
 }
 
-func NewInstanceListener(im *InstanceMonitor, id string, q *Query) *InstanceListener {
+func NewInstanceListener(im *InstanceMonitor, id string, q *skynet.Query) *InstanceListener {
 	return &InstanceListener{
 		Query:            q,
 		monitor:          im,
@@ -102,6 +102,6 @@ func (l *InstanceListener) Close() {
 	l.monitor.RemoveListener(l.id)
 }
 
-func (l *InstanceListener) GetInstances() []service.Service {
+func (l *InstanceListener) GetInstances() []skynet.ServiceInfo {
 	return l.monitor.GetQueryList(l.Query)
 }
