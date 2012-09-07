@@ -156,7 +156,6 @@ func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon
 				Instance: instance,
 			}
 
-			fmt.Println("waiting for service to stop: " + instance)
 			cladmin.Stop(service.StopRequest{
 				WaitForClients: true,
 			})
