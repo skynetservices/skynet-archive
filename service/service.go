@@ -267,7 +267,7 @@ func (s *Service) cleanupDoozerEntriesForAddr(ip string, port int) {
 	instances := q.FindInstances()
 
 	for _, i := range instances {
-		s.Log.Println("Cleaning up old doozer entry with conflicting addr " + ip + ":" + strconv.Itoa(port) + "(" + i.GetConfigPath() + ")")
+		s.Log.Item("Cleaning up old doozer entry with conflicting addr " + ip + ":" + strconv.Itoa(port) + "(" + i.GetConfigPath() + ")")
 		s.doozer().Del(i.GetConfigPath(), s.doozer().GetCurrentRevision())
 	}
 }
