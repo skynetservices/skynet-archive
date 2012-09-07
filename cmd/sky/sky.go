@@ -5,8 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/client"
-	"github.com/bketelsen/skynet/service"
 	"os"
 	"strconv"
 	"strings"
@@ -38,7 +36,7 @@ func main() {
 		return
 	}
 
-	query := &client.Query{
+	query := &skynet.Query{
 		DoozerConn: Doozer(config.DoozerConfig),
 		Service:    *ServiceNameFlag,
 		Version:    *VersionFlag,
@@ -114,7 +112,7 @@ func Connect(dcfg *skynet.DoozerConfig) *skynet.DoozerConnection {
 	return conn
 }
 
-func ListInstances(q *client.Query) {
+func ListInstances(q *skynet.Query) {
 	var regFlag *bool
 
 	if *RegisteredFlag == "true" {
@@ -140,7 +138,7 @@ func ListInstances(q *client.Query) {
 	}
 }
 
-func ListHosts(q *client.Query) {
+func ListHosts(q *skynet.Query) {
 	results := q.FindHosts()
 
 	for _, host := range results {
@@ -148,7 +146,7 @@ func ListHosts(q *client.Query) {
 	}
 }
 
-func ListRegions(q *client.Query) {
+func ListRegions(q *skynet.Query) {
 	results := q.FindRegions()
 
 	for _, region := range results {
@@ -156,7 +154,7 @@ func ListRegions(q *client.Query) {
 	}
 }
 
-func ListServices(q *client.Query) {
+func ListServices(q *skynet.Query) {
 	results := q.FindServices()
 
 	for _, service := range results {
@@ -164,7 +162,7 @@ func ListServices(q *client.Query) {
 	}
 }
 
-func ListServiceVersions(q *client.Query) {
+func ListServiceVersions(q *skynet.Query) {
 	if q.Service == "" {
 		fmt.Println("Service name is required")
 		return
@@ -177,27 +175,27 @@ func ListServiceVersions(q *client.Query) {
 	}
 }
 
-func PrintTopology(q *client.Query) {
-	topology := make(map[string]map[string]map[string]map[string][]*service.Service)
+func PrintTopology(q *skynet.Query) {
+	topology := make(map[string]map[string]map[string]map[string][]*skynet.ServiceInfo)
 
 	results := q.FindInstances()
 
 	// Build topology hash first
 	for _, instance := range results {
 		if topology[instance.Config.Region] == nil {
-			topology[instance.Config.Region] = make(map[string]map[string]map[string][]*service.Service)
+			topology[instance.Config.Region] = make(map[string]map[string]map[string][]*skynet.ServiceInfo)
 		}
 
 		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] = make(map[string]map[string][]*service.Service)
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] = make(map[string]map[string][]*skynet.ServiceInfo)
 		}
 
 		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] = make(map[string][]*service.Service)
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] = make(map[string][]*skynet.ServiceInfo)
 		}
 
 		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = make([]*service.Service, 0)
+			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = make([]*skynet.ServiceInfo, 0)
 		}
 
 		topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = append(topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version], instance)
@@ -293,7 +291,7 @@ func InteractiveShell() {
 	fmt.Println("Skynet Interactive Shell")
 	prompt()
 
-	query := &client.Query{
+	query := &skynet.Query{
 		DoozerConn: doozer,
 	}
 

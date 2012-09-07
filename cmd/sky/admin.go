@@ -12,7 +12,7 @@ import (
 	"text/template"
 )
 
-func Register(q *client.Query) {
+func Register(q *skynet.Query) {
 	instances := q.FindInstances()
 	for _, instance := range instances {
 		cladmin := client.Admin{
@@ -25,7 +25,7 @@ func Register(q *client.Query) {
 	}
 }
 
-func Unregister(q *client.Query) {
+func Unregister(q *skynet.Query) {
 	instances := q.FindInstances()
 	for _, instance := range instances {
 		cladmin := client.Admin{
@@ -45,7 +45,7 @@ func getDaemonServiceClientForHost(dc *skynet.DoozerConfig, host string) *client
 
 	c := client.NewClient(config)
 	registered := true
-	query := &client.Query{
+	query := &skynet.Query{
 		DoozerConn: c.DoozerConn,
 		Service:    "SkynetDaemon",
 		Host:       host,
@@ -61,7 +61,7 @@ var deployTemplate = template.Must(template.New("").Parse(
 `))
 
 // TODO: this should be smarter about which hosts it deploys to
-func Deploy(q *client.Query, path string, args ...string) {
+func Deploy(q *skynet.Query, path string, args ...string) {
 	cl := client.NewClient(&config)
 
 	fmt.Println("deploying " + path + " " + strings.Join(args, ""))
@@ -89,7 +89,7 @@ var stopTemplate = template.Must(template.New("").Parse(
 {{else}}Service with UUID {{.UUID}} is already stopped.
 {{end}}`))
 
-func Stop(q *client.Query) {
+func Stop(q *skynet.Query) {
 	cl := client.NewClient(&config)
 
 	for _, instance := range q.FindInstances() {
@@ -111,7 +111,7 @@ func Stop(q *client.Query) {
 	}
 }
 
-func AdminStop(q *client.Query) {
+func AdminStop(q *skynet.Query) {
 	instances := q.FindInstances()
 	for _, instance := range instances {
 		cladmin := client.Admin{

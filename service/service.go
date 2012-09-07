@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -25,22 +24,9 @@ type ServiceDelegate interface {
 	Unregistered(s *Service)
 }
 
-type ServiceStatistics struct {
-	Clients        uint
-	StartTime      string
-	LastRequest    string
-	RequestsServed uint64
-
-	// For now this will be since startup, we might change it later to be for a given sample interval
-	AverageResponseTime uint64
-	totalDuration       uint64
-}
-
 type Service struct {
-	Config     *skynet.ServiceConfig
 	DoozerConn *skynet.DoozerConnection `json:"-"`
-	Registered bool
-	Stats      ServiceStatistics
+	*skynet.ServiceInfo
 
 	doneChan chan bool `json:"-"`
 
@@ -70,7 +56,6 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	initializeConfig(c)
 
 	s = &Service{
-		Config:         c,
 		Delegate:       sd,
 		Log:            c.Log,
 		methods:        make(map[string]reflect.Value),
@@ -78,15 +63,17 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		registeredChan: make(chan bool),
 		doozerChan:     make(chan interface{}),
 		updateTicker:   time.NewTicker(c.DoozerUpdateInterval),
-
-		Stats: ServiceStatistics{
-			StartTime: time.Now().Format("2006-01-02T15:04:05Z-0700"),
-		},
 	}
 
-	c.Log.Item(ServiceCreated{
+	s.Config = c
+	s.Stats = skynet.ServiceStatistics{
+		StartTime: time.Now().Format("2006-01-02T15:04:05Z-0700"),
+	}
+
+	c.Log.Item(skynet.ServiceCreated{
 		ServiceConfig: s.Config,
 	})
+
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
 	rpcForwarder := NewServiceRPC(s)
@@ -105,7 +92,7 @@ func (s *Service) listen(addr *skynet.BindAddr) {
 		panic(err)
 	}
 
-	s.Log.Item(ServiceListening{
+	s.Log.Item(skynet.ServiceListening{
 		Addr:          addr,
 		ServiceConfig: s.Config,
 	})
@@ -357,10 +344,6 @@ func initializeConfig(c *skynet.ServiceConfig) {
 	if c.DoozerUpdateInterval == 0 {
 		c.DoozerUpdateInterval = 5 * time.Second
 	}
-}
-
-func (s *Service) GetConfigPath() string {
-	return "/services/" + s.Config.Name + "/" + s.Config.Version + "/" + s.Config.Region + "/" + s.Config.ServiceAddr.IPAddress + "/" + strconv.Itoa(s.Config.ServiceAddr.Port)
 }
 
 func (r *Service) Equal(that *Service) bool {

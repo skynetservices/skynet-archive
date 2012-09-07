@@ -5,7 +5,6 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/pools"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
-	"github.com/bketelsen/skynet/service"
 	"net"
 	"net/rpc"
 	"os"
@@ -19,7 +18,7 @@ var (
 
 type ServiceResource struct {
 	rpcClient *rpc.Client
-	service   *service.Service
+	service   *skynet.ServiceInfo
 	closed    bool
 }
 
@@ -83,7 +82,7 @@ func (c *Client) doozer() *skynet.DoozerConnection {
 
 var servicePoolMutex sync.Mutex
 
-func (c *Client) getServicePool(instance *service.Service) (sp *servicePool) {
+func (c *Client) getServicePool(instance *skynet.ServiceInfo) (sp *servicePool) {
 	servicePoolMutex.Lock()
 	defer servicePoolMutex.Unlock()
 
@@ -103,7 +102,7 @@ func (c *Client) getServicePool(instance *service.Service) (sp *servicePool) {
 	return
 }
 
-func (c *Client) GetServiceFromQuery(q *Query) (s *ServiceClient) {
+func (c *Client) GetServiceFromQuery(q *skynet.Query) (s *ServiceClient) {
 
 	s = newServiceClient(q, c)
 
@@ -114,7 +113,7 @@ func (c *Client) GetServiceFromQuery(q *Query) (s *ServiceClient) {
 // TODO: We should probably determine a way of supplying secondary conditions, for example it's ok to go to a different data center only if there are no instances in our current datacenter
 func (c *Client) GetService(name string, version string, region string, host string) *ServiceClient {
 	registered := true
-	query := &Query{
+	query := &skynet.Query{
 		DoozerConn: c.DoozerConn,
 		Service:    name,
 		Version:    version,
@@ -126,11 +125,11 @@ func (c *Client) GetService(name string, version string, region string, host str
 	return c.GetServiceFromQuery(query)
 }
 
-func getInstanceKey(service *service.Service) string {
+func getInstanceKey(service *skynet.ServiceInfo) string {
 	return service.Config.ServiceAddr.String()
 }
 
-func getConnectionFactory(s *service.Service) (factory pools.Factory) {
+func getConnectionFactory(s *skynet.ServiceInfo) (factory pools.Factory) {
 	factory = func() (pools.Resource, error) {
 		conn, err := net.Dial("tcp", s.Config.ServiceAddr.String())
 

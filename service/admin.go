@@ -30,7 +30,7 @@ func (sa *ServiceAdmin) Listen(addr *skynet.BindAddr) {
 		panic(err)
 	}
 
-	sa.service.Log.Item(AdminListening{sa.service.Config})
+	sa.service.Log.Item(skynet.AdminListening{sa.service.Config})
 
 	for {
 		conn, err := listener.AcceptTCP()
@@ -45,38 +45,19 @@ type Admin struct {
 	service *Service
 }
 
-type RegisterRequest struct {
-}
-
-type RegisterResponse struct {
-}
-
-func (sa *Admin) Register(in RegisterRequest, out *RegisterResponse) (err error) {
+func (sa *Admin) Register(in skynet.RegisterRequest, out *skynet.RegisterResponse) (err error) {
 	sa.service.Log.Println("Got RPC admin command Register")
 	sa.service.Register()
 	return
 }
 
-type UnregisterRequest struct {
-}
-
-type UnregisterResponse struct {
-}
-
-func (sa *Admin) Unregister(in UnregisterRequest, out *UnregisterResponse) (err error) {
+func (sa *Admin) Unregister(in skynet.UnregisterRequest, out *skynet.UnregisterResponse) (err error) {
 	sa.service.Log.Println("Got RPC admin command Unregister")
 	sa.service.Unregister()
 	return
 }
 
-type StopRequest struct {
-	WaitForClients bool
-}
-
-type StopResponse struct {
-}
-
-func (sa *Admin) Stop(in StopRequest, out *StopResponse) (err error) {
+func (sa *Admin) Stop(in skynet.StopRequest, out *skynet.StopResponse) (err error) {
 	sa.service.Log.Println("Got RPC admin command Stop")
 
 	// TODO: if in.WaitForClients is true, do it
