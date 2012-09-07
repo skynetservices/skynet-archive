@@ -143,7 +143,6 @@ func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in daemo
 
 func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon.StopSubServiceRequest, out *daemon.StopSubServiceResponse) (err error) {
 	ss := s.getSubService(in.UUID)
-	fmt.Println("stopping ss", in.UUID)
 	if ss != nil {
 		out.Ok = ss.Stop()
 

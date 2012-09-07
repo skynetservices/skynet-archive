@@ -398,6 +398,7 @@ func watchSignals(c chan os.Signal, s *Service) {
 			switch sig.(syscall.Signal) {
 			// Trap signals for clean shutdown
 			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
+				s.Log.Item(KillSignal{sig.(syscall.Signal)})
 				s.Shutdown()
 			}
 		}
