@@ -86,7 +86,7 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	return
 }
 
-func (s *Service) listen(addr *skynet.BindAddr) {
+func (s *Service) listen(addr *skynet.BindAddr, bindChan chan bool) {
 	var err error
 	s.rpcListener, err = addr.Listen()
 	if err != nil {
@@ -97,6 +97,8 @@ func (s *Service) listen(addr *skynet.BindAddr) {
 		Addr:          addr,
 		ServiceConfig: s.Config,
 	})
+
+	bindChan <- true
 
 	for {
 		conn, err := s.rpcListener.AcceptTCP()
@@ -218,13 +220,14 @@ func (s *Service) doozer() *skynet.DoozerConnection {
 }
 
 func (s *Service) Start(register bool) (done *sync.WaitGroup) {
+	bindChan := make(chan bool)
 
-	go s.listen(s.Config.ServiceAddr)
+	go s.listen(s.Config.ServiceAddr, bindChan)
 
 	// the admin server
 	if s.Config.AdminAddr != nil {
 		s.Admin = NewServiceAdmin(s)
-		go s.Admin.Listen(s.Config.AdminAddr)
+		go s.Admin.Listen(s.Config.AdminAddr, bindChan)
 	}
 
 	// Watch signals for shutdown
@@ -232,6 +235,10 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	go watchSignals(c, s)
 
 	s.doneChan = make(chan bool, 1)
+
+	// We must block here, we don't want to register with doozer, until we've actually bound to an ip:port
+	<-bindChan
+	<-bindChan
 
 	// If doozer contains instances with the same ip:port we just bound to then they are no longer alive and need to be cleaned up
 	s.cleanupDoozerEntriesForAddr(s.Config.ServiceAddr.IPAddress, s.Config.ServiceAddr.Port)

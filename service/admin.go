@@ -24,12 +24,13 @@ func NewServiceAdmin(service *Service) (sa *ServiceAdmin) {
 	return
 }
 
-func (sa *ServiceAdmin) Listen(addr *skynet.BindAddr) {
+func (sa *ServiceAdmin) Listen(addr *skynet.BindAddr, bindChan chan bool) {
 	listener, err := addr.Listen()
 	if err != nil {
 		panic(err)
 	}
 
+	bindChan <- true
 	sa.service.Log.Item(skynet.AdminListening{sa.service.Config})
 
 	for {
