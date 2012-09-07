@@ -26,7 +26,6 @@ type SubService struct {
 	argv []string
 
 	running      bool
-	runningMutex sync.Mutex
 
 	binPath string
 
@@ -81,9 +80,6 @@ func (ss *SubService) Stop() bool {
 	ss.startMutex.Lock()
 	defer ss.startMutex.Unlock()
 
-	ss.runningMutex.Lock()
-	defer ss.runningMutex.Unlock()
-
 	if !ss.running {
 		return false
 	}
@@ -105,9 +101,6 @@ func (ss *SubService) Start() (success bool, err error) {
 
 	ss.startMutex.Lock()
 	defer ss.startMutex.Unlock()
-
-	ss.runningMutex.Lock()
-	defer ss.runningMutex.Unlock()
 
 	if ss.running {
 		return
@@ -149,9 +142,6 @@ func (ss *SubService) startProcess() (proc *os.Process, err error) {
 
 func (ss *SubService) watchProcess(proc *os.Process, startupTimer *time.Timer) {
 	proc.Wait()
-
-	ss.runningMutex.Lock()
-	defer ss.runningMutex.Unlock()
 
 	if !ss.running {
 		startupTimer.Stop()
