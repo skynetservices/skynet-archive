@@ -5,7 +5,6 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
 	"github.com/bketelsen/skynet/daemon"
-	"github.com/bketelsen/skynet/service"
 	"github.com/kballard/go-shellquote"
 	"os"
 	"strings"
@@ -18,7 +17,7 @@ func Register(q *skynet.Query) {
 		cladmin := client.Admin{
 			Instance: instance,
 		}
-		_, err := cladmin.Register(service.RegisterRequest{})
+		_, err := cladmin.Register(skynet.RegisterRequest{})
 		if err != nil {
 			config.Log.Item(err)
 		}
@@ -31,7 +30,7 @@ func Unregister(q *skynet.Query) {
 		cladmin := client.Admin{
 			Instance: instance,
 		}
-		_, err := cladmin.Unregister(service.UnregisterRequest{})
+		_, err := cladmin.Unregister(skynet.UnregisterRequest{})
 		if err != nil {
 			config.Log.Item(err)
 		}
@@ -117,7 +116,7 @@ func AdminStop(q *skynet.Query) {
 		cladmin := client.Admin{
 			Instance: instance,
 		}
-		_, err := cladmin.Stop(service.StopRequest{
+		_, err := cladmin.Stop(skynet.StopRequest{
 			WaitForClients: true,
 		})
 		if err != nil {
