@@ -25,7 +25,8 @@ type SubService struct {
 	// argv is Args after it is properly split up
 	argv []string
 
-	running bool
+	running      bool
+
 	binPath string
 
 	rerunChan chan bool
@@ -142,6 +143,7 @@ func (ss *SubService) watchProcess(proc *os.Process, startupTimer *time.Timer) {
 	proc.Wait()
 
 	if !ss.running {
+		startupTimer.Stop()
 		return
 	}
 
@@ -160,6 +162,7 @@ func (ss *SubService) watchProcess(proc *os.Process, startupTimer *time.Timer) {
 
 func (ss *SubService) rerunner() {
 	for rerun := range ss.rerunChan {
+
 		if !rerun {
 			break
 		}
