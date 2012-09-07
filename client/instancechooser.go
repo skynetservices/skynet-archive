@@ -2,11 +2,12 @@ package client
 
 import (
 	"github.com/bketelsen/skynet/service"
-	"math/rand"
+	//"math/rand"
 )
 
 type InstanceChooser struct {
 	instances []*service.Service
+	count     int
 
 	addCh    chan *service.Service
 	remCh    chan *service.Service
@@ -87,7 +88,8 @@ func (ic *InstanceChooser) Choose(timeout chan bool) (instance *service.Service,
 }
 
 func (ic *InstanceChooser) choose() (instance *service.Service) {
-	i := rand.Intn(len(ic.instances))
+	i := ic.count % len(ic.instances) //rand.Intn(len(ic.instances))
 	instance = ic.instances[i]
+	ic.count++
 	return
 }
