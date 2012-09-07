@@ -15,12 +15,16 @@ import (
 	"strings"
 )
 
-type TestService struct{}
+type TestService struct {
+	Log skynet.Logger
+}
 
 func (s *TestService) Registered(service *service.Service)   {}
 func (s *TestService) Unregistered(service *service.Service) {}
 func (s *TestService) Started(service *service.Service)      {}
-func (s *TestService) Stopped(service *service.Service)      {}
+func (s *TestService) Stopped(service *service.Service) {
+	s.Log.Item("Stopped")
+}
 
 func NewTestService() *TestService {
 	r := &TestService{}
@@ -52,7 +56,8 @@ func main() {
 	var err error
 	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
 	clogger := skynet.NewConsoleLogger("TestService", os.Stdout)
-	config.Log = skynet.NewMultiLogger(mlogger, clogger)
+	testService.Log = skynet.NewMultiLogger(mlogger, clogger)
+	config.Log = testService.Log
 	if err != nil {
 		config.Log.Item("Could not connect to mongo db for logging")
 	}
