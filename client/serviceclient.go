@@ -5,7 +5,6 @@ import (
 	"github.com/4ad/doozer"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/pools"
-	"github.com/bketelsen/skynet/service"
 	"labix.org/v2/mgo/bson"
 	"time"
 )
@@ -49,7 +48,7 @@ type ServiceClient struct {
 	client  *Client
 	Log     skynet.Logger `json:"-"`
 	cconfig *skynet.ClientConfig
-	query   *Query
+	query   *skynet.Query
 	// a list of the known instances
 	instances map[string]*servicePool
 
@@ -65,7 +64,7 @@ type ServiceClient struct {
 	giveupTimeout time.Duration
 }
 
-func newServiceClient(query *Query, c *Client) (sc *ServiceClient) {
+func newServiceClient(query *skynet.Query, c *Client) (sc *ServiceClient) {
 	sc = &ServiceClient{
 		client:      c,
 		Log:         c.Config.Log,
@@ -95,7 +94,7 @@ func (ic *instanceFileCollector) VisitFile(path string, f *doozer.FileInfo) {
 }
 
 type servicePool struct {
-	service *service.Service
+	service *skynet.ServiceInfo
 	pool    *pools.ResourcePool
 }
 
@@ -103,8 +102,8 @@ type timeoutLengths struct {
 	retry, giveup time.Duration
 }
 
-func (c *ServiceClient) addInstanceMux(instance *service.Service) {
-	m := service.ServiceDiscovered{instance}
+func (c *ServiceClient) addInstanceMux(instance *skynet.ServiceInfo) {
+	m := skynet.ServiceDiscovered{instance}
 	key := getInstanceKey(m.Service)
 	_, known := c.instances[key]
 	if !known {
@@ -115,8 +114,8 @@ func (c *ServiceClient) addInstanceMux(instance *service.Service) {
 	}
 }
 
-func (c *ServiceClient) removeInstanceMux(instance *service.Service) {
-	m := service.ServiceRemoved{instance}
+func (c *ServiceClient) removeInstanceMux(instance *skynet.ServiceInfo) {
+	m := skynet.ServiceRemoved{instance}
 	key := m.Service.Config.ServiceAddr.String()
 	_, known := c.instances[key]
 	if !known {
@@ -321,7 +320,7 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.R
 	ts("sendToInstance", requestInfo)
 	defer te("sendToInstance", requestInfo)
 
-	sin := service.ServiceRPCIn{
+	sin := skynet.ServiceRPCIn{
 		RequestInfo: requestInfo,
 		Method:      funcName,
 	}
@@ -331,7 +330,7 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.R
 		return
 	}
 
-	sout := service.ServiceRPCOut{}
+	sout := skynet.ServiceRPCOut{}
 
 	err = sr.rpcClient.Call(sr.service.Config.Name+".Forward", sin, &sout)
 	if err != nil {

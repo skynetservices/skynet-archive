@@ -146,7 +146,7 @@ func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon
 	if ss != nil {
 		out.Ok = ss.Stop()
 
-		q := client.Query{
+		q := skynet.Query{
 			UUID:       in.UUID,
 			DoozerConn: s.Service.DoozerConn,
 		}
@@ -156,7 +156,7 @@ func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon
 				Instance: instance,
 			}
 
-			cladmin.Stop(service.StopRequest{
+			cladmin.Stop(skynet.StopRequest{
 				WaitForClients: true,
 			})
 		}

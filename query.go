@@ -1,11 +1,9 @@
-package client
+package skynet
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/4ad/doozer"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/service"
 	"log"
 	"path"
 	"strings"
@@ -19,7 +17,7 @@ type Query struct {
 	Region     string
 	UUID       string
 	Registered *bool
-	DoozerConn *skynet.DoozerConnection
+	DoozerConn *DoozerConnection
 	DoozerRev  int64
 
 	// Internal use only
@@ -120,15 +118,15 @@ func (q *Query) FindServiceVersions() []string {
 	return q.matchingPaths()
 }
 
-func (q *Query) FindInstances() []*service.Service {
+func (q *Query) FindInstances() []*ServiceInfo {
 	q.search()
 
-	results := make([]*service.Service, 0)
+	results := make([]*ServiceInfo, 0)
 
 	// At this point we don't know which values were supplied 
 	// if all prefixed dir's were supplied no filtering is needed, but this may be all nodes
 	for path, _ := range q.files {
-		var s service.Service
+		var s ServiceInfo
 
 		data, _, err := q.DoozerConn.Get(path, q.DoozerRev)
 		if err != nil {
@@ -177,7 +175,7 @@ func (q *Query) matchingPaths() []string {
 						data, _, err := q.DoozerConn.Get(path.Join(p, file.Name), rev)
 
 						if err == nil {
-							s := service.Service{}
+							s := ServiceInfo{}
 							err = json.Unmarshal(data, &s)
 
 							if q.ServiceMatches(s) {
@@ -228,7 +226,7 @@ func (q *Query) pathMatches(path string) bool {
 	return true
 }
 
-func (q *Query) ServiceMatches(s service.Service) bool {
+func (q *Query) ServiceMatches(s ServiceInfo) bool {
 	if q.Service != "" && s.Config.Name != q.Service {
 		return false
 	}

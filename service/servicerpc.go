@@ -103,7 +103,7 @@ func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 // and provides a slot for the RequestInfo. The parameters to the actual RPC
 // calls are transmitted in a []byte, and are then marshalled/unmarshalled on
 // either end.
-func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error) {
+func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOut) (err error) {
 	srpc.service.activeRequests.Add(1)
 	defer srpc.service.activeRequests.Done()
 
@@ -159,9 +159,9 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 
 	// Update stats
 	srpc.service.Stats.RequestsServed = atomic.AddUint64(&srpc.service.Stats.RequestsServed, 1)
-	srpc.service.Stats.totalDuration = atomic.AddUint64(&srpc.service.Stats.totalDuration, uint64(duration)) // ns
+	srpc.service.Stats.TotalDuration = atomic.AddUint64(&srpc.service.Stats.TotalDuration, uint64(duration)) // ns
 
-	srpc.service.Stats.AverageResponseTime = srpc.service.Stats.totalDuration / srpc.service.Stats.RequestsServed
+	srpc.service.Stats.AverageResponseTime = srpc.service.Stats.TotalDuration / srpc.service.Stats.RequestsServed
 
 	mcp := MethodCompletion{
 		MethodName:  in.Method,
@@ -185,15 +185,4 @@ func (srpc *ServiceRPC) Forward(in ServiceRPCIn, out *ServiceRPCOut) (err error)
 	}
 
 	return
-}
-
-type ServiceRPCIn struct {
-	Method      string
-	RequestInfo *skynet.RequestInfo
-	In          []byte
-}
-
-type ServiceRPCOut struct {
-	Out       []byte
-	ErrString string
 }

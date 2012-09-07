@@ -59,3 +59,44 @@ type LogsearchClient struct {
 func (l LogsearchClient) String() string {
 	return fmt.Sprintf("Log Search client attached: %s → %s %s", l.RemoteAddr, l.Method, l.Path)
 }
+
+type ServiceDiscovered struct {
+	Service *ServiceInfo
+}
+
+func (sd ServiceDiscovered) String() string {
+	return fmt.Sprintf("Discovered service %q at %s", sd.Service.Config.Name, sd.Service.Config.ServiceAddr)
+}
+
+type ServiceRemoved struct {
+	Service *ServiceInfo
+}
+
+func (sr ServiceRemoved) String() string {
+	return fmt.Sprintf("Removed service %q at %s", sr.Service.Config.Name, sr.Service.Config.ServiceAddr)
+}
+
+type ServiceCreated struct {
+	ServiceConfig *ServiceConfig
+}
+
+func (sc ServiceCreated) String() string {
+	return fmt.Sprintf("Created service %q", sc.ServiceConfig.Name)
+}
+
+type ServiceListening struct {
+	ServiceConfig *ServiceConfig
+	Addr          *BindAddr
+}
+
+func (sc ServiceListening) String() string {
+	return fmt.Sprintf("Service %q listening on %s", sc.ServiceConfig.Name, sc.Addr)
+}
+
+type AdminListening struct {
+	ServiceConfig *ServiceConfig
+}
+
+func (al AdminListening) String() string {
+	return fmt.Sprintf("Service %q listening for admin on %s", al.ServiceConfig.Name, al.ServiceConfig.AdminAddr)
+}

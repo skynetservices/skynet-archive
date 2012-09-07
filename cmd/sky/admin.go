@@ -5,33 +5,32 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
 	"github.com/bketelsen/skynet/daemon"
-	"github.com/bketelsen/skynet/service"
 	"github.com/kballard/go-shellquote"
 	"os"
 	"strings"
 	"text/template"
 )
 
-func Register(q *client.Query) {
+func Register(q *skynet.Query) {
 	instances := q.FindInstances()
 	for _, instance := range instances {
 		cladmin := client.Admin{
 			Instance: instance,
 		}
-		_, err := cladmin.Register(service.RegisterRequest{})
+		_, err := cladmin.Register(skynet.RegisterRequest{})
 		if err != nil {
 			config.Log.Item(err)
 		}
 	}
 }
 
-func Unregister(q *client.Query) {
+func Unregister(q *skynet.Query) {
 	instances := q.FindInstances()
 	for _, instance := range instances {
 		cladmin := client.Admin{
 			Instance: instance,
 		}
-		_, err := cladmin.Unregister(service.UnregisterRequest{})
+		_, err := cladmin.Unregister(skynet.UnregisterRequest{})
 		if err != nil {
 			config.Log.Item(err)
 		}
@@ -45,7 +44,7 @@ func getDaemonServiceClientForHost(dc *skynet.DoozerConfig, host string) *client
 
 	c := client.NewClient(config)
 	registered := true
-	query := &client.Query{
+	query := &skynet.Query{
 		DoozerConn: c.DoozerConn,
 		Service:    "SkynetDaemon",
 		Host:       host,
@@ -61,7 +60,7 @@ var deployTemplate = template.Must(template.New("").Parse(
 `))
 
 // TODO: this should be smarter about which hosts it deploys to
-func Deploy(q *client.Query, path string, args ...string) {
+func Deploy(q *skynet.Query, path string, args ...string) {
 	cl := client.NewClient(&config)
 
 	fmt.Println("deploying " + path + " " + strings.Join(args, ""))
@@ -89,7 +88,7 @@ var stopTemplate = template.Must(template.New("").Parse(
 {{else}}Service with UUID {{.UUID}} is already stopped.
 {{end}}`))
 
-func Stop(q *client.Query) {
+func Stop(q *skynet.Query) {
 	cl := client.NewClient(&config)
 
 	for _, instance := range q.FindInstances() {
@@ -111,13 +110,13 @@ func Stop(q *client.Query) {
 	}
 }
 
-func AdminStop(q *client.Query) {
+func AdminStop(q *skynet.Query) {
 	instances := q.FindInstances()
 	for _, instance := range instances {
 		cladmin := client.Admin{
 			Instance: instance,
 		}
-		_, err := cladmin.Stop(service.StopRequest{
+		_, err := cladmin.Stop(skynet.StopRequest{
 			WaitForClients: true,
 		})
 		if err != nil {

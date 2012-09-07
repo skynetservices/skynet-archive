@@ -112,6 +112,27 @@ type ServiceConfig struct {
 	DoozerUpdateInterval time.Duration `json:"-"`
 }
 
+type ServiceStatistics struct {
+	Clients        uint
+	StartTime      string
+	LastRequest    string
+	RequestsServed uint64
+
+	// For now this will be since startup, we might change it later to be for a given sample interval
+	AverageResponseTime uint64
+	TotalDuration       uint64
+}
+
+type ServiceInfo struct {
+	Config     *ServiceConfig
+	Registered bool
+	Stats      ServiceStatistics
+}
+
+func (s *ServiceInfo) GetConfigPath() string {
+	return "/services/" + s.Config.Name + "/" + s.Config.Version + "/" + s.Config.Region + "/" + s.Config.ServiceAddr.IPAddress + "/" + strconv.Itoa(s.Config.ServiceAddr.Port)
+}
+
 type ClientConfig struct {
 	Log                       Logger        `json:"-"`
 	DoozerConfig              *DoozerConfig `json:"-"`
