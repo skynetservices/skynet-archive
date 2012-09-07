@@ -100,7 +100,7 @@ func main() {
 
 	flag.Parse()
 
-	log = skynet.NewConsoleLogger(os.Stderr)
+	log = skynet.NewConsoleLogger("dashboard", os.Stderr)
 	if *mgoserver == "" {
 		log.Item(skynet.MongoError{"", "No mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)"})
 	}

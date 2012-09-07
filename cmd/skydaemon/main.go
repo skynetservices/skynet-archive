@@ -25,7 +25,7 @@ func main() {
 
 	var err error
 	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
-	clogger := skynet.NewConsoleLogger(os.Stdout)
+	clogger := skynet.NewConsoleLogger("skydaemon", os.Stdout)
 	config.Log = skynet.NewMultiLogger(mlogger, clogger)
 	if err != nil {
 		config.Log.Item("Could not connect to mongo db for logging")

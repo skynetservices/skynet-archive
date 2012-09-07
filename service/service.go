@@ -338,7 +338,7 @@ func (s *Service) Shutdown() {
 
 func initializeConfig(c *skynet.ServiceConfig) {
 	if c.Log == nil {
-		c.Log = skynet.NewConsoleLogger(os.Stderr)
+		c.Log = skynet.NewConsoleLogger("skynet", os.Stderr)
 	}
 
 	if c.Name == "" {
