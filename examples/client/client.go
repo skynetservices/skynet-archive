@@ -15,7 +15,7 @@ func main() {
 	config, _ := skynet.GetClientConfigFromFlags()
 
 	var err error
-	config.Log = skynet.NewConsoleLogger(os.Stderr)
+	config.Log = skynet.NewConsoleLogger("TestServiceClient", os.Stderr)
 
 	client := client.NewClient(config)
 

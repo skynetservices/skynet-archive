@@ -61,9 +61,9 @@ type ConsoleLogger struct {
 	untransitioned *log.Logger
 }
 
-func NewConsoleLogger(w io.Writer) (cl *ConsoleLogger) {
+func NewConsoleLogger(name string, w io.Writer) (cl *ConsoleLogger) {
 	cl = &ConsoleLogger{
-		l:              log.New(w, "skynet: ", log.LstdFlags),
+		l:              log.New(w, fmt.Sprintf("%s: ", name), log.LstdFlags),
 		untransitioned: log.New(w, "fix-me: ", log.LstdFlags),
 	}
 	return

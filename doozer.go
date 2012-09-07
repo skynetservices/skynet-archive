@@ -60,7 +60,7 @@ func NewDoozerConnection(uri string, boot string, discover bool, logger Logger) 
 
 func NewDoozerConnectionFromConfig(config DoozerConfig, logger Logger) (d *DoozerConnection) {
 	if logger == nil {
-		logger = NewConsoleLogger(os.Stderr)
+		logger = NewConsoleLogger("doozer", os.Stderr)
 	}
 
 	d = &DoozerConnection{

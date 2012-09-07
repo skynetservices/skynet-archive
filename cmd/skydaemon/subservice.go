@@ -85,11 +85,10 @@ func (ss *SubService) Stop() bool {
 	ss.running = false
 
 	ss.Deregister()
+
 	// halt the rerunner so we can kill the processes without it relaunching
 	ss.runSignal.Add(1)
-
 	ss.rerunChan <- false
-
 	ss.runSignal.Wait()
 
 	return true
@@ -149,11 +148,12 @@ func (ss *SubService) watchProcess(proc *os.Process, startupTimer *time.Timer) {
 	select {
 	case <-startupTimer.C:
 		// we let it run long enough that it might not be a recurring error, try again
-		if !ss.running {
+		if ss.running {
 			ss.rerunChan <- true
 		}
 	default:
 		// error happened too quickly - must be startup issue
+		fmt.Println("Service died too quickly: " + ss.binPath)
 		startupTimer.Stop()
 	}
 }
@@ -164,7 +164,7 @@ func (ss *SubService) rerunner() {
 			break
 		}
 
-		fmt.Println("Restarting SubService: " + ss.binPath)
+		fmt.Println("Restarting service: " + ss.binPath)
 		_, err := ss.startProcess()
 
 		if err != nil {

@@ -43,7 +43,7 @@ type Client struct {
 
 func NewClient(config *skynet.ClientConfig) *Client {
 	if config.Log == nil {
-		config.Log = skynet.NewConsoleLogger(os.Stderr)
+		config.Log = skynet.NewConsoleLogger("skynet", os.Stderr)
 	}
 
 	if config.IdleConnectionsToInstance == 0 {

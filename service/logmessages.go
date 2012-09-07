@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"github.com/bketelsen/skynet"
+	"syscall"
 )
 
 type RegisteredMethods struct {
@@ -30,4 +31,12 @@ type MethodCompletion struct {
 
 func (mi MethodCompletion) String() string {
 	return fmt.Sprintf("Method %q completed with RequestInfo %v and duration %dns", mi.MethodName, mi.RequestInfo, mi.Duration)
+}
+
+type KillSignal struct {
+	Signal syscall.Signal
+}
+
+func (ks KillSignal) String() string {
+	return fmt.Sprintf("Got kill signal %q", ks.Signal)
 }
