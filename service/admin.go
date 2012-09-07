@@ -59,7 +59,7 @@ func (sa *Admin) Unregister(in skynet.UnregisterRequest, out *skynet.UnregisterR
 }
 
 func (sa *Admin) Stop(in skynet.StopRequest, out *skynet.StopResponse) (err error) {
-	sa.service.Log.Println("Got RPC admin command Stop")
+	sa.service.Log.Item("Got RPC admin command Stop")
 
 	// TODO: if in.WaitForClients is true, do it
 
