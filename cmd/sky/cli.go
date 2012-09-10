@@ -37,6 +37,8 @@ var SupportedCliCommands = []string{
 }
 
 func tabCompleter(line string) []string {
+	var cmds []string
+
 	opts := make([]string, 0)
 
 	if strings.HasPrefix(line, "reset") {
@@ -50,18 +52,17 @@ func tabCompleter(line string) []string {
 		}
 
 		for _, cmd := range filters {
-
-			fmt.Println(cmd)
-			fmt.Println(line)
 			if strings.HasPrefix(cmd, line) {
 				opts = append(opts, cmd)
 			}
 		}
 	} else {
-		for _, cmd := range SupportedCliCommands {
-			if strings.HasPrefix(cmd, line) {
-				opts = append(opts, cmd)
-			}
+		cmds = SupportedCliCommands
+	}
+
+	for _, cmd := range cmds {
+		if strings.HasPrefix(cmd, line) {
+			opts = append(opts, cmd)
 		}
 	}
 
