@@ -5,13 +5,9 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/client"
 	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {
-	c := make(chan os.Signal, 1)
-
 	config, _ := skynet.GetClientConfigFromFlags()
 
 	var err error
@@ -37,20 +33,4 @@ func main() {
 
 	fmt.Println(out["data"].(string))
 
-	watchSignals(c)
-}
-
-func watchSignals(c chan os.Signal) {
-	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM)
-
-	for {
-		select {
-		case sig := <-c:
-			switch sig.(syscall.Signal) {
-			// Trap signals for clean shutdown
-			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
-				syscall.Exit(0)
-			}
-		}
-	}
 }
