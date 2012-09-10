@@ -25,7 +25,7 @@ type SubService struct {
 	// argv is Args after it is properly split up
 	argv []string
 
-	running      bool
+	running bool
 
 	binPath string
 
@@ -34,12 +34,18 @@ type SubService struct {
 	startMutex sync.Mutex
 
 	runSignal sync.WaitGroup
+
+	UUID string
+
+	doozer *skynet.DoozerConnection
 }
 
-func NewSubService(log skynet.Logger, servicePath, args, uuid string) (ss *SubService, err error) {
+func NewSubService(daemon *SkynetDaemon, servicePath, args, uuid string) (ss *SubService, err error) {
 	ss = &SubService{
 		ServicePath: servicePath,
 		Args:        args,
+		UUID:        uuid,
+		doozer:      daemon.Service.DoozerConn,
 		// TODO: proper argument splitting
 	}
 	ss.argv, err = shellquote.Split(args)
@@ -142,6 +148,8 @@ func (ss *SubService) startProcess() (proc *os.Process, err error) {
 func (ss *SubService) watchProcess(proc *os.Process, startupTimer *time.Timer) {
 	proc.Wait()
 
+	ss.removeFromDoozer()
+
 	if !ss.running {
 		startupTimer.Stop()
 		return
@@ -176,4 +184,16 @@ func (ss *SubService) rerunner() {
 	}
 
 	ss.runSignal.Done()
+}
+
+func (ss *SubService) removeFromDoozer() {
+	q := skynet.Query{
+		UUID:       ss.UUID,
+		DoozerConn: ss.doozer,
+	}
+
+	instances := q.FindInstances()
+	for _, instance := range instances {
+		ss.doozer.Del(instance.GetConfigPath(), ss.doozer.GetCurrentRevision())
+	}
 }
