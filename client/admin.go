@@ -27,7 +27,7 @@ func (a *Admin) Unregister(in skynet.UnregisterRequest) (out skynet.UnregisterRe
 		return
 	}
 	rpcClient := bsonrpc.NewClient(conn)
-	err = rpcClient.Call("Admin.UnregisterResponse", in, &out)
+	err = rpcClient.Call("Admin.Unregister", in, &out)
 	rpcClient.Close()
 	return
 }
