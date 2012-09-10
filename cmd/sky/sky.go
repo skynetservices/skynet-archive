@@ -1,10 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"github.com/bketelsen/skynet"
+	"github.com/sbinet/liner"
 	"os"
 	"strconv"
 	"strings"
@@ -281,28 +281,61 @@ Commands:
  * CLI Logic
  */
 
+var SupportedCliCommands = []string{
+	"exit",
+	"filters",
+	"help",
+	"host",
+	"hosts",
+	"instances",
+	"port",
+	"region",
+	"regions",
+	"registered",
+	"reset",
+	"service",
+	"services",
+	"topology",
+	"version",
+	"versions",
+}
+
 func InteractiveShell() {
-	lineReader := bufio.NewReader(os.Stdin)
+	term := liner.NewLiner()
+
 	doozer := Doozer(config.DoozerConfig)
 
 	fmt.Println("Skynet Interactive Shell")
-	prompt()
 
 	query := &skynet.Query{
 		DoozerConn: doozer,
 	}
 
+	term.SetCompleter(func(line string) []string {
+		opts := make([]string, 0)
+
+		for _, cmd := range SupportedCliCommands {
+			if strings.HasPrefix(cmd, line) {
+				opts = append(opts, cmd)
+			}
+		}
+
+		return opts
+	})
+
 	for {
-		l, _, e := lineReader.ReadLine()
+		l, e := term.Prompt("> ")
 		if e != nil {
 			break
 		}
 
 		s := string(l)
 		parts := strings.Split(s, " ")
+		validCommand := true
 
 		switch parts[0] {
 		case "exit":
+			term.Close()
 			syscall.Exit(0)
 		case "help", "h":
 			InteractiveShellHelp()
@@ -406,10 +439,13 @@ func InteractiveShell() {
 
 			fmt.Printf("Region: %v\nHost: %v\nService:%v\nVersion: %v\nRegistered: %v\n", query.Region, query.Host, query.Service, query.Version, registered)
 		default:
+			validCommand = false
 			fmt.Println("Unknown Command - type 'help' for a list of commands")
 		}
 
-		prompt()
+		if validCommand {
+			term.AppendHistory(s)
+		}
 	}
 }
 
@@ -434,8 +470,4 @@ Filters:
 	port <port> - Set port filter, all commands will be scoped to this port until reset
 
 `)
-}
-
-func prompt() {
-	fmt.Printf("> ")
 }
