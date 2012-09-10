@@ -9,6 +9,8 @@ import (
 	"syscall"
 )
 
+var query *skynet.Query
+
 /*
  * CLI Logic
  */
@@ -37,7 +39,7 @@ var SupportedCliCommands = []string{
 }
 
 func tabCompleter(line string) []string {
-	var cmds []string
+	cmds := make([]string, 0)
 
 	opts := make([]string, 0)
 
@@ -56,6 +58,32 @@ func tabCompleter(line string) []string {
 				opts = append(opts, cmd)
 			}
 		}
+	} else if strings.HasPrefix(line, "host") {
+		cmds = make([]string, 0)
+
+		for _, host := range query.FindHosts() {
+			cmds = append(cmds, "host "+host)
+		}
+	} else if strings.HasPrefix(line, "region") {
+		cmds = make([]string, 0)
+
+		for _, region := range query.FindRegions() {
+			cmds = append(cmds, "region "+region)
+		}
+	} else if strings.HasPrefix(line, "service") {
+		cmds = make([]string, 0)
+
+		for _, service := range query.FindServices() {
+			cmds = append(cmds, "service "+service)
+		}
+	} else if strings.HasPrefix(line, "version") {
+		cmds = make([]string, 0)
+
+		for _, version := range query.FindServiceVersions() {
+			cmds = append(cmds, "version "+version)
+		}
+	} else if strings.HasPrefix(line, "registered") {
+		cmds = []string{"registered true", "registered false"}
 	} else {
 		cmds = SupportedCliCommands
 	}
@@ -76,7 +104,7 @@ func InteractiveShell() {
 
 	fmt.Println("Skynet Interactive Shell")
 
-	query := &skynet.Query{
+	query = &skynet.Query{
 		DoozerConn: doozer,
 	}
 
