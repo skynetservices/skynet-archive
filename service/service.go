@@ -26,33 +26,33 @@ type ServiceDelegate interface {
 }
 
 type Service struct {
-	DoozerConn *skynet.DoozerConnection `json:"-"`
+	DoozerConn *skynet.DoozerConnection
 	skynet.ServiceInfo
 
 	// for sending the signal into mux()
-	doneChan chan bool `json:"-"`
+	doneChan chan bool
 	// for waiting for all shutdown operations
 	doneGroup *sync.WaitGroup
 
-	Log skynet.Logger `json:"-"`
+	Log skynet.Logger
 
-	RPCServ *rpc.Server   `json:"-"`
-	Admin   *ServiceAdmin `json:"-"`
+	RPCServ *rpc.Server
+	Admin   *ServiceAdmin
 
-	Delegate ServiceDelegate `json:"-"`
+	Delegate ServiceDelegate
 
-	methods map[string]reflect.Value `json:"-"`
+	methods map[string]reflect.Value
 
-	activeRequests sync.WaitGroup `json:"-"`
+	activeRequests sync.WaitGroup
 
-	connectionChan chan *net.TCPConn `json:"-"`
-	registeredChan chan bool         `json:"-"`
+	connectionChan chan *net.TCPConn
+	registeredChan chan bool
 
-	doozerChan   chan interface{} `json:"-"`
-	doozerWaiter sync.WaitGroup   `json:"-"`
+	doozerChan   chan interface{}
+	doozerWaiter sync.WaitGroup
 
-	rpcListener  *net.TCPListener `json:"-"`
-	updateTicker *time.Ticker     `json:"-"`
+	rpcListener  *net.TCPListener
+	updateTicker *time.Ticker
 }
 
 func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
