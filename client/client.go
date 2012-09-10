@@ -46,12 +46,8 @@ func NewClient(config *skynet.ClientConfig) *Client {
 		config.Log = skynet.NewConsoleLogger("skynet", os.Stderr)
 	}
 
-	if config.IdleConnectionsToInstance == 0 {
-		config.IdleConnectionsToInstance = 1
-	}
-
 	if config.MaxConnectionsToInstance == 0 {
-		config.MaxConnectionsToInstance = 1
+		panic("must have at least one connection allowed to an instance")
 	}
 
 	client := &Client{
