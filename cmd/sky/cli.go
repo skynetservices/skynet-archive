@@ -138,6 +138,11 @@ func InteractiveShell() {
 			if confirm(term, strconv.Itoa(len(query.FindInstances()))+" instances will be unregistered") {
 				Unregister(query)
 			}
+		case "stop":
+			if confirm(term, strconv.Itoa(len(query.FindInstances()))+" instances will be stopped") {
+				Stop(query)
+			}
+
 		case "registered":
 			if len(parts) >= 2 {
 				var reg bool
@@ -188,7 +193,7 @@ func InteractiveShell() {
 				registered = strconv.FormatBool(*query.Registered)
 			}
 
-			fmt.Printf("Region: %v\nHost: %v\nService:%v\nVersion: %v\nRegistered: %v\n", query.Region, query.Host, query.Service, query.Version, registered)
+			fmt.Printf("Region: %v\nHost: %v\nService: %v\nVersion: %v\nRegistered: %v\n", query.Region, query.Host, query.Service, query.Version, registered)
 		default:
 			validCommand = false
 			fmt.Println("Unknown Command - type 'help' for a list of commands")
@@ -218,6 +223,7 @@ Commands:
 	regions: List all regions available that meet the specified criteria
   register: Registers all instances that match the current filters
   unregister: Unregisters all instances that match the current filters
+  unregister: Stops all instances that match the current filters
 	services: List all services available that meet the specified criteria
 	versions: List all services available that meet the specified criteria
 	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
