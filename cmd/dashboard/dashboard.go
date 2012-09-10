@@ -83,7 +83,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 
 var addr = flag.String("addr", ":8080", "dashboard listener address")
 
-var doozer = flag.String("doozer", skynet.GetDefaultEnvVar("SKYNET_DZHOST", "127.0.0.1:8046"), "initial doozer instance to connect to")
+var doozer = flag.String("doozer", skynet.GetDefaultEnvVar("SKYNET_DZHOST", skynet.DefaultDoozerdAddr), "initial doozer instance to connect to")
 var doozerboot = flag.String("doozerboot", skynet.GetDefaultEnvVar("SKYNET_DZNSHOST", ""), "initial doozer instance to connect to")
 var autodiscover = flag.Bool("autodiscover", skynet.GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true", "auto discover new doozer instances")
 

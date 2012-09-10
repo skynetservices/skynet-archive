@@ -66,14 +66,16 @@ type ServiceClient struct {
 
 func newServiceClient(query *skynet.Query, c *Client) (sc *ServiceClient) {
 	sc = &ServiceClient{
-		client:      c,
-		Log:         c.Config.Log,
-		cconfig:     c.Config,
-		query:       query,
-		instances:   make(map[string]*servicePool),
-		chooser:     NewInstanceChooser(),
-		muxChan:     make(chan interface{}),
-		timeoutChan: make(chan timeoutLengths),
+		client:        c,
+		Log:           c.Config.Log,
+		cconfig:       c.Config,
+		query:         query,
+		instances:     make(map[string]*servicePool),
+		chooser:       NewInstanceChooser(),
+		muxChan:       make(chan interface{}),
+		timeoutChan:   make(chan timeoutLengths),
+		retryTimeout:  skynet.DefaultRetryDuration,
+		giveupTimeout: skynet.DefaultTimeoutDuration,
 	}
 	sc.listenID = skynet.UUID()
 	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query)
