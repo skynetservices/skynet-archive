@@ -47,7 +47,7 @@ func NewClient(config *skynet.ClientConfig) *Client {
 	}
 
 	if config.MaxConnectionsToInstance == 0 {
-		panic("must have at least once connection allowed to an instance")
+		panic("must have at least one connection allowed to an instance")
 	}
 
 	client := &Client{
