@@ -14,6 +14,7 @@ import (
  */
 
 var SupportedCliCommands = []string{
+	"deploy",
 	"exit",
 	"filters",
 	"help",
@@ -23,11 +24,13 @@ var SupportedCliCommands = []string{
 	"port",
 	"region",
 	"regions",
+	"register",
 	"registered",
 	"reset",
 	"service",
 	"services",
 	"topology",
+	"unregister",
 	"version",
 	"versions",
 }
@@ -66,6 +69,15 @@ func InteractiveShell() {
 		validCommand := true
 
 		switch parts[0] {
+		case "deploy":
+			if len(parts) >= 2 {
+				confirm, _ := term.Prompt("Service will be deployed to " + strconv.Itoa(len(query.FindHosts())) + " hosts, Are you sure? (Y/N) > ")
+				if confirm == "Y" || confirm == "y" {
+					Deploy(query, parts[1], parts[2:]...)
+				}
+			} else {
+				fmt.Println("Usage: deploy <service path> <args>")
+			}
 		case "exit":
 			term.Close()
 			syscall.Exit(0)
@@ -181,10 +193,10 @@ func InteractiveShell() {
 	}
 }
 
-// TODO: cli needs to support deploy as well
 func InteractiveShellHelp() {
 	fmt.Print(`
 Commands:
+  deploy: deploy new instances to cluster, will deploy to all hosts matching current filters (deploy <service path> <args>)
 	hosts: List all hosts available that meet the specified criteria
 	instances: List all instances available that meet the specified criteria
 	regions: List all regions available that meet the specified criteria
