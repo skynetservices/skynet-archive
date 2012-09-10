@@ -71,8 +71,7 @@ func InteractiveShell() {
 		switch parts[0] {
 		case "deploy":
 			if len(parts) >= 2 {
-				confirm, _ := term.Prompt("Service will be deployed to " + strconv.Itoa(len(query.FindHosts())) + " hosts, Are you sure? (Y/N) > ")
-				if confirm == "Y" || confirm == "y" {
+				if confirm(term, "Service will be deployed to "+strconv.Itoa(len(query.FindHosts()))+" hosts") {
 					Deploy(query, parts[1], parts[2:]...)
 				}
 			} else {
@@ -131,6 +130,14 @@ func InteractiveShell() {
 
 			fmt.Printf("Region: %v\n", query.Region)
 
+		case "register":
+			if confirm(term, strconv.Itoa(len(query.FindInstances()))+" instances will be registered") {
+				Register(query)
+			}
+		case "unregister":
+			if confirm(term, strconv.Itoa(len(query.FindInstances()))+" instances will be unregistered") {
+				Unregister(query)
+			}
 		case "registered":
 			if len(parts) >= 2 {
 				var reg bool
@@ -193,13 +200,24 @@ func InteractiveShell() {
 	}
 }
 
+func confirm(term *liner.State, msg string) bool {
+	confirm, _ := term.Prompt(msg + ", Are you sure? (Y/N) > ")
+	if confirm == "Y" || confirm == "y" {
+		return true
+	}
+
+	return false
+}
+
 func InteractiveShellHelp() {
 	fmt.Print(`
 Commands:
-  deploy: deploy new instances to cluster, will deploy to all hosts matching current filters (deploy <service path> <args>)
+  deploy: Deploy new instances to cluster, will deploy to all hosts matching current filters (deploy <service path> <args>)
 	hosts: List all hosts available that meet the specified criteria
 	instances: List all instances available that meet the specified criteria
 	regions: List all regions available that meet the specified criteria
+  register: Registers all instances that match the current filters
+  unregister: Unregisters all instances that match the current filters
 	services: List all services available that meet the specified criteria
 	versions: List all services available that meet the specified criteria
 	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
