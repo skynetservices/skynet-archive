@@ -35,7 +35,7 @@ func (s *SkynetDaemon) Deploy(requestInfo *skynet.RequestInfo, in daemon.DeployR
 		Args:        in.Args,
 	})
 
-	ss, err := NewSubService(s.Log, in.ServicePath, in.Args, out.UUID)
+	ss, err := NewSubService(s, in.ServicePath, in.Args, out.UUID)
 	if err != nil {
 		return
 	}
