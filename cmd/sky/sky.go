@@ -267,6 +267,20 @@ Commands:
 		-host - limit command to instances on the specified host
 		-port - limit command to instances on the specified port
 		-registered - (true, false) limit command to instances that are registered (accepting requests)
+	register: Register all instances available that meet the specified criteria
+		-service - limit command to instances of the specified service
+		-version - limit command to instances of the specified version of service
+		-region - limit command to instances in the specified region
+		-host - limit command to instances on the specified host
+		-port - limit command to instances on the specified port
+		-registered - (true, false) limit command to instances that are registered (accepting requests)
+	unregister: Unregister all instances available that meet the specified criteria
+		-service - limit command to instances of the specified service
+		-version - limit command to instances of the specified version of service
+		-region - limit command to instances in the specified region
+		-host - limit command to instances on the specified host
+		-port - limit command to instances on the specified port
+		-registered - (true, false) limit command to instances that are registered (accepting requests)
 		
 		
 
