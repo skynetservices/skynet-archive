@@ -29,10 +29,43 @@ var SupportedCliCommands = []string{
 	"reset",
 	"service",
 	"services",
+	"stop",
 	"topology",
 	"unregister",
 	"version",
 	"versions",
+}
+
+func tabCompleter(line string) []string {
+	opts := make([]string, 0)
+
+	if strings.HasPrefix(line, "reset") {
+		filters := []string{
+			"reset host",
+			"reset port",
+			"reset region",
+			"reset registered",
+			"reset service",
+			"reset version",
+		}
+
+		for _, cmd := range filters {
+
+			fmt.Println(cmd)
+			fmt.Println(line)
+			if strings.HasPrefix(cmd, line) {
+				opts = append(opts, cmd)
+			}
+		}
+	} else {
+		for _, cmd := range SupportedCliCommands {
+			if strings.HasPrefix(cmd, line) {
+				opts = append(opts, cmd)
+			}
+		}
+	}
+
+	return opts
 }
 
 func InteractiveShell() {
@@ -46,17 +79,7 @@ func InteractiveShell() {
 		DoozerConn: doozer,
 	}
 
-	term.SetCompleter(func(line string) []string {
-		opts := make([]string, 0)
-
-		for _, cmd := range SupportedCliCommands {
-			if strings.HasPrefix(cmd, line) {
-				opts = append(opts, cmd)
-			}
-		}
-
-		return opts
-	})
+	term.SetCompleter(tabCompleter)
 
 	for {
 		l, e := term.Prompt("> ")
