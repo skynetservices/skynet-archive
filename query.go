@@ -18,7 +18,7 @@ type Query struct {
 	UUID       string
 	Registered *bool
 	DoozerConn *DoozerConnection
-	DoozerRev  int64
+	doozerRev  int64
 
 	// Internal use only
 	pathLength int
@@ -81,13 +81,11 @@ func (q *Query) search() {
 	q.paths = make(map[string]*doozer.FileInfo, 0)
 	q.files = make(map[string]*doozer.FileInfo, 0)
 
-	if q.DoozerRev == 0 {
-		q.DoozerRev = q.getCurrentDoozerRevision()
-	}
+  q.doozerRev = q.getCurrentDoozerRevision()
 
 	path := q.makePath()
 
-	q.DoozerConn.Walk(q.DoozerRev, path, q, nil)
+	q.DoozerConn.Walk(q.doozerRev, path, q, nil)
 }
 
 func (q *Query) FindHosts() []string {
@@ -128,7 +126,7 @@ func (q *Query) FindInstances() []*ServiceInfo {
 	for path, _ := range q.files {
 		var s ServiceInfo
 
-		data, _, err := q.DoozerConn.Get(path, q.DoozerRev)
+		data, _, err := q.DoozerConn.Get(path, q.doozerRev)
 		if err != nil {
 			log.Panic(err.Error())
 		}
