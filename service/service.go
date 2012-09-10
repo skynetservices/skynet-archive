@@ -29,7 +29,10 @@ type Service struct {
 	DoozerConn *skynet.DoozerConnection `json:"-"`
 	skynet.ServiceInfo
 
+	// for sending the signal into mux()
 	doneChan chan bool `json:"-"`
+	// for waiting for all shutdown operations
+	doneGroup *sync.WaitGroup
 
 	Log skynet.Logger `json:"-"`
 
@@ -255,12 +258,13 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 		s.register()
 	}
 
-	done = &sync.WaitGroup{}
-	done.Add(1)
+	s.doneGroup = &sync.WaitGroup{}
+	s.doneGroup.Add(1)
 	go func() {
 		s.mux()
-		done.Done()
+		s.doneGroup.Done()
 	}()
+	done = s.doneGroup
 	return
 }
 
@@ -327,6 +331,8 @@ func (s *Service) Unregister() {
 }
 
 func (s *Service) Shutdown() {
+	s.doneGroup.Add(1)
+
 	s.doneChan <- true
 
 	s.activeRequests.Wait()
@@ -334,6 +340,7 @@ func (s *Service) Shutdown() {
 
 	s.Delegate.Stopped(s) // Call user defined callback
 
+	s.doneGroup.Done()
 }
 
 func initializeConfig(c *skynet.ServiceConfig) {
