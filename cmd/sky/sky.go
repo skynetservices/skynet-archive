@@ -1,14 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"github.com/bketelsen/skynet"
 	"os"
 	"strconv"
-	"strings"
-	"syscall"
 )
 
 var (
@@ -270,172 +267,23 @@ Commands:
 		-host - limit command to instances on the specified host
 		-port - limit command to instances on the specified port
 		-registered - (true, false) limit command to instances that are registered (accepting requests)
+	register: Register all instances available that meet the specified criteria
+		-service - limit command to instances of the specified service
+		-version - limit command to instances of the specified version of service
+		-region - limit command to instances in the specified region
+		-host - limit command to instances on the specified host
+		-port - limit command to instances on the specified port
+		-registered - (true, false) limit command to instances that are registered (accepting requests)
+	unregister: Unregister all instances available that meet the specified criteria
+		-service - limit command to instances of the specified service
+		-version - limit command to instances of the specified version of service
+		-region - limit command to instances in the specified region
+		-host - limit command to instances on the specified host
+		-port - limit command to instances on the specified port
+		-registered - (true, false) limit command to instances that are registered (accepting requests)
 		
 		
 
 `)
 
-}
-
-/*
- * CLI Logic
- */
-
-func InteractiveShell() {
-	lineReader := bufio.NewReader(os.Stdin)
-	doozer := Doozer(config.DoozerConfig)
-
-	fmt.Println("Skynet Interactive Shell")
-	prompt()
-
-	query := &skynet.Query{
-		DoozerConn: doozer,
-	}
-
-	for {
-		l, _, e := lineReader.ReadLine()
-		if e != nil {
-			break
-		}
-
-		s := string(l)
-		parts := strings.Split(s, " ")
-
-		switch parts[0] {
-		case "exit":
-			syscall.Exit(0)
-		case "help", "h":
-			InteractiveShellHelp()
-		case "services":
-			ListServices(query)
-		case "hosts":
-			ListHosts(query)
-		case "regions":
-			ListRegions(query)
-		case "instances":
-			ListInstances(query)
-		case "versions":
-			ListServiceVersions(query)
-		case "topology":
-			PrintTopology(query)
-
-		case "service":
-			if len(parts) >= 2 {
-				query.Service = parts[1]
-			}
-
-			fmt.Printf("Service: %v\n", query.Service)
-
-		case "host":
-			if len(parts) >= 2 {
-				query.Host = parts[1]
-			}
-
-			fmt.Printf("Host: %v\n", query.Host)
-
-		case "port":
-			if len(parts) >= 2 {
-				query.Port = parts[1]
-			}
-
-			fmt.Printf("Host: %v\n", query.Host)
-
-		case "version":
-			if len(parts) >= 2 {
-				query.Version = parts[1]
-			}
-
-			fmt.Printf("Version: %v\n", query.Version)
-
-		case "region":
-			if len(parts) >= 2 {
-				query.Region = parts[1]
-			}
-
-			fmt.Printf("Region: %v\n", query.Region)
-
-		case "registered":
-			if len(parts) >= 2 {
-				var reg bool
-
-				if parts[1] == "true" {
-					reg = true
-				} else {
-					reg = false
-				}
-
-				query.Registered = &reg
-			}
-
-			registered := ""
-			if query.Registered != nil {
-				registered = strconv.FormatBool(*query.Registered)
-			}
-
-			fmt.Printf("Registered: %v\n", registered)
-
-		case "reset":
-			if len(parts) == 1 || parts[1] == "service" {
-				query.Service = ""
-			}
-
-			if len(parts) == 1 || parts[1] == "version" {
-				query.Version = ""
-			}
-
-			if len(parts) == 1 || parts[1] == "host" {
-				query.Host = ""
-			}
-
-			if len(parts) == 1 || parts[1] == "port" {
-				query.Port = ""
-			}
-
-			if len(parts) == 1 || parts[1] == "region" {
-				query.Region = ""
-			}
-
-			if len(parts) == 1 || parts[1] == "registered" {
-				query.Registered = nil
-			}
-		case "filters":
-			registered := ""
-			if query.Registered != nil {
-				registered = strconv.FormatBool(*query.Registered)
-			}
-
-			fmt.Printf("Region: %v\nHost: %v\nService:%v\nVersion: %v\nRegistered: %v\n", query.Region, query.Host, query.Service, query.Version, registered)
-		default:
-			fmt.Println("Unknown Command - type 'help' for a list of commands")
-		}
-
-		prompt()
-	}
-}
-
-// TODO: cli needs to support deploy as well
-func InteractiveShellHelp() {
-	fmt.Print(`
-Commands:
-	hosts: List all hosts available that meet the specified criteria
-	instances: List all instances available that meet the specified criteria
-	regions: List all regions available that meet the specified criteria
-	services: List all services available that meet the specified criteria
-	versions: List all services available that meet the specified criteria
-	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
-
-Filters:
-	filters - list current filters
-	reset <filter> - reset all filters or specified filter
-	region <region> - Set region filter, all commands will be scoped to this region until reset
-	service <service> - Set service filter, all commands will be scoped to this service until reset
-	version <version> - Set version filter, all commands will be scoped to this version until reset
-	host <host> - Set host filter, all commands will be scoped to this host until reset
-	port <port> - Set port filter, all commands will be scoped to this port until reset
-
-`)
-}
-
-func prompt() {
-	fmt.Printf("> ")
 }
