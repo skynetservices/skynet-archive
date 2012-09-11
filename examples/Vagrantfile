@@ -74,14 +74,13 @@ Vagrant::Config.run do |config|
     c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/dashboard -addr 192.168.126.101:80 --webroot=/opt/local/gopath/src/github.com/bketelsen/skynet/cmd/dashboard 0<&- &> /var/log/skynet_dashboard.log &"
 
     # Start Services
-    sleep 5 # Give daemon time to start up
-    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=1"
-    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=1"
-    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=2"
+    c.vm.provision :shell, :inline => "sleep 10 && sky --host=192.168.126.101 deploy github.com/bketelsen/skynet/examples/service --version=1"
+    c.vm.provision :shell, :inline => "sky --host=192.168.126.101 deploy github.com/bketelsen/skynet/examples/service --version=1"
+    c.vm.provision :shell, :inline => "sky --host=192.168.126.101 deploy github.com/bketelsen/skynet/examples/service --version=2"
 
-    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
-    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
-    c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=2"
+    c.vm.provision :shell, :inline => "sky --host=192.168.126.101 deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
+    c.vm.provision :shell, :inline => "sky --host=192.168.126.101 deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
+    c.vm.provision :shell, :inline => "sky --host=192.168.126.101 deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=2"
 
     c.vm.share_folder "skynet", "/opt/skynet", "../"
     #c.vm.share_folder "gopath", "/opt/gopath", ENV['GOPATH']
@@ -135,16 +134,16 @@ Vagrant::Config.run do |config|
       c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.126.101:8046' add '/ctl/cal/#{i-1}'  0<&- &> /dev/null &"
 
       # Start Daemon
-      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/daemon --version=1 0<&- &> /var/log/skynet_daemon.log &"
+      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/skydaemon --version=1 0<&- &> /var/log/skynet_daemon.log &"
 
       # Start Services
-      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=1"
-      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=1"
-      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/service --version=2"
+      c.vm.provision :shell, :inline => "sleep 15 && sky --host=192.168.126.10#{i} deploy github.com/bketelsen/skynet/examples/service --version=1"
+      c.vm.provision :shell, :inline => "sky --host=192.168.126.10#{i} deploy github.com/bketelsen/skynet/examples/service --version=1"
+      c.vm.provision :shell, :inline => "sky --host=192.168.126.10#{i} deploy github.com/bketelsen/skynet/examples/service --version=2"
 
-      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
-      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
-      c.vm.provision :shell, :inline => "sky deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=2"
+      c.vm.provision :shell, :inline => "sky --host=192.168.126.10#{i} deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
+      c.vm.provision :shell, :inline => "sky --host=192.168.126.10#{i} deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
+      c.vm.provision :shell, :inline => "sky --host=192.168.126.10#{i} deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=2"
 
 
       #c.vm.share_folder "skynet", "/opt/skynet", "../"
