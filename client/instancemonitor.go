@@ -9,9 +9,10 @@ import (
 )
 
 type InstanceMonitorNotification struct {
-	Path    string
-	Service skynet.ServiceInfo
-	Type    InstanceNotificationType
+	Path       string
+	Service    skynet.ServiceInfo
+	OldService skynet.ServiceInfo
+	Type       InstanceNotificationType
 }
 
 type InstanceNotificationType int
@@ -87,7 +88,12 @@ func (im *InstanceMonitor) mux() {
 				if notification.Service.Config == nil {
 					panic("nil service config")
 				}
+
 				if c.Query.ServiceMatches(notification.Service) {
+					c.notify(notification)
+				} else if notification.OldService.Config != nil && c.Query.ServiceMatches(notification.OldService) {
+					// Used to match, we need to send a remove notification
+					notification.Type = InstanceRemoveNotification
 					c.notify(notification)
 				}
 			}
@@ -220,9 +226,10 @@ func (im *InstanceMonitor) monitorInstances() {
 			}
 
 			im.notificationChan <- InstanceMonitorNotification{
-				Path:    ev.Path,
-				Service: s,
-				Type:    notificationType,
+				Path:       ev.Path,
+				Service:    s,
+				OldService: im.instances[ev.Path],
+				Type:       notificationType,
 			}
 		}
 	}
