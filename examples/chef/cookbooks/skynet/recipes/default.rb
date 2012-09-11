@@ -28,7 +28,7 @@ execute "download-skynet" do
   }
 
   not_if do
-    #File.exists?("/opt/local/gopath/src/github.com/bketelsen/skynet")
+    File.exists?("/opt/local/gopath/src/github.com/bketelsen/skynet")
   end
 end
 
