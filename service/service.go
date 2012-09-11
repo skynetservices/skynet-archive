@@ -96,7 +96,7 @@ func (s *Service) listen(addr *skynet.BindAddr, bindChan chan bool) {
 		panic(err)
 	}
 
-	s.Log.Item(skynet.ServiceListening{
+	s.Log.Item(ServiceListening{
 		Addr:          addr,
 		ServiceConfig: s.Config,
 	})
