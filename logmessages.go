@@ -83,20 +83,3 @@ type ServiceCreated struct {
 func (sc ServiceCreated) String() string {
 	return fmt.Sprintf("Created service %q", sc.ServiceConfig.Name)
 }
-
-type ServiceListening struct {
-	ServiceConfig *ServiceConfig
-	Addr          *BindAddr
-}
-
-func (sc ServiceListening) String() string {
-	return fmt.Sprintf("Service %q listening on %s", sc.ServiceConfig.Name, sc.Addr)
-}
-
-type AdminListening struct {
-	ServiceConfig *ServiceConfig
-}
-
-func (al AdminListening) String() string {
-	return fmt.Sprintf("Service %q listening for admin on %s", al.ServiceConfig.Name, al.ServiceConfig.AdminAddr)
-}
