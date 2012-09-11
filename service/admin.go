@@ -26,7 +26,7 @@ func NewServiceAdmin(service *Service) (sa *ServiceAdmin) {
 
 func (sa *ServiceAdmin) Listen(addr *skynet.BindAddr, bindChan chan bool) {
 	if addr == nil {
-
+		sa.service.Log.Item(AdminNotListening{sa.service.Config})
 	}
 
 	listener, err := addr.Listen()
