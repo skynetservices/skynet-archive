@@ -24,11 +24,11 @@ end
 
 execute "download-skynet" do
   command %Q{
-    go get github.com/kballard/go-shellquote && go get github.com/bketelsen/skynet
+    go get github.com/kballard/go-shellquote && go get github.com/sbinet/liner && go get github.com/bketelsen/skynet
   }
 
   not_if do
-    File.exists?("/opt/local/gopath/src/github.com/bketelsen/skynet")
+    #File.exists?("/opt/local/gopath/src/github.com/bketelsen/skynet")
   end
 end
 
