@@ -40,3 +40,28 @@ type KillSignal struct {
 func (ks KillSignal) String() string {
 	return fmt.Sprintf("Got kill signal %q", ks.Signal)
 }
+
+type ServiceListening struct {
+	ServiceConfig *skynet.ServiceConfig
+	Addr          *skynet.BindAddr
+}
+
+func (sc ServiceListening) String() string {
+	return fmt.Sprintf("Service %q listening on %s", sc.ServiceConfig.Name, sc.Addr)
+}
+
+type AdminListening struct {
+	ServiceConfig *skynet.ServiceConfig
+}
+
+func (al AdminListening) String() string {
+	return fmt.Sprintf("Service %q listening for admin on %s", al.ServiceConfig.Name, al.ServiceConfig.AdminAddr)
+}
+
+type AdminNotListening struct {
+	ServiceConfig *skynet.ServiceConfig
+}
+
+func (al AdminNotListening) String() string {
+	return fmt.Sprintf("Service %q not listening for admin", al.ServiceConfig.Name)
+}

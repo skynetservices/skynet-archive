@@ -22,6 +22,8 @@ func main() {
 	config, args := skynet.GetServiceConfigFromFlags()
 	config.Name = "SkynetDaemon"
 	config.Version = "1"
+	// skydaemon does not listen to admin RPC requests
+	config.AdminAddr = nil
 
 	var err error
 	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)

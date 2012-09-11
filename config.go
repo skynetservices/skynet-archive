@@ -71,7 +71,10 @@ func BindAddrFromString(host string) (ba *BindAddr, err error) {
 	return
 }
 
-func (ba BindAddr) String() string {
+func (ba *BindAddr) String() string {
+	if ba == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s:%d", ba.IPAddress, ba.Port)
 }
 
