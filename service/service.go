@@ -89,7 +89,7 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	return
 }
 
-func (s *Service) listen(addr *skynet.BindAddr, bindChan chan bool) {
+func (s *Service) listen(addr *skynet.BindAddr, bindWait *sync.WaitGroup) {
 	var err error
 	s.rpcListener, err = addr.Listen()
 	if err != nil {
@@ -101,7 +101,7 @@ func (s *Service) listen(addr *skynet.BindAddr, bindChan chan bool) {
 		ServiceConfig: s.Config,
 	})
 
-	bindChan <- true
+	bindWait.Done()
 
 	for {
 		conn, err := s.rpcListener.AcceptTCP()
@@ -223,14 +223,18 @@ func (s *Service) doozer() *skynet.DoozerConnection {
 }
 
 func (s *Service) Start(register bool) (done *sync.WaitGroup) {
-	bindChan := make(chan bool)
+	bindWait := &sync.WaitGroup{}
 
-	go s.listen(s.Config.ServiceAddr, bindChan)
+	bindWait.Add(1)
+	go s.listen(s.Config.ServiceAddr, bindWait)
 
 	// the admin server
 	if s.Config.AdminAddr != nil {
 		s.Admin = NewServiceAdmin(s)
-		go s.Admin.Listen(s.Config.AdminAddr, bindChan)
+		bindWait.Add(1)
+		go s.Admin.Listen(s.Config.AdminAddr, bindWait)
+	} else {
+		s.Log.Item(AdminNotListening{s.Config})
 	}
 
 	// Watch signals for shutdown
@@ -240,12 +244,11 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	s.doneChan = make(chan bool, 1)
 
 	// We must block here, we don't want to register with doozer, until we've actually bound to an ip:port
-	<-bindChan
-	<-bindChan
+	bindWait.Wait()
 
 	// If doozer contains instances with the same ip:port we just bound to then they are no longer alive and need to be cleaned up
-	s.cleanupDoozerEntriesForAddr(s.Config.ServiceAddr.IPAddress, s.Config.ServiceAddr.Port)
-	s.cleanupDoozerEntriesForAddr(s.Config.AdminAddr.IPAddress, s.Config.AdminAddr.Port)
+	s.cleanupDoozerEntriesForAddr(s.Config.ServiceAddr)
+	s.cleanupDoozerEntriesForAddr(s.Config.AdminAddr)
 
 	go s.Delegate.Started(s) // Call user defined callback
 
@@ -268,17 +271,20 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	return
 }
 
-func (s *Service) cleanupDoozerEntriesForAddr(ip string, port int) {
+func (s *Service) cleanupDoozerEntriesForAddr(addr *skynet.BindAddr) {
+	if addr == nil {
+		return
+	}
 	q := skynet.Query{
-		Host:       ip,
-		Port:       strconv.Itoa(port),
+		Host:       addr.IPAddress,
+		Port:       strconv.Itoa(addr.Port),
 		DoozerConn: s.doozer(),
 	}
 
 	instances := q.FindInstances()
 
 	for _, i := range instances {
-		s.Log.Item("Cleaning up old doozer entry with conflicting addr " + ip + ":" + strconv.Itoa(port) + "(" + i.GetConfigPath() + ")")
+		s.Log.Item("Cleaning up old doozer entry with conflicting addr " + addr.String() + "(" + i.GetConfigPath() + ")")
 		s.doozer().Del(i.GetConfigPath(), s.doozer().GetCurrentRevision())
 	}
 }

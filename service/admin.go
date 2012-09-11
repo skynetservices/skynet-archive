@@ -4,6 +4,7 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"net/rpc"
+	"sync"
 )
 
 type ServiceAdmin struct {
@@ -24,17 +25,13 @@ func NewServiceAdmin(service *Service) (sa *ServiceAdmin) {
 	return
 }
 
-func (sa *ServiceAdmin) Listen(addr *skynet.BindAddr, bindChan chan bool) {
-	if addr == nil {
-		sa.service.Log.Item(AdminNotListening{sa.service.Config})
-	}
-
+func (sa *ServiceAdmin) Listen(addr *skynet.BindAddr, bindWait *sync.WaitGroup) {
 	listener, err := addr.Listen()
 	if err != nil {
 		panic(err)
 	}
 
-	bindChan <- true
+	bindWait.Done()
 	sa.service.Log.Item(AdminListening{sa.service.Config})
 
 	for {
