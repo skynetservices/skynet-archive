@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	config, _ := skynet.GetClientConfigFromFlags()
+	config, _ := skynet.GetClientConfig()
 	config.MaxConnectionsToInstance = 5
 	client := client.NewClient(config)
 

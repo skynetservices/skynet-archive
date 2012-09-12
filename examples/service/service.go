@@ -39,7 +39,7 @@ func (s *TestService) Upcase(requestInfo *skynet.RequestInfo, in map[string]inte
 func main() {
 	testService := NewTestService()
 
-	config, _ := skynet.GetServiceConfigFromFlags()
+	config, _ := skynet.GetServiceConfig()
 
 	if config.Name == "" {
 		config.Name = "TestService"

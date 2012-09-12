@@ -19,7 +19,7 @@ import (
 // Daemon will run the "SkynetDeployment" service, which can be used to remotely spawn
 // new services on the host.
 func main() {
-	config, args := skynet.GetServiceConfigFromFlags()
+	config, args := skynet.GetServiceConfig()
 	config.Name = "SkynetDaemon"
 	config.Version = "1"
 	// skydaemon does not listen to admin RPC requests
