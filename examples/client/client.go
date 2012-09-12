@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	config, _ := skynet.GetClientConfigFromFlags()
+	config, _ := skynet.GetClientConfig()
 
 	var err error
 	config.Log = skynet.NewConsoleLogger("TestServiceClient", os.Stderr)

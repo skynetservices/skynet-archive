@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	config, args := skynet.GetClientConfigFromFlags()
+	config, args := skynet.GetClientConfig()
 	client := client.NewClient(config)
 
 	service := client.GetService("Fibonacci", "", "", "")

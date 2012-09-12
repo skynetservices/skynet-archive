@@ -36,7 +36,7 @@ func (f *Sleeper) Sleep(ri *skynet.RequestInfo, req sleeper.Request, resp *sleep
 func main() {
 	f := NewSleeper()
 
-	config, _ := skynet.GetServiceConfigFromFlags()
+	config, _ := skynet.GetServiceConfig()
 
 	if config.Name == "" {
 		config.Name = "Sleeper"
