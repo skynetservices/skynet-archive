@@ -109,13 +109,19 @@ jQuery(document).ready(function ($) {
       },
 
       addInstance: function(instance, silent){
+        var adminAddress = "";
+
+        if(instance.Config.AdminAddr !== null){
+          adminAddress = instance.Config.AdminAddr.IPAddress + ":" + instance.Config.AdminAddr.Port;
+        }
+
         this.get('instances').add({
           name: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
           id: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
           service: instance.Config.Name,
           version: instance.Config.Version,
           address: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
-          adminAddress: instance.Config.AdminAddr.IPAddress + ":" + instance.Config.AdminAddr.Port,
+          adminAddress: adminAddress,
           registered: instance.Registered,
           stats: instance.Stats,
           node: this
@@ -140,13 +146,19 @@ jQuery(document).ready(function ($) {
         var i = instances.get(instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port);
 
         if(i){
+          var adminAddress = "";
+
+          if(instance.Config.AdminAddr !== null){
+            adminAddress = instance.Config.AdminAddr.IPAddress + ":" + instance.Config.AdminAddr.Port;
+          }
+
           i.set({
             name: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
             id: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
             service: instance.Config.Name,
             version: instance.Config.Version,
             address: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
-            adminAddress: instance.Config.AdminAddr.IPAddress + ":" + instance.Config.AdminAddr.Port,
+            adminAddress: adminAddress,
             registered: instance.Registered,
             stats: instance.Stats,
             node: this,
