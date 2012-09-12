@@ -72,8 +72,8 @@ jQuery(document).ready(function ($) {
       initialize: function(models, options){
         this.on('add', function(instance){
           $("#" + instance.get('node').regionHtmlId() + "-" + instance.get('node').htmlId() + " table tbody").append(instance.contentHTML());
-
-          $("#" + instance.htmlId()).effect("highlight", {}, 600);
+          $(".timeago").timeago();
+          $("#" + instance.htmlId()).show().effect("highlight", {}, 600);
         });
 
         this.on('remove', function(i){
@@ -109,13 +109,19 @@ jQuery(document).ready(function ($) {
       },
 
       addInstance: function(instance, silent){
+        var adminAddress = "";
+
+        if(instance.Config.AdminAddr !== null){
+          adminAddress = instance.Config.AdminAddr.IPAddress + ":" + instance.Config.AdminAddr.Port;
+        }
+
         this.get('instances').add({
           name: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
           id: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
           service: instance.Config.Name,
           version: instance.Config.Version,
           address: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
-          adminAddress: instance.Config.AdminAddr.IPAddress + ":" + instance.Config.AdminAddr.Port,
+          adminAddress: adminAddress,
           registered: instance.Registered,
           stats: instance.Stats,
           node: this
@@ -140,17 +146,25 @@ jQuery(document).ready(function ($) {
         var i = instances.get(instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port);
 
         if(i){
+          var adminAddress = "";
+
+          if(instance.Config.AdminAddr !== null){
+            adminAddress = instance.Config.AdminAddr.IPAddress + ":" + instance.Config.AdminAddr.Port;
+          }
+
           i.set({
             name: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
             id: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
             service: instance.Config.Name,
             version: instance.Config.Version,
             address: instance.Config.ServiceAddr.IPAddress + ":" + instance.Config.ServiceAddr.Port,
-            adminAddress: instance.Config.AdminAddr.IPAddress + ":" + instance.Config.AdminAddr.Port,
+            adminAddress: adminAddress,
             registered: instance.Registered,
             stats: instance.Stats,
             node: this,
           }, {silent: false});
+        } else {
+          this.addInstance(instance);
         }
       }
     });
@@ -232,6 +246,8 @@ jQuery(document).ready(function ($) {
 
         if(node){
           node.updateInstance(instance);
+        } else {
+          this.addInstance(instance)
         }
       }
     })
@@ -308,7 +324,6 @@ jQuery(document).ready(function ($) {
           activateTab($('#region-tabs dd').first());
 
       } else if(notification.Action === "Update"){
-
         for(var path in notification.Data){
           var update = notification.Data[path];
 
@@ -319,7 +334,12 @@ jQuery(document).ready(function ($) {
               break;
 
             case "InstanceUpdateNotification":
-              var region = regions.get(update.Service.Config.Region);
+              var region = findOrCreateRegion(update.Service.Config.Region, false);
+
+              // If there is only 1 tab make sure it's selected (page could have been empty on load)
+              if($('#region-tabs dd').size() == 1){
+                activateTab($('#region-tabs dd').first());
+              }
 
               if(region){
                 region.updateInstance(update.Service);
