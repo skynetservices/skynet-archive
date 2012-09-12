@@ -24,7 +24,7 @@ type Fibonacci struct {
 func NewFibonacci() (f *Fibonacci) {
 	f = new(Fibonacci)
 
-	f.cconfig, _ = skynet.GetClientConfigFromFlags()
+	f.cconfig, _ = skynet.GetClientConfig()
 	f.client = client.NewClient(f.cconfig)
 
 	f.cache = map[int]chan uint64{
@@ -99,7 +99,7 @@ func (f *Fibonacci) lookupValue(ri *skynet.RequestInfo, index int, vchan chan<- 
 func main() {
 	f := NewFibonacci()
 
-	config, _ := skynet.GetServiceConfigFromFlags()
+	config, _ := skynet.GetServiceConfig()
 
 	if config.Name == "" {
 		config.Name = "Fibonacci"

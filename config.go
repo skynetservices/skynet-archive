@@ -166,8 +166,11 @@ func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
 
 }
 
-func GetClientConfigFromFlags(argv ...string) (config *ClientConfig, args []string) {
+func GetClientConfig() (config *ClientConfig, args []string) {
+	return GetClientConfigFromFlags(os.Args[1:])
+}
 
+func GetClientConfigFromFlags(argv []string) (config *ClientConfig, args []string) {
 	config = &ClientConfig{
 		DoozerConfig: &DoozerConfig{},
 	}
@@ -177,6 +180,7 @@ func GetClientConfigFromFlags(argv ...string) (config *ClientConfig, args []stri
 	FlagsForClient(config, flagset)
 
 	err := flagset.Parse(argv)
+
 	args = flagset.Args()
 	if err == flag.ErrHelp {
 		// -help was given, pass it on to caller who 
@@ -195,7 +199,11 @@ func FlagsForService(scfg *ServiceConfig, flagset *flag.FlagSet) {
 	flagset.DurationVar(&scfg.DoozerUpdateInterval, "dzupdate", DefaultDoozerUpdateInterval, "ns to wait before sending the next status update")
 }
 
-func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []string) {
+func GetServiceConfig() (config *ServiceConfig, args []string) {
+	return GetServiceConfigFromFlags(os.Args[1:])
+}
+
+func GetServiceConfigFromFlags(argv []string) (config *ServiceConfig, args []string) {
 
 	config = &ServiceConfig{
 		DoozerConfig: &DoozerConfig{},
@@ -208,9 +216,6 @@ func GetServiceConfigFromFlags(argv ...string) (config *ServiceConfig, args []st
 	rpcAddr := flagset.String("l", GetDefaultBindAddr(), "host:port to listen on for RPC")
 	adminAddr := flagset.String("admin", GetDefaultBindAddr(), "host:port to listen on for admin")
 
-	if len(argv) == 0 {
-		argv = os.Args[1:]
-	}
 	err := flagset.Parse(argv)
 	args = flagset.Args()
 	if err == flag.ErrHelp {
