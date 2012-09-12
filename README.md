@@ -72,7 +72,7 @@ The sky command and the client connectivity logic is all backed by Query. A stru
 #####Instance Listener
 You can create an instance listener by passing it a Query object, and be notified anytime an instance matching your Query is added/removed/changed.
 
-[https://github.com/bketelsen/skynet/wiki/Instance-Monitor---Instance-Listener](https://github.com/bketelsen/skynet/wiki/Instance-Monitor---Instance-Listener)
+[https://github.com/bketelsen/skynet/wiki/Instance-Monitor-&-Instance-Listener](https://github.com/bketelsen/skynet/wiki/Instance-Monitor-&-Instance-Listener)
 
 #####
 
