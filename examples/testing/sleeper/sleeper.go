@@ -5,8 +5,11 @@ import (
 )
 
 type Request struct {
-	Duration time.Duration
-	Message  string
+	Duration           time.Duration
+	UnregisterWhenDone bool
+	ExitWhenDone       bool
+	PanicWhenDone      bool
+	Message            string
 }
 
 type Response struct {

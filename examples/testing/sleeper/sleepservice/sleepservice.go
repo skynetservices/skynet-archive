@@ -10,6 +10,7 @@ import (
 )
 
 type Sleeper struct {
+	service *service.Service
 }
 
 func NewSleeper() (f *Sleeper) {
@@ -29,6 +30,18 @@ func (f *Sleeper) Sleep(ri *skynet.RequestInfo, req sleeper.Request, resp *sleep
 	time.Sleep(req.Duration)
 
 	resp.Message = req.Message
+
+	if req.UnregisterWhenDone {
+		f.service.Unregister()
+	}
+
+	if req.PanicWhenDone {
+		panic("panic requested by client")
+	}
+
+	if req.ExitWhenDone {
+		os.Exit(0)
+	}
 
 	return
 }
@@ -57,11 +70,11 @@ func main() {
 	if err != nil {
 		config.Log.Item("Could not connect to mongo db for logging")
 	}
-	service := service.CreateService(f, config)
+	f.service = service.CreateService(f, config)
 
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
 	defer func() {
-		service.Shutdown()
+		f.service.Shutdown()
 		if err := recover(); err != nil {
 			log.Println("Unrecovered error occured: ", err)
 		}
@@ -69,7 +82,7 @@ func main() {
 
 	// If we pass false here service will not be Registered
 	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
-	waiter := service.Start(true)
+	waiter := f.service.Start(true)
 
 	// waiting on the sync.WaitGroup returned by service.Start() will wait for the service to finish running.
 	waiter.Wait()
