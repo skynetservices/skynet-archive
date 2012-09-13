@@ -23,6 +23,12 @@ func dbgf(format string, items ...interface{}) {
 	}
 }
 
+func dbgerr(name string, err error) {
+	if err != nil {
+		dbgf("(%s) %v\n", name, err)
+	}
+}
+
 const TRACE = false
 
 func ts(name string, items ...interface{}) {
@@ -274,10 +280,12 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 	defer te("attemptSend")
 
 	// first find an available instance
+	var instance *skynet.ServiceInfo
 	var r pools.Resource
 	var err error
 	for r == nil {
-		instance, ok := c.chooser.Choose(timeout)
+		var ok bool
+		instance, ok = c.chooser.Choose(timeout)
 		if !ok {
 			dbg("timed out")
 			// must have timed out
@@ -289,6 +297,7 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 		// then, get a connection to that instance
 		dbg("acquiring connection")
 		r, err = sp.pool.Acquire()
+		dbgerr("sp.pool.Acquire", err)
 		dbg("acquired connection")
 		defer sp.pool.Release(r)
 		if err != nil {
@@ -309,16 +318,24 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 
 	sr := r.(ServiceResource)
 
-	result, err := c.sendToInstance(sr, ri, fn, in)
+	result, serviceErr, err := c.sendToInstance(sr, ri, fn, in)
+	dbgerr("c.sendToInstance", err)
+	if err != nil {
+		// some communication error happened, shut down this connection and remove it from the pool
+		sr.Close()
+		// and remove the instance from the chooser
+		c.chooser.Remove(instance)
+		return
+	}
 
 	attempts <- sendAttempt{
 		result: result,
-		err:    err,
+		err:    serviceErr,
 	}
 }
 
 // ServiceClient.sendToInstance() tries to make an RPC request on a particular connection to an instance
-func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.RequestInfo, funcName string, in interface{}) (result []byte, err error) {
+func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.RequestInfo, funcName string, in interface{}) (result []byte, serviceErr, err error) {
 	ts("sendToInstance", requestInfo)
 	defer te("sendToInstance", requestInfo)
 
@@ -337,11 +354,12 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.R
 	err = sr.rpcClient.Call(sr.service.Config.Name+".Forward", sin, &sout)
 	if err != nil {
 		sr.Close()
+		dbg("(sr.rpcClient.Call)", err)
 		c.Log.Item(err)
 	}
 
 	if sout.ErrString != "" {
-		err = serviceError{sout.ErrString}
+		serviceErr = serviceError{sout.ErrString}
 	}
 
 	result = sout.Out
