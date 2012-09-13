@@ -65,3 +65,19 @@ type AdminNotListening struct {
 func (al AdminNotListening) String() string {
 	return fmt.Sprintf("Service %q not listening for admin", al.ServiceConfig.Name)
 }
+
+type ServiceRegistered struct {
+	ServiceConfig *skynet.ServiceConfig
+}
+
+func (sr ServiceRegistered) String() string {
+	return fmt.Sprintf("Service %q registered", sr.ServiceConfig.Name)
+}
+
+type ServiceUnregistered struct {
+	ServiceConfig *skynet.ServiceConfig
+}
+
+func (sr ServiceUnregistered) String() string {
+	return fmt.Sprintf("Service %q unregistered", sr.ServiceConfig.Name)
+}

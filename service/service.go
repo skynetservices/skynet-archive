@@ -314,6 +314,7 @@ func (s *Service) register() {
 		return
 	}
 	s.Registered = true
+	s.Log.Item(ServiceRegistered{s.Config})
 	s.UpdateCluster()
 	s.Delegate.Registered(s) // Call user defined callback
 }
@@ -328,6 +329,7 @@ func (s *Service) unregister() {
 		return
 	}
 	s.Registered = false
+	s.Log.Item(ServiceUnregistered{s.Config})
 	s.UpdateCluster()
 	s.Delegate.Unregistered(s) // Call user defined callback
 }
