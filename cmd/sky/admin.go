@@ -12,7 +12,7 @@ import (
 )
 
 func Register(q *skynet.Query) {
-	instances := q.FindInstances()
+	instances := filterDaemon(q.FindInstances())
 	for _, instance := range instances {
 		cladmin := client.Admin{
 			Instance: instance,
@@ -25,7 +25,7 @@ func Register(q *skynet.Query) {
 }
 
 func Unregister(q *skynet.Query) {
-	instances := q.FindInstances()
+	instances := filterDaemon(q.FindInstances())
 	for _, instance := range instances {
 		cladmin := client.Admin{
 			Instance: instance,
@@ -91,7 +91,7 @@ var stopTemplate = template.Must(template.New("").Parse(
 func Stop(q *skynet.Query) {
 	cl := client.NewClient(&config)
 
-	for _, instance := range q.FindInstances() {
+	for _, instance := range filterDaemon(q.FindInstances()) {
 		cdaemon := daemon.GetDaemonForService(cl, instance)
 
 		in := daemon.StopSubServiceRequest{UUID: instance.Config.UUID}
