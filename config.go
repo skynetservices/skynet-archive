@@ -123,7 +123,7 @@ type ServiceStatistics struct {
 
 	// For now this will be since startup, we might change it later to be for a given sample interval
 	AverageResponseTime uint64
-	TotalDuration       uint64
+	TotalDuration       uint64 `json:"-"`
 }
 
 type ServiceInfo struct {
