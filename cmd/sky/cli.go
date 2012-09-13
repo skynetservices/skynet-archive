@@ -183,15 +183,15 @@ func InteractiveShell() {
 			fmt.Printf("Region: %v\n", query.Region)
 
 		case "register":
-			if confirm(term, strconv.Itoa(len(query.FindInstances()))+" instances will be registered") {
+			if confirm(term, strconv.Itoa(len(filterDaemon(query.FindInstances())))+" instances will be registered") {
 				Register(query)
 			}
 		case "unregister":
-			if confirm(term, strconv.Itoa(len(query.FindInstances()))+" instances will be unregistered") {
+			if confirm(term, strconv.Itoa(len(filterDaemon(query.FindInstances())))+" instances will be unregistered") {
 				Unregister(query)
 			}
 		case "stop":
-			if confirm(term, strconv.Itoa(len(query.FindInstances()))+" instances will be stopped") {
+			if confirm(term, strconv.Itoa(len(filterDaemon(query.FindInstances())))+" instances will be stopped") {
 				Stop(query)
 			}
 
@@ -264,6 +264,18 @@ func confirm(term *liner.State, msg string) bool {
 	}
 
 	return false
+}
+
+func filterDaemon(instances []*skynet.ServiceInfo) []*skynet.ServiceInfo {
+  filteredInstances := make([]*skynet.ServiceInfo, 0)
+
+  for _, i := range instances {
+    if i.Config.Name != "SkynetDaemon" {
+      filteredInstances = append(filteredInstances, i)
+    }
+  }
+
+  return filteredInstances
 }
 
 func InteractiveShellHelp() {
