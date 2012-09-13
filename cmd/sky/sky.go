@@ -22,8 +22,11 @@ var DC *skynet.DoozerConnection
 var config skynet.ClientConfig
 
 func main() {
+	logger := skynet.NewConsoleLogger("Sky", os.Stdout)
+
 	config = skynet.ClientConfig{
 		DoozerConfig: &skynet.DoozerConfig{},
+		Log:          logger,
 	}
 	skynet.FlagsForClient(&config, flagset)
 
