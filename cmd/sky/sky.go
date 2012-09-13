@@ -257,7 +257,7 @@ Commands:
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
 		-port - limit results to the specified port
-  deploy: deploy new instances to cluster (deploy <service path> <args>)
+	deploy: deploy new instances to cluster (deploy <service path> <args>)
 		-region - deploy only to the specified region
 		-host - deploy to the specified host
 	stop: Stop all instances available that meet the specified criteria

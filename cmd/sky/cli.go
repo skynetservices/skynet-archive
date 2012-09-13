@@ -269,13 +269,13 @@ func confirm(term *liner.State, msg string) bool {
 func InteractiveShellHelp() {
 	fmt.Print(`
 Commands:
-  deploy: Deploy new instances to cluster, will deploy to all hosts matching current filters (deploy <service path> <args>)
+	deploy: Deploy new instances to cluster, will deploy to all hosts matching current filters (deploy <service path> <args>)
 	hosts: List all hosts available that meet the specified criteria
 	instances: List all instances available that meet the specified criteria
 	regions: List all regions available that meet the specified criteria
-  register: Registers all instances that match the current filters
-  unregister: Unregisters all instances that match the current filters
-  unregister: Stops all instances that match the current filters
+	register: Registers all instances that match the current filters
+	unregister: Unregisters all instances that match the current filters
+	stop: Stops all instances that match the current filters
 	services: List all services available that meet the specified criteria
 	versions: List all services available that meet the specified criteria
 	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
