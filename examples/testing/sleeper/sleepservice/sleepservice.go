@@ -27,6 +27,13 @@ func (f *Sleeper) Stopped(s *service.Service)      {}
 func (f *Sleeper) Sleep(ri *skynet.RequestInfo, req sleeper.Request, resp *sleeper.Response) (err error) {
 	log.Println("sleeping for", req.Duration, req.Message)
 
+	if req.UnregisterHalfwayThrough {
+		go func() {
+			time.Sleep(req.Duration / 2)
+			f.service.Unregister()
+		}()
+	}
+
 	time.Sleep(req.Duration)
 
 	resp.Message = req.Message

@@ -5,11 +5,12 @@ import (
 )
 
 type Request struct {
-	Duration           time.Duration
-	UnregisterWhenDone bool
-	ExitWhenDone       bool
-	PanicWhenDone      bool
-	Message            string
+	Duration                 time.Duration
+	UnregisterHalfwayThrough bool
+	UnregisterWhenDone       bool
+	ExitWhenDone             bool
+	PanicWhenDone            bool
+	Message                  string
 }
 
 type Response struct {
