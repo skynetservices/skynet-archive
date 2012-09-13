@@ -23,11 +23,18 @@ func main() {
 		Message: "Hello!",
 	}
 
+	var (
+		retry  time.Duration
+		giveup time.Duration
+	)
+
 	flagset.DurationVar(&req.Duration, "sleepfor", 5*time.Second, "how long to sleep")
 	flagset.BoolVar(&req.ExitWhenDone, "exit", false, "have the service call os.Exit(0) when finished sleeping")
 	flagset.BoolVar(&req.PanicWhenDone, "panic", false, "have the service panic when finished sleeping")
 	flagset.BoolVar(&req.UnregisterWhenDone, "unregister", false, "have the service unregister when finished sleeping")
 	flagset.BoolVar(&req.UnregisterHalfwayThrough, "unregister-halfway", false, "have the service unregister half-way through the sleep")
+	flagset.DurationVar(&retry, "retry", time.Second, "how long to wait before trying again")
+	flagset.DurationVar(&giveup, "giveup", 5*time.Second, "how long to wait before giving up")
 
 	flagset.Parse(os.Args[1:])
 
@@ -37,7 +44,7 @@ func main() {
 
 	service := client.GetService("Sleeper", "", "", "")
 
-	service.SetTimeout(1*time.Second, 30*time.Second)
+	service.SetTimeout(retry, giveup)
 
 	resp := sleeper.Response{}
 
