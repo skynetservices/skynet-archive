@@ -83,6 +83,8 @@ Also in the *examples*/ directory is a Vagrant setup with chef recipes to deploy
 
 
 ## Work In Progress
+##### Entire node failure / netsplit
+Although a lot of work has gone into keeping instances up, and restarting, and the configuration management system to stay cleaned up. We still have a feature out standing to better handle an entire node crashing, or not being able to be communicated with.
 
 #####Monitor CPU/Memory/Load
 Skynet will be aware of system utilization and number of requests going to specific instances of a service, and will be able to have a configurable threshold for it to restart or remove itself from the pool of instances for it's particular Service/Version, and return itself to the queue when the system has leveled out, or restart has completed
