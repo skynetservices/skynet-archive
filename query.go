@@ -81,7 +81,7 @@ func (q *Query) search() {
 	q.paths = make(map[string]*doozer.FileInfo, 0)
 	q.files = make(map[string]*doozer.FileInfo, 0)
 
-  q.doozerRev = q.getCurrentDoozerRevision()
+	q.doozerRev = q.getCurrentDoozerRevision()
 
 	path := q.makePath()
 

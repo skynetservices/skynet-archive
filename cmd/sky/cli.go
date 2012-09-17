@@ -267,15 +267,15 @@ func confirm(term *liner.State, msg string) bool {
 }
 
 func filterDaemon(instances []*skynet.ServiceInfo) []*skynet.ServiceInfo {
-  filteredInstances := make([]*skynet.ServiceInfo, 0)
+	filteredInstances := make([]*skynet.ServiceInfo, 0)
 
-  for _, i := range instances {
-    if i.Config.Name != "SkynetDaemon" {
-      filteredInstances = append(filteredInstances, i)
-    }
-  }
+	for _, i := range instances {
+		if i.Config.Name != "SkynetDaemon" {
+			filteredInstances = append(filteredInstances, i)
+		}
+	}
 
-  return filteredInstances
+	return filteredInstances
 }
 
 func InteractiveShellHelp() {
