@@ -45,6 +45,10 @@ func BindAddrFromString(host string) (ba *BindAddr, err error) {
 		ba.IPAddress = "127.0.0.1"
 	}
 
+	if ba.IPAddress == "*" {
+		ba.IPAddress = "0.0.0.0"
+	}
+
 	portstr := host[split+1:]
 	if ba.Port, err = strconv.Atoi(portstr); err == nil {
 		return
