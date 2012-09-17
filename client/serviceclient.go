@@ -239,6 +239,8 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 		select {
 		case <-ticker:
 			attemptCount++
+			ri.RetryCount++
+
 			go c.attemptSend(doneSignal, attempts, ri, fn, in)
 		case <-timeout:
 			if err == nil {
