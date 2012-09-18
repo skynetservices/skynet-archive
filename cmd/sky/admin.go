@@ -110,6 +110,34 @@ func Stop(q *skynet.Query) {
 	}
 }
 
+var restartTemplate = template.Must(template.New("").Parse(
+	`{{if .Ok}}Restarted service with UUID {{.UUID}}.
+{{else}}Service with UUID {{.UUID}} is not running.
+{{end}}`))
+
+func Restart(q *skynet.Query) {
+	cl := client.NewClient(&config)
+
+	for _, instance := range filterDaemon(q.FindInstances()) {
+		cdaemon := daemon.GetDaemonForService(cl, instance)
+
+		in := daemon.RestartSubServiceRequest{UUID: instance.Config.UUID}
+		out, err := cdaemon.RestartSubService(in)
+
+		if err != nil {
+			if strings.HasPrefix(err.Error(), "No such service UUID") {
+				// no daemon on the service's machine, shut it down directly
+				AdminStop(q)
+			} else {
+				fmt.Println(err)
+			}
+		} else {
+			restartTemplate.Execute(os.Stdout, out)
+		}
+	}
+
+}
+
 func AdminStop(q *skynet.Query) {
 	instances := q.FindInstances()
 	for _, instance := range instances {
