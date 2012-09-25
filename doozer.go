@@ -64,11 +64,12 @@ func NewDoozerConnectionFromConfig(config DoozerConfig, logger Logger) (d *Dooze
 	}
 
 	d = &DoozerConnection{
-		Config:        &config,
-		Log:           logger,
-		instancesChan: make(chan interface{}, 1),
-		connChan:      make(chan doozerconn),
-		dialChan:      make(chan dialInstance),
+		Config:          &config,
+		Log:             logger,
+		instancesChan:   make(chan interface{}, 1),
+		connChan:        make(chan doozerconn),
+		dialChan:        make(chan dialInstance),
+		doozerInstances: make(map[string]*DoozerServer),
 	}
 
 	return
@@ -89,7 +90,10 @@ func (d *DoozerConnection) mux() {
 				d.doozerInstances[m.DoozerServer.Key] = m.DoozerServer
 			case DoozerRemoved:
 				d.Log.Item(m)
-				delete(d.doozerInstances, m.DoozerServer.Key)
+
+				if _, ok := d.doozerInstances[m.DoozerServer.Key]; ok {
+					delete(d.doozerInstances, m.DoozerServer.Key)
+				}
 			}
 		case di := <-d.dialChan:
 			di.errch <- d.dialAnInstanceMux()
@@ -256,8 +260,6 @@ func (d *DoozerConnection) Connect() {
 }
 
 func (d *DoozerConnection) getDoozerInstances() {
-	d.doozerInstances = make(map[string]*DoozerServer)
-
 	rev := d.GetCurrentRevision()
 	instances, _ := d.Connection().Getdir("/ctl/cal", rev, 0, -1)
 
