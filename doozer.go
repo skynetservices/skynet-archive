@@ -90,12 +90,8 @@ func (d *DoozerConnection) mux() {
 				d.doozerInstances[m.DoozerServer.Key] = m.DoozerServer
 			case DoozerRemoved:
 				d.Log.Item(m)
-				d.Log.Item(d.doozerInstances)
-				d.Log.Item(m.DoozerServer)
 
-				if _, ok := d.doozerInstances[m.DoozerServer.Key]; ok {
-					delete(d.doozerInstances, m.DoozerServer.Key)
-				}
+				delete(d.doozerInstances, m.DoozerServer.Key)
 			}
 		case di := <-d.dialChan:
 			di.errch <- d.dialAnInstanceMux()
