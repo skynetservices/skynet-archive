@@ -126,8 +126,9 @@ func Restart(q *skynet.Query) {
 
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "No such service UUID") {
+				// Commented out for now, we need to determine if we want to try to restart an unmanaged instance, and support it
 				// no daemon on the service's machine, shut it down directly
-				AdminStop(q)
+				//AdminStop(q)
 			} else {
 				fmt.Println(err)
 			}
