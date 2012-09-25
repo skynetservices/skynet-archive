@@ -3,14 +3,14 @@
 
 NUM_SKYNET_NODES = 5
 FORCE_SKYNET_REBUILD = true
-SKYNET_BRANCH = "master"
+SKYNET_BRANCH = "fixes"
 
 # This will make chef always deploy the current branch you're working on locally
 #SKYNET_BRANCH = (`git branch | grep '*'`).strip.gsub('* ', '')
+#
+
 
 Vagrant::Config.run do |config|
-  #doozerd -timeout 5 -l "127.0.0.1:10000" -w "127.0.0.1:11000" -c "dzns"
-
   # bring in the host gopaths, if asked for
   if ENV["VAGRANT_USE_HOST_GOPATH"] then
     gps = ENV["GOPATH"].split(":")
@@ -82,6 +82,14 @@ Vagrant::Config.run do |config|
     c.vm.provision :shell, :inline => "sky --host=192.168.126.101 deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=1"
     c.vm.provision :shell, :inline => "sky --host=192.168.126.101 deploy github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice --version=2"
 
+
+    # Open additional doozer slots in case we start more nodes
+    (NUM_SKYNET_NODES - 1).times do |n|
+      i = n + 1
+      c.vm.provision :shell, :inline => "printf '' | doozer -a 'doozer:?ca=192.168.126.101:10000' add '/ctl/cal/#{i}'"
+      c.vm.provision :shell, :inline => "printf '' | doozer -a 'doozer:?ca=192.168.126.101:8046' -b 'doozer:?ca=192.168.126.101:10000' add '/ctl/cal/#{i}'"
+    end
+
     c.vm.share_folder "skynet", "/opt/skynet", "../"
     #c.vm.share_folder "gopath", "/opt/gopath", ENV['GOPATH']
   end
@@ -103,8 +111,8 @@ Vagrant::Config.run do |config|
           :skynet_branch => SKYNET_BRANCH,
           :skynet_rebuild => FORCE_SKYNET_REBUILD,
           :skynet_region => 'Dallas',
-          :skynet_dzhost => '192.168.126.101:8046',
-          :skynet_dznshost => '',
+          :skynet_dzhost => "192.168.126.101:8046",
+          :skynet_dznshost => '192.168.126.101:10000',
           :skynet_dzdizcover => 'true',
           :skynet_min_port => '9000',
           :skynet_max_port => '9999',
@@ -127,11 +135,8 @@ Vagrant::Config.run do |config|
 
       # Setup DZNS Node
       c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.126.10#{i}:10000' -w '192.168.126.10#{i}:11000' -a '192.168.126.101:10000' -c 'dzns' 0<&- &> /var/log/dzns.log &" 
-      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.126.101:10000' add '/ctl/cal/#{i-1}' 0<&- &> /dev/null &"
-      
-      # Setup Doozer Node
+      #Setup Doozer node
       c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.126.10#{i}:8046' -w '192.168.126.10#{i}:8080' -c 'skynet' -b 'doozer:?ca=192.168.126.101:10000' 0<&- &> /var/log/doozer.log &"
-      c.vm.provision :shell, :inline => "sleep 2 && echo -n | doozer -a 'doozer:?ca=192.168.126.101:8046' add '/ctl/cal/#{i-1}'  0<&- &> /dev/null &"
 
       # Start Daemon
       c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/skydaemon --version=1 0<&- &> /var/log/skynet_daemon.log &"
