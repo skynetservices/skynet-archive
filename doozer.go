@@ -90,6 +90,8 @@ func (d *DoozerConnection) mux() {
 				d.doozerInstances[m.DoozerServer.Key] = m.DoozerServer
 			case DoozerRemoved:
 				d.Log.Item(m)
+				d.Log.Item(d.doozerInstances)
+				d.Log.Item(m.DoozerServer)
 
 				if _, ok := d.doozerInstances[m.DoozerServer.Key]; ok {
 					delete(d.doozerInstances, m.DoozerServer.Key)
@@ -209,8 +211,10 @@ func (d *DoozerConnection) monitorCluster() {
 		rev = ev.Rev
 
 		if ev.IsDel() || buf.String() == "" {
-			d.instancesChan <- DoozerRemoved{
-				DoozerServer: d.doozerInstances[id],
+			if _, ok := d.doozerInstances[id]; ok {
+				d.instancesChan <- DoozerRemoved{
+					DoozerServer: d.doozerInstances[id],
+				}
 			}
 		} else if buf.String() != "" {
 			//if d.doozerInstances[id] == nil || d.doozerInstances[id].Key != buf.String() {
