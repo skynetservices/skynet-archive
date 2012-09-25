@@ -42,10 +42,6 @@ func BindAddrFromString(host string) (ba *BindAddr, err error) {
 
 	ba.IPAddress = host[:split]
 	if ba.IPAddress == "" {
-		ba.IPAddress = "127.0.0.1"
-	}
-
-	if ba.IPAddress == "*" {
 		ba.IPAddress = "0.0.0.0"
 	}
 
