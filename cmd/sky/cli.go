@@ -12,7 +12,7 @@ import (
 var query *skynet.Query
 
 /*
- * CLI Logic
+* CLI Logic
  */
 
 var SupportedCliCommands = []string{
@@ -29,6 +29,7 @@ var SupportedCliCommands = []string{
 	"register",
 	"registered",
 	"reset",
+	"restart",
 	"service",
 	"services",
 	"stop",
@@ -194,6 +195,10 @@ func InteractiveShell() {
 			if confirm(term, strconv.Itoa(len(filterDaemon(query.FindInstances())))+" instances will be stopped") {
 				Stop(query)
 			}
+		case "restart":
+			if confirm(term, strconv.Itoa(len(filterDaemon(query.FindInstances())))+" instances will be restarted") {
+				Restart(query)
+			}
 
 		case "registered":
 			if len(parts) >= 2 {
@@ -267,39 +272,39 @@ func confirm(term *liner.State, msg string) bool {
 }
 
 func filterDaemon(instances []*skynet.ServiceInfo) []*skynet.ServiceInfo {
-  filteredInstances := make([]*skynet.ServiceInfo, 0)
+	filteredInstances := make([]*skynet.ServiceInfo, 0)
 
-  for _, i := range instances {
-    if i.Config.Name != "SkynetDaemon" {
-      filteredInstances = append(filteredInstances, i)
-    }
-  }
+	for _, i := range instances {
+		if i.Config.Name != "SkynetDaemon" {
+			filteredInstances = append(filteredInstances, i)
+		}
+	}
 
-  return filteredInstances
+	return filteredInstances
 }
 
 func InteractiveShellHelp() {
 	fmt.Print(`
-Commands:
-	deploy: Deploy new instances to cluster, will deploy to all hosts matching current filters (deploy <service path> <args>)
-	hosts: List all hosts available that meet the specified criteria
-	instances: List all instances available that meet the specified criteria
-	regions: List all regions available that meet the specified criteria
-	register: Registers all instances that match the current filters
-	unregister: Unregisters all instances that match the current filters
-	stop: Stops all instances that match the current filters
-	services: List all services available that meet the specified criteria
-	versions: List all services available that meet the specified criteria
-	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
+  Commands:
+  deploy: Deploy new instances to cluster, will deploy to all hosts matching current filters (deploy <service path> <args>)
+  hosts: List all hosts available that meet the specified criteria
+  instances: List all instances available that meet the specified criteria
+  regions: List all regions available that meet the specified criteria
+  register: Registers all instances that match the current filters
+  unregister: Unregisters all instances that match the current filters
+  stop: Stops all instances that match the current filters
+  services: List all services available that meet the specified criteria
+  versions: List all services available that meet the specified criteria
+  topology: Print detailed heirarchy of regions/hosts/services/versions/instances
 
-Filters:
-	filters - list current filters
-	reset <filter> - reset all filters or specified filter
-	region <region> - Set region filter, all commands will be scoped to this region until reset
-	service <service> - Set service filter, all commands will be scoped to this service until reset
-	version <version> - Set version filter, all commands will be scoped to this version until reset
-	host <host> - Set host filter, all commands will be scoped to this host until reset
-	port <port> - Set port filter, all commands will be scoped to this port until reset
+  Filters:
+  filters - list current filters
+  reset <filter> - reset all filters or specified filter
+  region <region> - Set region filter, all commands will be scoped to this region until reset
+  service <service> - Set service filter, all commands will be scoped to this service until reset
+  version <version> - Set version filter, all commands will be scoped to this version until reset
+  host <host> - Set host filter, all commands will be scoped to this host until reset
+  port <port> - Set port filter, all commands will be scoped to this port until reset
 
-`)
+  `)
 }

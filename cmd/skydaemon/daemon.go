@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/client"
 	"github.com/bketelsen/skynet/daemon"
 	"github.com/bketelsen/skynet/service"
 	"sync"
@@ -103,64 +102,10 @@ func (s *SkynetDaemon) StopAllSubServices(requestInfo *skynet.RequestInfo, in da
 	return
 }
 
-func (s *SkynetDaemon) StartAllSubServices(requestInfo *skynet.RequestInfo, in daemon.StartAllSubServicesRequest, out *daemon.StartAllSubServicesResponse) (err error) {
-	var uuids []string
-	s.serviceLock.Lock()
-	for uuid := range s.Services {
-		uuids = append(uuids, uuid)
-	}
-	s.serviceLock.Unlock()
-
-	if len(uuids) == 0 {
-		err = errors.New("No services deployed")
-		return
-	}
-
-	out.Starts = make([]daemon.StartSubServiceResponse, len(uuids))
-
-	for i, uuid := range uuids {
-		err = s.StartSubService(requestInfo, daemon.StartSubServiceRequest{UUID: uuid}, &out.Starts[i])
-		if err != nil {
-			return
-		}
-		if out.Starts[i].Ok {
-			out.Count++
-		}
-	}
-	return
-}
-
-func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in daemon.StartSubServiceRequest, out *daemon.StartSubServiceResponse) (err error) {
-	ss := s.getSubService(in.UUID)
-	if ss != nil {
-		out.Ok, _ = ss.Start()
-		out.UUID = in.UUID
-	} else {
-		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
-	}
-	return
-}
-
 func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon.StopSubServiceRequest, out *daemon.StopSubServiceResponse) (err error) {
 	ss := s.getSubService(in.UUID)
 	if ss != nil {
 		out.Ok = ss.Stop()
-
-		q := skynet.Query{
-			UUID:       in.UUID,
-			DoozerConn: s.Service.DoozerConn,
-		}
-		instances := q.FindInstances()
-		for _, instance := range instances {
-			cladmin := client.Admin{
-				Instance: instance,
-			}
-
-			cladmin.Stop(skynet.StopRequest{
-				WaitForClients: true,
-			})
-		}
-
 		out.UUID = in.UUID
 	} else {
 		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))

@@ -29,4 +29,3 @@ type ServiceRPCOut struct {
 	Out       []byte
 	ErrString string
 }
-

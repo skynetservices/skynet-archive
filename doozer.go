@@ -64,11 +64,12 @@ func NewDoozerConnectionFromConfig(config DoozerConfig, logger Logger) (d *Dooze
 	}
 
 	d = &DoozerConnection{
-		Config:        &config,
-		Log:           logger,
-		instancesChan: make(chan interface{}, 1),
-		connChan:      make(chan doozerconn),
-		dialChan:      make(chan dialInstance),
+		Config:          &config,
+		Log:             logger,
+		instancesChan:   make(chan interface{}, 1),
+		connChan:        make(chan doozerconn),
+		dialChan:        make(chan dialInstance),
+		doozerInstances: make(map[string]*DoozerServer),
 	}
 
 	return
@@ -89,6 +90,7 @@ func (d *DoozerConnection) mux() {
 				d.doozerInstances[m.DoozerServer.Key] = m.DoozerServer
 			case DoozerRemoved:
 				d.Log.Item(m)
+
 				delete(d.doozerInstances, m.DoozerServer.Key)
 			}
 		case di := <-d.dialChan:
@@ -205,8 +207,10 @@ func (d *DoozerConnection) monitorCluster() {
 		rev = ev.Rev
 
 		if ev.IsDel() || buf.String() == "" {
-			d.instancesChan <- DoozerRemoved{
-				DoozerServer: d.doozerInstances[id],
+			if _, ok := d.doozerInstances[id]; ok {
+				d.instancesChan <- DoozerRemoved{
+					DoozerServer: d.doozerInstances[id],
+				}
 			}
 		} else if buf.String() != "" {
 			//if d.doozerInstances[id] == nil || d.doozerInstances[id].Key != buf.String() {
@@ -256,8 +260,6 @@ func (d *DoozerConnection) Connect() {
 }
 
 func (d *DoozerConnection) getDoozerInstances() {
-	d.doozerInstances = make(map[string]*DoozerServer)
-
 	rev := d.GetCurrentRevision()
 	instances, _ := d.Connection().Getdir("/ctl/cal", rev, 0, -1)
 
@@ -266,7 +268,7 @@ func (d *DoozerConnection) getDoozerInstances() {
 		data, _, err := d.Get("/ctl/cal/"+i, rev)
 		buf := bytes.NewBuffer(data)
 
-		if err == nil {
+		if err == nil && buf.String() != "" {
 			d.instancesChan <- DoozerDiscovered{
 				DoozerServer: d.getDoozerServer(buf.String()),
 			}
