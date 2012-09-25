@@ -268,7 +268,7 @@ func (d *DoozerConnection) getDoozerInstances() {
 		data, _, err := d.Get("/ctl/cal/"+i, rev)
 		buf := bytes.NewBuffer(data)
 
-		if err == nil {
+		if err == nil && buf.String() != "" {
 			d.instancesChan <- DoozerDiscovered{
 				DoozerServer: d.getDoozerServer(buf.String()),
 			}
