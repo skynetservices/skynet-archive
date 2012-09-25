@@ -68,6 +68,8 @@ func main() {
 		Unregister(query)
 	case "stop":
 		Stop(query)
+	case "restart":
+		Restart(query)
 	case "deploy":
 		args := flagset.Args()
 		fmt.Println(args)

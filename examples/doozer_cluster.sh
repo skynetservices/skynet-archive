@@ -47,8 +47,6 @@ if [ $# -eq 3 ]; then
 fi
 
 
-echo "Using Doozerd: $DOOZERD_PATH"
-
 function start {
   # First startup our DzNS cluster
   for dzns_count in $(seq 0 $(($DZNS_INSTANCES-1)))
@@ -64,7 +62,7 @@ function start {
       # add to DzNS cluster
 	  echo doozerd -timeout 5 -l "$BIND_IP:$dzns_port" -w ":$dzns_web_port" -c "dzns" -a "$BIND_IP:$START_DZNS_PORT"
       doozerd -timeout 5 -l "$BIND_IP:$dzns_port" -w ":$dzns_web_port" -c "dzns" -a "$BIND_IP:$START_DZNS_PORT" 2>/dev/null &
-      echo "\c" | doozer -a "doozer:?ca=$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dzns_count" >/dev/null &
+      printf '' | doozer -a "doozer:?ca=$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dzns_count" >/dev/null &
     fi
   done
 
@@ -82,7 +80,7 @@ function start {
     else
       # add to cluster
       # this has to connect to master, it blows up with a REV_MISMATCH if we connect to anyone else
-      echo -n | doozer -a "doozer:?ca=$BIND_IP:$START_PORT" -b "doozer:?ca$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dz_count" >/dev/null &
+      printf '' | doozer -a "doozer:?ca=$BIND_IP:$START_PORT" -b "doozer:?ca=$BIND_IP:$START_DZNS_PORT" add "/ctl/cal/$dz_count" >/dev/null &
     fi
   done
 }

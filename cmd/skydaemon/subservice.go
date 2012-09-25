@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/client"
 	"github.com/kballard/go-shellquote"
 	"go/build"
 	"os"
@@ -98,6 +99,8 @@ func (ss *SubService) Stop() bool {
 	ss.rerunChan <- false
 	ss.runSignal.Wait()
 
+	ss.sendRPCStop()
+
 	return true
 }
 
@@ -125,8 +128,9 @@ func (ss *SubService) Start() (success bool, err error) {
 }
 
 func (ss *SubService) Restart() {
-	ss.Stop()
-	ss.Start()
+	// Because we don't call stop here,
+	// rerunner will spawn a new instance when the old one has stopped
+	ss.sendRPCStop()
 }
 
 func (ss *SubService) startProcess() (proc *os.Process, err error) {
@@ -196,4 +200,22 @@ func (ss *SubService) removeFromDoozer() {
 	for _, instance := range instances {
 		ss.doozer.Del(instance.GetConfigPath(), ss.doozer.GetCurrentRevision())
 	}
+}
+
+func (ss *SubService) sendRPCStop() {
+	q := skynet.Query{
+		UUID:       ss.UUID,
+		DoozerConn: ss.doozer,
+	}
+	instances := q.FindInstances()
+	for _, instance := range instances {
+		cladmin := client.Admin{
+			Instance: instance,
+		}
+
+		cladmin.Stop(skynet.StopRequest{
+			WaitForClients: true,
+		})
+	}
+
 }
