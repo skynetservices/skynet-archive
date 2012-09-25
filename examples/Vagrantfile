@@ -3,7 +3,7 @@
 
 NUM_SKYNET_NODES = 5
 FORCE_SKYNET_REBUILD = true
-SKYNET_BRANCH = "fixes"
+SKYNET_BRANCH = "master"
 
 # This will make chef always deploy the current branch you're working on locally
 #SKYNET_BRANCH = (`git branch | grep '*'`).strip.gsub('* ', '')
