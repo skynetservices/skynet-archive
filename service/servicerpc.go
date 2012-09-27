@@ -158,10 +158,10 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	duration := time.Now().UnixNano() - startTime
 
 	// Update stats
-	srpc.service.Stats.RequestsServed = atomic.AddUint64(&srpc.service.Stats.RequestsServed, 1)
-	srpc.service.Stats.TotalDuration = atomic.AddUint64(&srpc.service.Stats.TotalDuration, uint64(duration)) // ns
+	atomic.AddInt64(&srpc.service.Stats.RequestsServed, 1)
+	atomic.AddInt64((*int64)(&srpc.service.Stats.TotalDuration), int64(duration)) // ns
 
-	srpc.service.Stats.AverageResponseTime = srpc.service.Stats.TotalDuration / srpc.service.Stats.RequestsServed
+	srpc.service.Stats.AverageResponseTime = srpc.service.Stats.TotalDuration / time.Duration(srpc.service.Stats.RequestsServed)
 
 	mcp := MethodCompletion{
 		MethodName:  in.Method,

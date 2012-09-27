@@ -116,14 +116,14 @@ type ServiceConfig struct {
 }
 
 type ServiceStatistics struct {
-	Clients        uint
+	Clients        int32
 	StartTime      string
 	LastRequest    string
-	RequestsServed uint64
+	RequestsServed int64
 
 	// For now this will be since startup, we might change it later to be for a given sample interval
-	AverageResponseTime uint64
-	TotalDuration       uint64 `json:"-"`
+	AverageResponseTime time.Duration
+	TotalDuration       time.Duration `json:"-"`
 }
 
 type ServiceInfo struct {

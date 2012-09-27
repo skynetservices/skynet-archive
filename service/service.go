@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -119,7 +120,7 @@ loop:
 	for {
 		select {
 		case conn := <-s.connectionChan:
-			s.Stats.Clients += 1
+			atomic.AddInt32(&s.Stats.Clients, 1)
 
 			// send the server handshake
 			sh := skynet.ServiceHandshake{
@@ -130,12 +131,12 @@ loop:
 			if err != nil {
 				s.Log.Item(err)
 
-				s.Stats.Clients -= 1
+				atomic.AddInt32(&s.Stats.Clients, -1)
 				break
 			}
 			if !s.Registered {
 				conn.Close()
-				s.Stats.Clients -= 1
+				atomic.AddInt32(&s.Stats.Clients, -1)
 				break
 			}
 
@@ -145,7 +146,7 @@ loop:
 			err = decoder.Decode(&ch)
 			if err != nil {
 				s.Log.Item(err)
-				s.Stats.Clients -= 1
+				atomic.AddInt32(&s.Stats.Clients, -1)
 				break
 			}
 
@@ -154,7 +155,7 @@ loop:
 			go func() {
 				s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
 
-				s.Stats.Clients -= 1
+				atomic.AddInt32(&s.Stats.Clients, -1)
 			}()
 		case register := <-s.registeredChan:
 			if register {
