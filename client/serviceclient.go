@@ -344,6 +344,7 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.R
 	sin := skynet.ServiceRPCIn{
 		RequestInfo: requestInfo,
 		Method:      funcName,
+		ClientID:    sr.clientID,
 	}
 
 	sin.In, err = bson.Marshal(in)

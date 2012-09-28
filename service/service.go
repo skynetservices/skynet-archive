@@ -125,6 +125,7 @@ loop:
 			// send the server handshake
 			sh := skynet.ServiceHandshake{
 				Registered: s.Registered,
+				ClientID:   skynet.UUID(),
 			}
 			encoder := bsonrpc.NewEncoder(conn)
 			err := encoder.Encode(sh)
