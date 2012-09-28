@@ -19,6 +19,7 @@ var (
 type ServiceResource struct {
 	rpcClient *rpc.Client
 	service   *skynet.ServiceInfo
+	clientID  string
 	closed    bool
 }
 
@@ -162,6 +163,7 @@ func getConnectionFactory(s *skynet.ServiceInfo) (factory pools.Factory) {
 		resource := ServiceResource{
 			rpcClient: bsonrpc.NewClient(conn),
 			service:   s,
+			clientID:  sh.ClientID,
 		}
 
 		return resource, nil
