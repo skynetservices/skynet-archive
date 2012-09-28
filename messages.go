@@ -20,6 +20,7 @@ type StopResponse struct {
 }
 
 type ServiceRPCIn struct {
+	ClientID    string
 	Method      string
 	RequestInfo *RequestInfo
 	In          []byte

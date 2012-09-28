@@ -26,6 +26,10 @@ type ServiceDelegate interface {
 	Unregistered(s *Service)
 }
 
+type ClientInfo struct {
+	Address net.Addr
+}
+
 type Service struct {
 	DoozerConn *skynet.DoozerConnection
 	skynet.ServiceInfo
@@ -54,6 +58,9 @@ type Service struct {
 
 	rpcListener  *net.TCPListener
 	updateTicker *time.Ticker
+
+	clientMutex sync.Mutex
+	clientInfo  map[string]ClientInfo
 }
 
 func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
@@ -122,9 +129,18 @@ loop:
 		case conn := <-s.connectionChan:
 			atomic.AddInt32(&s.Stats.Clients, 1)
 
+			clientID := skynet.UUID()
+
+			s.clientMutex.Lock()
+			s.clientInfo[clientID] = ClientInfo{
+				Address: conn.RemoteAddr(),
+			}
+			s.clientMutex.Unlock()
+
 			// send the server handshake
 			sh := skynet.ServiceHandshake{
 				Registered: s.Registered,
+				ClientID:   clientID,
 			}
 			encoder := bsonrpc.NewEncoder(conn)
 			err := encoder.Encode(sh)
@@ -221,6 +237,19 @@ func (s *Service) doozer() *skynet.DoozerConnection {
 	}
 
 	return s.DoozerConn
+}
+
+func (s *Service) getClientInfo(clientID string) (ci ClientInfo, ok bool) {
+	s.clientMutex.Lock()
+	defer s.clientMutex.Unlock()
+
+	ci, ok = s.clientInfo[clientID]
+	return
+}
+
+func (s *Service) IsTrusted(addr net.Addr) bool {
+	// TODO: something else
+	return true
 }
 
 func (s *Service) Start(register bool) (done *sync.WaitGroup) {
