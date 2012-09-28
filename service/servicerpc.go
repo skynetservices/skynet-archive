@@ -107,6 +107,13 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	srpc.service.activeRequests.Add(1)
 	defer srpc.service.activeRequests.Done()
 
+	clientInfo, ok := srpc.service.getClientInfo(in.ClientID)
+
+	in.RequestInfo.ConnectionAddress = clientInfo.Address
+	if in.RequestInfo.OriginAddress == nil || !srpc.service.IsTrusted(clientInfo.Address) {
+		in.RequestInfo.OriginAddress = clientInfo.Address
+	}
+
 	mc := MethodCall{
 		MethodName:  in.Method,
 		RequestInfo: in.RequestInfo,
