@@ -159,6 +159,9 @@ func FlagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
 }
 
 func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
+	if ccfg.DoozerConfig == nil {
+		ccfg.DoozerConfig = &DoozerConfig{}
+	}
 	FlagsForDoozer(ccfg.DoozerConfig, flagset)
 	flagset.DurationVar(&ccfg.IdleTimeout, "timeout", DefaultIdleTimeout, "amount of idle time before timeout")
 	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle", DefaultIdleConnectionsToInstance, "maximum number of idle connections to a particular instance")
@@ -192,6 +195,9 @@ func GetClientConfigFromFlags(argv []string) (config *ClientConfig, args []strin
 }
 
 func FlagsForService(scfg *ServiceConfig, flagset *flag.FlagSet) {
+	if scfg.DoozerConfig == nil {
+		scfg.DoozerConfig = &DoozerConfig{}
+	}
 	FlagsForDoozer(scfg.DoozerConfig, flagset)
 	flagset.StringVar(&scfg.UUID, "uuid", UUID(), "UUID for this service")
 	flagset.StringVar(&scfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region service is located in")
