@@ -75,6 +75,7 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		registeredChan: make(chan bool),
 		doozerChan:     make(chan interface{}),
 		updateTicker:   time.NewTicker(c.DoozerUpdateInterval),
+		clientInfo:     make(map[string]ClientInfo),
 	}
 
 	s.Config = c
