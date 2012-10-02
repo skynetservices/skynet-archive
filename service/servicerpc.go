@@ -108,6 +108,10 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	defer srpc.service.activeRequests.Done()
 
 	clientInfo, ok := srpc.service.getClientInfo(in.ClientID)
+	if !ok {
+		err = errors.New("did not provide the ClientID")
+		return
+	}
 
 	in.RequestInfo.ConnectionAddress = clientInfo.Address.String()
 	if in.RequestInfo.OriginAddress == "" || !srpc.service.IsTrusted(clientInfo.Address) {
