@@ -109,9 +109,9 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 
 	clientInfo, ok := srpc.service.getClientInfo(in.ClientID)
 
-	in.RequestInfo.ConnectionAddress = clientInfo.Address
-	if in.RequestInfo.OriginAddress == nil || !srpc.service.IsTrusted(clientInfo.Address) {
-		in.RequestInfo.OriginAddress = clientInfo.Address
+	in.RequestInfo.ConnectionAddress = clientInfo.Address.String()
+	if in.RequestInfo.OriginAddress == "" || !srpc.service.IsTrusted(clientInfo.Address) {
+		in.RequestInfo.OriginAddress = in.RequestInfo.ConnectionAddress
 	}
 
 	mc := MethodCall{
