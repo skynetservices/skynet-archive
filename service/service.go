@@ -250,7 +250,7 @@ func (s *Service) getClientInfo(clientID string) (ci ClientInfo, ok bool) {
 
 func (s *Service) IsTrusted(addr net.Addr) bool {
 	// TODO: something else
-	return true
+	return false
 }
 
 func (s *Service) Start(register bool) (done *sync.WaitGroup) {
