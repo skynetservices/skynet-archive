@@ -10,6 +10,7 @@ type RequestInfo struct {
 	// ConnectionAddress is the address of the TCP connection making the current RPC request.
 	ConnectionAddress net.Addr
 	// RequestID is a unique ID for the current RPC request.
-	RequestID  string
+	RequestID string
+	// RetryCount indicates how many times this request has been tried before.
 	RetryCount int
 }
