@@ -68,23 +68,23 @@ Using BSON as the encoding mechanism, the skynet protocol is as follows.
 3) Client may close the stream, ending the session, or go to step 4
 
 4) Client sends <RequestHeader>, using 
-    - "<Name>.Forward" as the ServiceMethod field, where <Name> is the service's reported name,
-    - a number unique to this connection session for the Seq field, possibly incrementing for each request.
+    * "<Name>.Forward" as the ServiceMethod field, where <Name> is the service's reported name,
+    * a number unique to this connection session for the Seq field, possibly incrementing for each request.
 
 5) Client sends <RequestIn>, using
-    - the client ID received in step 1,
-    - the service's method name for the Method field,
-    - a unique value for the RequestInfo's request ID, unless the request is the result of an earlier request, in which case it may use the same request ID,
-    - an empty string for the RequestInfo's OriginAddress field, unless the request is proxied from another machine or is a result of a request from another machine, in which case it may be an address indicating the original source,
-    - the BSON-marshalled data to be decoded for the method's in-parameter.
+    * the client ID received in step 1,
+    * the service's method name for the Method field,
+    * a unique value for the RequestInfo's request ID, unless the request is the result of an earlier request, in which case it may use the same request ID,
+    * an empty string for the RequestInfo's OriginAddress field, unless the request is proxied from another machine or is a result of a request from another machine, in which case it may be an address indicating the original source,
+    * the BSON-marshalled data to be decoded for the method's in-parameter.
 
 6) Service sends <ResponseHeader>, using
-    - the same ServiceMethod as from step 4,
-    - the same Seq as from step 4,
-    - an empty string for the error, unless there was an rpc-level or skynet-level error, in which case it can contain the result of the error's .Error() method.
+    * the same ServiceMethod as from step 4,
+    * the same Seq as from step 4,
+    * an empty string for the error, unless there was an rpc-level or skynet-level error, in which case it can contain the result of the error's .Error() method.
 
 7) Service sends <RequestOut>, using
-    - the BSON-marshalled data encoded from the method's out-parameter,
-    - the string representation of any service-level error that occurred during the request, or an empty string if no error.
+    * the BSON-marshalled data encoded from the method's out-parameter,
+    * the string representation of any service-level error that occurred during the request, or an empty string if no error.
 
 go to step 3
