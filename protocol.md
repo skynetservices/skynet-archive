@@ -1,61 +1,63 @@
-skynet client/server protocol
+# skynet client/server protocol
 
-Types
+## Types
 
-ClientHandshake
-(defined in github.com/bketelsen/skynet ClientHandshake type)
-{
-	
-}
+    ClientHandshake
+    (defined in github.com/bketelsen/skynet ClientHandshake type)
+    {
+        
+    }
 
-ServiceHandshake
-(defined in github.com/bketelsen/skynet ServiceHandshake type)
-{
-	Registered bool
-	ClientID string
-}
+    ServiceHandshake
+    (defined in github.com/bketelsen/skynet ServiceHandshake type)
+    {
+        Registered bool
+        ClientID string
+    }
 
-RequestHeader
-(defined in net/rpc Request type)
-{
-    ServiceMethod string
-    Seq           uint64
-}
+    RequestHeader
+    (defined in net/rpc Request type)
+    {
+        ServiceMethod string
+        Seq           uint64
+    }
 
-ResponseHeader
-(defined in net/rpc Response type)
-{
-    ServiceMethod string
-    Seq           uint64
-    Error         string
-}
+    ResponseHeader
+    (defined in net/rpc Response type)
+    {
+        ServiceMethod string
+        Seq           uint64
+        Error         string
+    }
 
-RequestInfo
-(defined in github.com/bketelsen/skynet RequestInfo type)
-{
-	// OriginAddress is the reported address of the originating client, typically from outside the service cluster.
-	OriginAddress string
-	// RequestID is a unique ID for the current RPC request.
-	RequestID  string
-	// RetryCount indicates how many times this request has been tried before.
-	RetryCount int
-}
+    RequestInfo
+    (defined in github.com/bketelsen/skynet RequestInfo type)
+    {
+        // OriginAddress is the reported address of the originating client, typically from outside the service cluster.
+        OriginAddress string
+        // RequestID is a unique ID for the current RPC request.
+        RequestID  string
+        // RetryCount indicates how many times this request has been tried before.
+        RetryCount int
+    }
 
-RequestIn
-(defined in github.com/bketelsen/skynet ServiceRPCIn type)
-{
-	ClientID    string
-	Method      string
-	RequestInfo RequestInfo
-	In          []byte
-}
+    RequestIn
+    (defined in github.com/bketelsen/skynet ServiceRPCIn type)
+    {
+        ClientID    string
+        Method      string
+        RequestInfo RequestInfo
+        In          []byte
+    }
 
-RequestOut
-(defined in github.com/bketelsen/skynet ServiceRPCOut type)
-{
-	Out       []byte
-	ErrString string
-}
+    RequestOut
+    (defined in github.com/bketelsen/skynet ServiceRPCOut type)
+    {
+        Out       []byte
+        ErrString string
+    }
+
+## order of events
 
 Using BSON as the encoding mechanism, the skynet protocol is as follows.
 
