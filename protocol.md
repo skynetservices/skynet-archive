@@ -57,36 +57,36 @@
         ErrString string
     }
 
-## order of events
+## skynet protocol
 
-Using BSON as the encoding mechanism, the skynet protocol is as follows.
+1) Client/server handshake
 
-1) Service sends _ServiceHandshake_, using
-* true for _Registered_ if the service is currently registered,
-* and providing a new UUID for _ClientID_.
+Service: *ServiceHandshake*
+* *Registered*: A value of false indicates the service will not respond to requests.
+* *ClientID*: A UUID that must be provided will all requests.
 
-2) Client sends _ClientHandshake_, which as of this document's creation is empty.
+Client: *ClientHandshake*
 
-3) Client may close the stream, ending the session, or go to step 4
+2) Begin sending requests. When done sending requests, the stream may be closed by the client.
 
-4) Client sends _RequestHeader_, using 
-* "_Name_.Forward" as the _ServiceMethod_ field, where _Name_ is the service's reported name,
-* a number unique to this connection session for the _Seq_ field, possibly incremented for each request.
+Client: *RequestHeader*
+* *ServiceMethod*: Use "*Name*.Forward", where *Name* is the service's reported name.
+* *Seq*: Use a number unique to this session, usually by incrementing some counter.
 
-5) Client sends _RequestIn_, using
-* the client ID received in step 1 for the _ClientID_ field,
-* the service's method name for the _Method_ field,
-* a unique value for the _RequestInfo_ fields's _RequestID_, unless the request is the result of an earlier request, in which case it may use the same request ID,
-* an empty string for the _RequestInfo_'s _OriginAddress_ field, unless the request is proxied from another machine or is a result of a request from another machine, in which case it may be an address indicating the original source,
-* the BSON-marshalled data to be decoded for the method's in-parameter for the _In_ field.
+Client: *RequestIn*
+* *ClientID*: Must be the UUID provided by the *ServiceHandshake*.
+* *Method*: The name of the RPC method desired.
+* *RequestInfo*.*RequestID*: A UUID. If this is request is the direct result of another request, the UUID may be reused.
+* *RequestInfo*.*OriginAddress*: If this request originated from another machine, that machine's address may be used. If left blank, the service will fill it in with the client's remote address.
+* *In*: The BSON-encoded buffer representing the RPC's in parameter.
 
-6) Service sends _ResponseHeader_, using
-* the same _ServiceMethod_ as from step 4,
-* the same _Seq_ as from step 4,
-* an empty string for the _Error_, unless there was an rpc-level or skynet-level error, in which case it can contain the result of the error's .Error() method.
+3) Synchronously receive responses. When the stream is closed by the client and all responses have been issued, the stream may be closed by the service.
 
-7) Service sends _RequestOut_, using
-* the BSON-marshalled data encoded from the method's out-parameter for the _Out_ field,
-* the string representation of any service-level error that occurred during the request, or an empty string if no error, for the _Error_ field.
+Service: *ResponseHeader*
+* *ServiceMethod*: Will be the same "*Name*.Forward" provided in the request.
+* *Seq*: This number will match the *Seq* provided in the request to which this response corresponds.
+* *Error*: Any rpc-level or skynet-level error. Empty string if no error. Errors in the actual service call are not put here.
 
-go to step 3
+Service: *RequestOut*
+* *Out*: The BSON-encoded buffer represending the RPC's out parameter.
+* *Error*: The text of the error returned by the service call, or the empty string if no error.
