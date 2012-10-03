@@ -67,7 +67,7 @@ Service: **ServiceHandshake**
 
 Client: **ClientHandshake**
 
-2) Begin sending requests. When done sending requests, the stream may be closed by the client.
+2) Client may begin sending requests. When done sending requests, the stream may be closed by the client.
 
 Client: **RequestHeader**
 * **ServiceMethod**: Use "**Name**.Forward", where **Name** is the service's reported name.
@@ -80,7 +80,7 @@ Client: **RequestIn**
 * **RequestInfo**.**OriginAddress**: If this request originated from another machine, that machine's address may be used. If left blank, the service will fill it in with the client's remote address.
 * **In**: The BSON-encoded buffer representing the RPC's in parameter.
 
-3) Synchronously receive responses. When the stream is closed by the client and all responses have been issued, the stream may be closed by the service.
+3) Service may synchronously send responses, in any order as long as the response corresponds to a request sent by the client. When the stream is closed by the client and all responses have been issued, the stream may be closed by the service.
 
 Service: **ResponseHeader**
 * **ServiceMethod**: Will be the same "**Name**.Forward" provided in the request.
