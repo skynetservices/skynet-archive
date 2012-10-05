@@ -104,7 +104,7 @@ type MongoLogger struct {
 	untransitioned *log.Logger
 }
 
-func NewMongoLogger(addr string, dbName, collectionName string, uuid string) (ml *MongoLogger, err error) {
+func NewMongoLogger(addr, dbName, collectionName, uuid string) (ml *MongoLogger, err error) {
 	ml = &MongoLogger{
 		dbName:         dbName,
 		colName:        collectionName,
