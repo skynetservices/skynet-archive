@@ -68,7 +68,11 @@ func NewSubService(daemon *SkynetDaemon, servicePath, args, uuid string) (ss *Su
 	}
 
 	_, binName := path.Split(ss.ServicePath)
-	binPath := filepath.Join(pkg.BinDir, binName)
+        bindir := os.Getenv("GOBIN")
+        if bindir == "" {
+            bindir = pkg.BinDir
+        }
+	binPath := filepath.Join(bindir, binName)
 
 	ss.binPath = binPath
 
