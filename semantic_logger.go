@@ -25,11 +25,6 @@ type Payload struct {
 	Action      string        `json:"action"`
 }
 
-
-//
-// One design proposal
-//
-
 type SemanticLogger interface {
 	Trace(msg string, payload *Payload, exception ...*Exception)
 	Debug(msg string, payload *Payload, exception ...*Exception)
@@ -37,26 +32,5 @@ type SemanticLogger interface {
 	Warn(msg string, payload *Payload, exception ...*Exception)
 	Error(msg string, payload *Payload, exception ...*Exception)
 	Fatal(msg string, payload *Payload, exception ...*Exception)
-	BenchmarkInfo(string, func(logger SemanticLogger))
-}
-
-
-//
-// Another design proposal
-//
-
-type LogLevel string
-
-const (
-	TRACE LogLevel = "TRACE"
-	DEBUG LogLevel = "DEBUG"
-	INFO LogLevel  = "INFO"
-	WARN LogLevel  = "WARN"
-	ERROR LogLevel = "ERROR"
-	FATAL LogLevel = "FATAL"
-)
-
-type SemanticLogger2 interface {
-	Log(level LogLevel, msg string, payload *Payload, exception ...*Exception)
-	BenchmarkInfo(string, func(logger SemanticLogger2))
+	BenchmarkInfo(msg, f func(logger SemanticLogger))
 }
