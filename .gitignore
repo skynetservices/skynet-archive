@@ -1,5 +1,6 @@
 cmd/sky/sky
 .DS_Store
+nbproject/*
 examples/service/service
 examples/client/client
 examples/tutorial/service
