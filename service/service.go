@@ -190,7 +190,8 @@ loop:
 			break loop
 
 		case _ = <-s.updateTicker.C:
-			s.UpdateCluster()
+			s.UpdateDoozerServiceInfo()
+			s.UpdateDoozerStats()
 		}
 	}
 }
@@ -286,7 +287,7 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	s.doozerWaiter.Add(1)
 	go s.doozerMux()
 
-	s.UpdateCluster()
+	s.UpdateDoozerServiceInfo()
 
 	if register == true {
 		s.register()
@@ -320,7 +321,7 @@ func (s *Service) cleanupDoozerEntriesForAddr(addr *skynet.BindAddr) {
 	}
 }
 
-func (s *Service) UpdateCluster() {
+func (s *Service) UpdateDoozerServiceInfo() {
 	b, err := json.Marshal(s.ServiceInfo)
 	if err != nil {
 		s.Log.Panic(err.Error())
@@ -329,6 +330,17 @@ func (s *Service) UpdateCluster() {
 
 	s.doozerChan <- doozerSetConfig{
 		ConfigPath: cfgpath,
+		ConfigData: b,
+	}
+}
+
+func (s *Service) UpdateDoozerStats() {
+	b, err := json.Marshal(s.ServiceInfo.Stats)
+	if err != nil {
+		s.Log.Panic(err.Error())
+	}
+	s.doozerChan <- doozerSetConfig{
+		ConfigPath: s.GetStatsPath(),
 		ConfigData: b,
 	}
 }
@@ -346,7 +358,7 @@ func (s *Service) register() {
 	}
 	s.Registered = true
 	s.Log.Item(ServiceRegistered{s.Config})
-	s.UpdateCluster()
+	s.UpdateDoozerServiceInfo()
 	s.Delegate.Registered(s) // Call user defined callback
 }
 
@@ -361,7 +373,7 @@ func (s *Service) unregister() {
 	}
 	s.Registered = false
 	s.Log.Item(ServiceUnregistered{s.Config})
-	s.UpdateCluster()
+	s.UpdateDoozerServiceInfo()
 	s.Delegate.Unregistered(s) // Call user defined callback
 }
 
@@ -399,12 +411,19 @@ func initializeConfig(c *skynet.ServiceConfig) {
 		c.Region = "local"
 	}
 
+	if c.ServiceAddr == nil {
+		c.ServiceAddr = &skynet.BindAddr{}
+	}
+
 	if c.ServiceAddr.IPAddress == "" {
 		c.ServiceAddr.IPAddress = "127.0.0.1"
 	}
 
 	if c.ServiceAddr.Port == 0 {
 		c.ServiceAddr.Port = 9000
+	}
+	if c.ServiceAddr.MaxPort == 0 {
+		c.ServiceAddr.MaxPort = 9999
 	}
 
 	if c.DoozerConfig == nil {
