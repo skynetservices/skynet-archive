@@ -129,7 +129,7 @@ type ServiceStatistics struct {
 type ServiceInfo struct {
 	Config     *ServiceConfig
 	Registered bool
-	Stats      ServiceStatistics
+	Stats      ServiceStatistics `json:"-"`
 }
 
 func (s *ServiceInfo) GetConfigPath() string {
