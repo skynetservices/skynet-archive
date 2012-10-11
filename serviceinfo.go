@@ -25,7 +25,6 @@ type ServiceInfo struct {
 }
 
 func (s *ServiceInfo) GetConfigPath() string {
-	//	return "/services/" + s.Config.Name + "/" + s.Config.Version + "/" + s.Config.Region + "/" + s.Config.ServiceAddr.IPAddress + "/" + strconv.Itoa(s.Config.ServiceAddr.Port)
 	return path.Join("/services", s.Config.Name, s.Config.Version, s.Config.Region, s.Config.ServiceAddr.IPAddress, strconv.Itoa(s.Config.ServiceAddr.Port))
 }
 
@@ -33,6 +32,9 @@ func (s *ServiceInfo) GetStatsPath() string {
 	return path.Join("/statistics", s.Config.Name, s.Config.Version, s.Config.Region, s.Config.ServiceAddr.IPAddress, strconv.Itoa(s.Config.ServiceAddr.Port))
 }
 
+/*
+*ServiceInfo.FetchStats will query the provided doozer connection and update its .Stats field.
+ */
 func (s *ServiceInfo) FetchStats(doozer *DoozerConnection) (err error) {
 	rev := doozer.GetCurrentRevision()
 	data, _, err := doozer.Get(s.GetStatsPath(), rev)
