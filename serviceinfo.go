@@ -1,6 +1,7 @@
 package skynet
 
 import (
+	"encoding/json"
 	"path"
 	"strconv"
 	"time"
@@ -30,4 +31,17 @@ func (s *ServiceInfo) GetConfigPath() string {
 
 func (s *ServiceInfo) GetStatsPath() string {
 	return path.Join("/statistics", s.Config.Name, s.Config.Version, s.Config.Region, s.Config.ServiceAddr.IPAddress, strconv.Itoa(s.Config.ServiceAddr.Port))
+}
+
+func (s *ServiceInfo) FetchStats(doozer *DoozerConnection) (err error) {
+	rev := doozer.GetCurrentRevision()
+	data, _, err := doozer.Get(s.GetStatsPath(), rev)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(data, s)
+	if err != nil {
+		return
+	}
+	return
 }

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const DEBUG = false
+const DEBUG = true
 
 func dbg(items ...interface{}) {
 	if DEBUG {
@@ -340,6 +340,9 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.RequestInfo, funcName string, in interface{}) (result []byte, serviceErr, err error) {
 	ts("sendToInstance", requestInfo)
 	defer te("sendToInstance", requestInfo)
+
+	sr.service.FetchStats(c.client.doozer())
+	dbgf("stats: %+v\n", sr.service.Stats)
 
 	sin := skynet.ServiceRPCIn{
 		RequestInfo: requestInfo,

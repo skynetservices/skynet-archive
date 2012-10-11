@@ -32,5 +32,4 @@ func main() {
 	}
 
 	fmt.Println(out["data"].(string))
-
 }
