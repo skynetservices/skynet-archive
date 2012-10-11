@@ -411,12 +411,19 @@ func initializeConfig(c *skynet.ServiceConfig) {
 		c.Region = "local"
 	}
 
+	if c.ServiceAddr == nil {
+		c.ServiceAddr = &skynet.BindAddr{}
+	}
+
 	if c.ServiceAddr.IPAddress == "" {
 		c.ServiceAddr.IPAddress = "127.0.0.1"
 	}
 
 	if c.ServiceAddr.Port == 0 {
 		c.ServiceAddr.Port = 9000
+	}
+	if c.ServiceAddr.MaxPort == 0 {
+		c.ServiceAddr.MaxPort = 9999
 	}
 
 	if c.DoozerConfig == nil {
