@@ -9,14 +9,24 @@ import (
 	"strings"
 )
 
+// Query is used for finding collections of service instances, according to the criteria it is given.
 type Query struct {
-	Service    string
-	Version    string
-	Host       string
-	Port       string
-	Region     string
-	UUID       string
+	// Service is the name of the service being queried. Blank for all services.
+	Service string
+	// Version is the version of the service being queried. Blank for all versions.
+	Version string
+	// Host is the host of the service being queried. Blank for all hosts.
+	Host string
+	// Port is the port of the service being queried. Blank for all ports.
+	Port string
+	// Region is the region of the service being queried. Blank for all regions.
+	Region string
+	// UUID is the UUID of the service being queried. Blank for any UUID.
+	UUID string
+
+	// Registered is the registered status of the service. Nil for any status.
 	Registered *bool
+
 	DoozerConn *DoozerConnection
 	doozerRev  int64
 
