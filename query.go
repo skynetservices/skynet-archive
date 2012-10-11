@@ -36,7 +36,9 @@ type Query struct {
 	files      map[string]*doozer.FileInfo
 }
 
-func (q *Query) VisitDir(path string, f *doozer.FileInfo) bool {
+type queryVisitor Query
+
+func (q *queryVisitor) VisitDir(path string, f *doozer.FileInfo) bool {
 	parts := strings.Split(path, "/")
 
 	// If we know we are looking for dir's at a specified level no need to dig deeper
@@ -52,7 +54,7 @@ func (q *Query) VisitDir(path string, f *doozer.FileInfo) bool {
 	return true
 }
 
-func (q *Query) VisitFile(path string, f *doozer.FileInfo) {
+func (q *queryVisitor) VisitFile(path string, f *doozer.FileInfo) {
 	q.files[path] = f
 }
 
@@ -95,7 +97,7 @@ func (q *Query) search() {
 
 	path := q.makePath()
 
-	q.DoozerConn.Walk(q.doozerRev, path, q, nil)
+	q.DoozerConn.Walk(q.doozerRev, path, (*queryVisitor)(q), nil)
 }
 
 func (q *Query) FindHosts() []string {
