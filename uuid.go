@@ -7,6 +7,7 @@ import (
 	"log"
 )
 
+// UUID() provides unique identifier strings.
 func UUID() string {
 	b := make([]byte, 16)
 	_, err := io.ReadFull(rand.Reader, b)
