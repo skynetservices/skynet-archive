@@ -190,7 +190,6 @@ loop:
 			break loop
 
 		case _ = <-s.updateTicker.C:
-			s.UpdateDoozerServiceInfo()
 			s.UpdateDoozerStats()
 		}
 	}
