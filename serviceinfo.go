@@ -39,7 +39,7 @@ func (s *ServiceInfo) FetchStats(doozer *DoozerConnection) (err error) {
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(data, s)
+	err = json.Unmarshal(data, &s.Stats)
 	if err != nil {
 		return
 	}

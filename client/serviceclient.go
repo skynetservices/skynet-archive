@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const DEBUG = true
+const DEBUG = false
 
 func dbg(items ...interface{}) {
 	if DEBUG {
