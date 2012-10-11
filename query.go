@@ -100,6 +100,7 @@ func (q *Query) search() {
 	q.DoozerConn.Walk(q.doozerRev, path, (*queryVisitor)(q), nil)
 }
 
+// *Query.FindHosts() finds all the hosts with services that match the query.
 func (q *Query) FindHosts() []string {
 	q.pathLength = 6
 	q.search()
@@ -107,6 +108,7 @@ func (q *Query) FindHosts() []string {
 	return q.matchingPaths()
 }
 
+// *Query.FindRegions() finds all the regions with services that match the query.
 func (q *Query) FindRegions() []string {
 	q.pathLength = 5
 	q.search()
@@ -114,6 +116,7 @@ func (q *Query) FindRegions() []string {
 	return q.matchingPaths()
 }
 
+// *Query.FindServices() finds paths for all the services that match the query.
 func (q *Query) FindServices() []string {
 	q.pathLength = 3
 	q.search()
@@ -121,6 +124,7 @@ func (q *Query) FindServices() []string {
 	return q.matchingPaths()
 }
 
+// *Query.FindServiceVersions finds all the versions with services that match the query.
 func (q *Query) FindServiceVersions() []string {
 	q.pathLength = 4
 	q.search()
@@ -128,6 +132,7 @@ func (q *Query) FindServiceVersions() []string {
 	return q.matchingPaths()
 }
 
+// *Query.FindInstances fetches the services that match the query.
 func (q *Query) FindInstances() []*ServiceInfo {
 	q.search()
 
@@ -236,6 +241,7 @@ func (q *Query) pathMatches(path string) bool {
 	return true
 }
 
+// *Query.ServiceMatches indicates if the query matches the given service.
 func (q *Query) ServiceMatches(s ServiceInfo) bool {
 	if q.Service != "" && s.Config.Name != q.Service {
 		return false
@@ -268,6 +274,7 @@ func (q *Query) ServiceMatches(s ServiceInfo) bool {
 	return true
 }
 
+// *Query.Reset erases this query, making it match all services until fields are set.
 func (q *Query) Reset() {
 	q.Service = ""
 	q.Version = ""
