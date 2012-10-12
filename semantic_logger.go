@@ -28,19 +28,41 @@ type Payload struct {
 	Action      string        `json:"action"`
 }
 
-type LogLevel string
+type LogLevel int
 
 const (
-	TRACE LogLevel = "TRACE"
-	DEBUG LogLevel = "DEBUG"
-	INFO  LogLevel = "INFO"
-	WARN  LogLevel = "WARN"
-	ERROR LogLevel = "ERROR"
-	FATAL LogLevel = "FATAL"
+	TRACE LogLevel = iota
+	DEBUG
+	INFO
+	WARN
+	ERROR
+	FATAL
 )
 
 var LogLevels = []LogLevel{
 	TRACE, DEBUG, INFO, WARN, ERROR, FATAL,
+}
+
+func (level LogLevel) LessSevereThan(level2 LogLevel) bool {
+	return int(level) < int(level2)
+}
+
+func (level LogLevel) String() string {
+	switch level {
+	case TRACE:
+		return "TRACE"
+	case DEBUG:
+		return "DEBUG"
+	case INFO:
+		return "INFO"
+	case WARN:
+		return "WARN"
+	case ERROR:
+		return "ERROR"
+	case FATAL:
+		return "FATAL"
+	}
+	return "CUSTOM"
 }
 
 // Goal: When done replicating `Logger` logic as `SemanticLogger`s,
