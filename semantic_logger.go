@@ -15,6 +15,13 @@ type Exception struct {
 	Backtrace []string `json:"backtrace"`
 }
 
+func (exc *Exception) String() string {
+	// message << " -- " << "#{exception.class}: #{exception.message}\n#{(exception.backtrace || []).join("\n")}"
+	formatStr := "%s -- %s: %s\n%s"
+	backtrace := strings.Join(exc.Backtrace, "\n")
+	return fmt.Sprintf(formatStr, exc.Message, "panic", exc.Message, backtrace)
+}
+
 type Payload struct {
 	Name        string        `json:"name"`
 	Application string        `json:"application"`
