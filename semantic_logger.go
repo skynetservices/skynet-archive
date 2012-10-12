@@ -1,6 +1,9 @@
 package skynet
 
 import (
+	"fmt"
+	"io"
+	"log"
 	"time"
 )
 
@@ -25,6 +28,9 @@ type Payload struct {
 	Action      string        `json:"action"`
 }
 
+// Goal: When done replicating `Logger` logic as `SemanticLogger`s,
+// s/SemanticLogger/Logger/ in this file
+
 type SemanticLogger interface {
 	Trace(msg string, payload *Payload, exception ...*Exception)
 	Debug(msg string, payload *Payload, exception ...*Exception)
@@ -32,5 +38,81 @@ type SemanticLogger interface {
 	Warn(msg string, payload *Payload, exception ...*Exception)
 	Error(msg string, payload *Payload, exception ...*Exception)
 	Fatal(msg string, payload *Payload, exception ...*Exception)
-	BenchmarkInfo(msg, f func(logger SemanticLogger))
+	BenchmarkInfo(msg string, f func(logger SemanticLogger))
+}
+
+type MultiSemanticLogger []SemanticLogger
+
+func NewMultiSemanticLogger(loggers ...SemanticLogger) (ml MultiSemanticLogger) {
+	ml = loggers
+	return
+}
+
+//
+// Define methods necessary for MultiSemanticLogger to implement
+// SemanticLogger
+//
+
+func (ml MultiSemanticLogger) Trace(msg string, payload *Payload,
+	exception ...*Exception) {
+	for _, lgr := range ml {
+		lgr.Trace(msg, payload, exception...)
+	}
+}
+
+func (ml MultiSemanticLogger) Debug(msg string, payload *Payload,
+	exception ...*Exception) {
+	for _, lgr := range ml {
+		lgr.Debug(msg, payload, exception...)
+	}
+}
+
+func (ml MultiSemanticLogger) Info(msg string, payload *Payload,
+	exception ...*Exception) {
+	for _, lgr := range ml {
+		lgr.Info(msg, payload, exception...)
+	}
+}
+
+func (ml MultiSemanticLogger) Warn(msg string, payload *Payload,
+	exception ...*Exception) {
+	for _, lgr := range ml {
+		lgr.Warn(msg, payload, exception...)
+	}
+}
+
+func (ml MultiSemanticLogger) Error(msg string, payload *Payload,
+	exception ...*Exception) {
+	for _, lgr := range ml {
+		lgr.Error(msg, payload, exception...)
+	}
+}
+
+func (ml MultiSemanticLogger) Fatal(msg string, payload *Payload,
+	exception ...*Exception) {
+	for _, lgr := range ml {
+		lgr.Fatal(msg, payload, exception...)
+	}
+}
+
+func (ml MultiSemanticLogger) BenchmarkInfo(msg, f func(logger SemanticLogger)) {
+	for _, lgr := range ml {
+		lgr.BenchmarkInfo(msg, f)
+	}
+}
+
+//
+// ConsoleSemanticLogger
+//
+
+type ConsoleSemanticLogger struct {
+	l *log.Logger
+}
+
+func NewConsoleSemanticLogger(name string, w io.Writer) *ConsoleSemanticLogger {
+	cl := ConsoleSemanticLogger{
+		// TODO: Set this format to match Clarity's Ruby SemanticLogger
+		l: log.New(w, fmt.Sprintf("%s: ", name), log.LstdFlags),
+	}
+	return &cl
 }
