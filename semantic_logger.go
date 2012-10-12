@@ -131,6 +131,21 @@ func NewConsoleSemanticLogger(name string, w io.Writer) *ConsoleSemanticLogger {
 	return &cl
 }
 
+func (cl *ConsoleSemanticLogger) Log(level LogLevel, msg string,
+	payload *Payload, excep *Exception) error {
+	cl.l.Printf("%v: %s\n", level, msg)
+	return nil
+}
+
+func (cl *ConsoleSemanticLogger) BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger)) {
+	// TODO: Implement
+}
+
+
+//
+// MongoSemanticLogger
+//
+
 type MongoSemanticLogger struct {
 	session         *mgo.Session
 	dbName, colName string
@@ -170,4 +185,8 @@ func (ml *MongoSemanticLogger) Log(level LogLevel, msg string,
 	case FATAL: // Use Exception
 	}
 	return nil
+}
+
+func (ml *MongoSemanticLogger) BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger)) {
+	// TODO: Implement
 }
