@@ -3,14 +3,16 @@ package skynet
 import (
 	"fmt"
 	"io"
+	"labix.org/v2/mgo"
 	"log"
+	"strings"
 	"time"
 )
 
 type Exception struct {
-	Exception string `json:"exception"`
-	Message   string `json:"message"`
-	Backtrace string `json:"backtrace"`
+	Exception string   `json:"exception"`
+	Message   string   `json:"message"`
+	Backtrace []string `json:"backtrace"`
 }
 
 type Payload struct {
@@ -69,7 +71,7 @@ func (level LogLevel) String() string {
 // s/SemanticLogger/Logger/ in this file
 
 type SemanticLogger interface {
-	Log(level LogLevel, msg string, payload *Payload, exception ...*Exception)
+	Log(LogLevel, string, *Payload, *Exception) error
 	BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger))
 }
 
@@ -86,13 +88,15 @@ func NewMultiSemanticLogger(loggers ...SemanticLogger) (ml MultiSemanticLogger) 
 //
 
 func (ml MultiSemanticLogger) Log(level LogLevel, msg string, payload *Payload,
-	exception ...*Exception) {
+	exception *Exception) error {
 	switch level {
 	case TRACE, DEBUG, INFO, WARN, ERROR, FATAL:
 		for _, lgr := range ml {
-			lgr.Log(level, msg, payload, exception...)
+			// TODO: Decide what to do with returned `error` value
+			lgr.Log(level, msg, payload, exception)
 		}
 	}
+	return nil
 }
 
 func (ml MultiSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
