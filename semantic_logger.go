@@ -10,16 +10,17 @@ import (
 )
 
 type Exception struct {
-	Exception string   `json:"exception"`
 	Message   string   `json:"message"`
 	Backtrace []string `json:"backtrace"`
 }
 
-func (exc *Exception) String() string {
-	// message << " -- " << "#{exception.class}: #{exception.message}\n#{(exception.backtrace || []).join("\n")}"
+func (excep *Exception) String() string {
+	// message << " -- " << "#{exception.class}: #{exception.message}\n
+	// #{(exception.backtrace || []).join("\n")}"
 	formatStr := "%s -- %s: %s\n%s"
-	backtrace := strings.Join(exc.Backtrace, "\n")
-	return fmt.Sprintf(formatStr, exc.Message, "panic", exc.Message, backtrace)
+	backtrace := strings.Join(excep.Backtrace, "\n")
+	return fmt.Sprintf(formatStr, excep.Message, "panic", excep.Message,
+		backtrace)
 }
 
 type Payload struct {
@@ -35,6 +36,7 @@ type Payload struct {
 	Duration    time.Duration `json:"duration"`
 	Table       string        `json:"table"`
 	Action      string        `json:"action"`
+	UUID        string        `json:"uuid"`
 }
 
 type LogLevel int
@@ -95,12 +97,12 @@ func NewMultiSemanticLogger(loggers ...SemanticLogger) (ml MultiSemanticLogger) 
 //
 
 func (ml MultiSemanticLogger) Log(level LogLevel, msg string, payload *Payload,
-	exception *Exception) error {
+	excep *Exception) error {
 	switch level {
 	case TRACE, DEBUG, INFO, WARN, ERROR, FATAL:
 		for _, lgr := range ml {
 			// TODO: Decide what to do with returned `error` value
-			lgr.Log(level, msg, payload, exception)
+			lgr.Log(level, msg, payload, excep)
 		}
 	}
 	return nil
@@ -147,7 +149,7 @@ func NewMongoSemanticLogger(addr, dbName, collectionName,
 }
 
 func (ml *MongoSemanticLogger) Log(level LogLevel, msg string,
-	payload *Payload, exception *Exception) error {
+	payload *Payload, excep *Exception) error {
 	if ml == nil {
 		return fmt.Errorf("Can't log to nil *MongoSemanticLogger")
 	}
@@ -157,17 +159,15 @@ func (ml *MongoSemanticLogger) Log(level LogLevel, msg string,
 	// TODO: Remove once basics are in place (MongoDB logging, etc);
 	// `switch` for testing purposes only
 	switch level {
-	case TRACE, DEBUG, INFO, WARN, ERROR:
+	case TRACE, DEBUG, INFO, WARN, ERROR: // Use Payload
 		if payload != nil {
 			err := col.Insert(payload)
 			if err != nil {
-				return fmt.Errorf("Error logging payload to %s: %v",
-					ml.uuid, err)
+				errStr := "Error logging with MongoSemanticLogger %s: %v"
+				return fmt.Errorf(errStr, ml.uuid, err)
 			}
 		}
-	// Use Exception value
-	case FATAL:
-		// TODO: Handle
+	case FATAL: // Use Exception
 	}
 	return nil
 }
