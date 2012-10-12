@@ -5,6 +5,7 @@ import (
 	"io"
 	"labix.org/v2/mgo"
 	"log"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -183,6 +184,24 @@ func (ml *MongoSemanticLogger) Log(level LogLevel, msg string,
 			}
 		}
 	case FATAL: // Use Exception
+		// Define `stackTrace`
+		var stackTrace []string
+		for skip := 1; ; skip++ {
+			pc, file, line, ok := runtime.Caller(skip)
+			if !ok {
+				break
+			}
+			f := runtime.FuncForPC(pc)
+			traceLine := fmt.Sprintf("%s:%d %s()\n", file, line, f.Name())
+			stackTrace = append(stackTrace, traceLine)
+		}
+		excep.Backtrace = stackTrace
+		err := col.Insert(excep)
+		if err != nil {
+			log.Printf("Logging error: %v", err)
+		}
+		panic(excep)
+		return nil
 	}
 	return nil
 }
