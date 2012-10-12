@@ -128,3 +128,46 @@ func NewConsoleSemanticLogger(name string, w io.Writer) *ConsoleSemanticLogger {
 	}
 	return &cl
 }
+
+type MongoSemanticLogger struct {
+	session         *mgo.Session
+	dbName, colName string
+	uuid            string
+}
+
+func NewMongoSemanticLogger(addr, dbName, collectionName,
+	uuid string) (ml *MongoSemanticLogger, err error) {
+	ml = &MongoSemanticLogger{
+		dbName:         dbName,
+		colName:        collectionName,
+		uuid:           uuid,
+	}
+	ml.session, err = mgo.Dial(addr)
+	return
+}
+
+func (ml *MongoSemanticLogger) Log(level LogLevel, msg string,
+	payload *Payload, exception *Exception) error {
+	if ml == nil {
+		return fmt.Errorf("Can't log to nil *MongoSemanticLogger")
+	}
+	db := ml.session.DB(ml.dbName)
+	col := db.C(ml.colName)
+
+	// TODO: Remove once basics are in place (MongoDB logging, etc);
+	// `switch` for testing purposes only
+	switch level {
+	case TRACE, DEBUG, INFO, WARN, ERROR:
+		if payload != nil {
+			err := col.Insert(payload)
+			if err != nil {
+				return fmt.Errorf("Error logging payload to %s: %v",
+					ml.uuid, err)
+			}
+		}
+	// Use Exception value
+	case FATAL:
+		// TODO: Handle
+	}
+	return nil
+}
