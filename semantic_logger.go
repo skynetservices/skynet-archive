@@ -30,8 +30,8 @@ type Payload struct {
 	ThreadName  string        `json:"thread_name"`
 	Message     string        `json:"message"`
 	Tags        []string      `json:"tags"`
-	PID         int64         `json:"pid"`
-	Level       string        `json:"level"`
+	PID         int           `json:"pid"`
+	Level       LogLevel      `json:"level"`
 	Time        time.Time     `json:"time"`
 	Duration    time.Duration `json:"duration"`
 	Table       string        `json:"table"`
