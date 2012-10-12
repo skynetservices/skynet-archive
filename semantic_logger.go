@@ -28,17 +28,27 @@ type Payload struct {
 	Action      string        `json:"action"`
 }
 
+type LogLevel string
+
+const (
+	TRACE LogLevel = "TRACE"
+	DEBUG LogLevel = "DEBUG"
+	INFO  LogLevel = "INFO"
+	WARN  LogLevel = "WARN"
+	ERROR LogLevel = "ERROR"
+	FATAL LogLevel = "FATAL"
+)
+
+var LogLevels = []LogLevel{
+	TRACE, DEBUG, INFO, WARN, ERROR, FATAL,
+}
+
 // Goal: When done replicating `Logger` logic as `SemanticLogger`s,
 // s/SemanticLogger/Logger/ in this file
 
 type SemanticLogger interface {
-	Trace(msg string, payload *Payload, exception ...*Exception)
-	Debug(msg string, payload *Payload, exception ...*Exception)
-	Info(msg string, payload *Payload, exception ...*Exception)
-	Warn(msg string, payload *Payload, exception ...*Exception)
-	Error(msg string, payload *Payload, exception ...*Exception)
-	Fatal(msg string, payload *Payload, exception ...*Exception)
-	BenchmarkInfo(msg string, f func(logger SemanticLogger))
+	Log(level LogLevel, msg string, payload *Payload, exception ...*Exception)
+	BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger))
 }
 
 type MultiSemanticLogger []SemanticLogger
@@ -53,51 +63,20 @@ func NewMultiSemanticLogger(loggers ...SemanticLogger) (ml MultiSemanticLogger) 
 // SemanticLogger
 //
 
-func (ml MultiSemanticLogger) Trace(msg string, payload *Payload,
+func (ml MultiSemanticLogger) Log(level LogLevel, msg string, payload *Payload,
 	exception ...*Exception) {
-	for _, lgr := range ml {
-		lgr.Trace(msg, payload, exception...)
+	switch level {
+	case TRACE, DEBUG, INFO, WARN, ERROR, FATAL:
+		for _, lgr := range ml {
+			lgr.Log(level, msg, payload, exception...)
+		}
 	}
 }
 
-func (ml MultiSemanticLogger) Debug(msg string, payload *Payload,
-	exception ...*Exception) {
+func (ml MultiSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
+	f func(logger SemanticLogger)) {
 	for _, lgr := range ml {
-		lgr.Debug(msg, payload, exception...)
-	}
-}
-
-func (ml MultiSemanticLogger) Info(msg string, payload *Payload,
-	exception ...*Exception) {
-	for _, lgr := range ml {
-		lgr.Info(msg, payload, exception...)
-	}
-}
-
-func (ml MultiSemanticLogger) Warn(msg string, payload *Payload,
-	exception ...*Exception) {
-	for _, lgr := range ml {
-		lgr.Warn(msg, payload, exception...)
-	}
-}
-
-func (ml MultiSemanticLogger) Error(msg string, payload *Payload,
-	exception ...*Exception) {
-	for _, lgr := range ml {
-		lgr.Error(msg, payload, exception...)
-	}
-}
-
-func (ml MultiSemanticLogger) Fatal(msg string, payload *Payload,
-	exception ...*Exception) {
-	for _, lgr := range ml {
-		lgr.Fatal(msg, payload, exception...)
-	}
-}
-
-func (ml MultiSemanticLogger) BenchmarkInfo(msg, f func(logger SemanticLogger)) {
-	for _, lgr := range ml {
-		lgr.BenchmarkInfo(msg, f)
+		lgr.BenchmarkInfo(level, msg, f)
 	}
 }
 
