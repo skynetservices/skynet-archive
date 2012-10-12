@@ -10,20 +10,6 @@ import (
 	"time"
 )
 
-type Exception struct {
-	Message   string   `json:"message"`
-	Backtrace []string `json:"backtrace"`
-}
-
-func (excep *Exception) String() string {
-	// message << " -- " << "#{exception.class}: #{exception.message}\n
-	// #{(exception.backtrace || []).join("\n")}"
-	formatStr := "%s -- %s: %s\n%s"
-	backtrace := strings.Join(excep.Backtrace, "\n")
-	return fmt.Sprintf(formatStr, excep.Message, "panic", excep.Message,
-		backtrace)
-}
-
 type Payload struct {
 	Name        string        `json:"name"`
 	Application string        `json:"application"`
@@ -38,6 +24,15 @@ type Payload struct {
 	Table       string        `json:"table"`
 	Action      string        `json:"action"`
 	UUID        string        `json:"uuid"`
+	Backtrace   []string      `json:"backtrace"`
+}
+
+func (pl *Payload) Exception() string {
+	// message << " -- " << "#{exception.class}: #{exception.message}\n
+	// #{(exception.backtrace || []).join("\n")}"
+	formatStr := "%s -- %s: %s\n%s"
+	backtrace := strings.Join(pl.Backtrace, "\n")
+	return fmt.Sprintf(formatStr, pl.Message, "panic", pl.Message, backtrace)
 }
 
 type LogLevel int
@@ -81,7 +76,8 @@ func (level LogLevel) String() string {
 // s/SemanticLogger/Logger/ in this file
 
 type SemanticLogger interface {
-	Log(LogLevel, string, *Payload, *Exception) error
+	Log(payload *Payload) error
+	Fatal(payload *Payload)
 	BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger))
 }
 
@@ -97,13 +93,14 @@ func NewMultiSemanticLogger(loggers ...SemanticLogger) (ml MultiSemanticLogger) 
 // SemanticLogger
 //
 
-func (ml MultiSemanticLogger) Log(level LogLevel, msg string, payload *Payload,
-	excep *Exception) error {
+func (ml MultiSemanticLogger) Log(level LogLevel, msg string,
+	payload *Payload) error {
 	switch level {
 	case TRACE, DEBUG, INFO, WARN, ERROR, FATAL:
 		for _, lgr := range ml {
-			// TODO: Decide what to do with returned `error` value
-			lgr.Log(level, msg, payload, excep)
+			if err := lgr.Log(payload); err != nil {
+				log.Printf("Error calling .Log: %v\n", err)
+			}
 		}
 	}
 	return nil
@@ -132,10 +129,13 @@ func NewConsoleSemanticLogger(name string, w io.Writer) *ConsoleSemanticLogger {
 	return &cl
 }
 
-func (cl *ConsoleSemanticLogger) Log(level LogLevel, msg string,
-	payload *Payload, excep *Exception) error {
-	cl.l.Printf("%v: %s\n", level, msg)
+func (cl *ConsoleSemanticLogger) Log(payload *Payload) error {
+	cl.l.Printf("%v: %s\n", payload.Level, payload.Message)
 	return nil
+}
+
+func (cl *ConsoleSemanticLogger) Fatal(payload *Payload) {
+	cl.l.Fatal(payload)
 }
 
 func (cl *ConsoleSemanticLogger) BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger)) {
@@ -164,17 +164,20 @@ func NewMongoSemanticLogger(addr, dbName, collectionName,
 	return
 }
 
-func (ml *MongoSemanticLogger) Log(level LogLevel, msg string,
-	payload *Payload, excep *Exception) error {
+func (ml *MongoSemanticLogger) Log(payload *Payload) error {
 	if ml == nil {
 		return fmt.Errorf("Can't log to nil *MongoSemanticLogger")
 	}
+	if payload == nil {
+		return fmt.Errorf("Can't log nil *Payload")
+	}
+
 	db := ml.session.DB(ml.dbName)
 	col := db.C(ml.colName)
 
 	// TODO: Remove once basics are in place (MongoDB logging, etc);
 	// `switch` for testing purposes only
-	switch level {
+	switch payload.Level {
 	case TRACE, DEBUG, INFO, WARN, ERROR: // Use Payload
 		if payload != nil {
 			err := col.Insert(payload)
@@ -183,29 +186,37 @@ func (ml *MongoSemanticLogger) Log(level LogLevel, msg string,
 				return fmt.Errorf(errStr, ml.uuid, err)
 			}
 		}
-	case FATAL: // Use Exception
-		// Define `stackTrace`
-		var stackTrace []string
-		for skip := 1; ; skip++ {
-			pc, file, line, ok := runtime.Caller(skip)
-			if !ok {
-				break
-			}
-			f := runtime.FuncForPC(pc)
-			traceLine := fmt.Sprintf("%s:%d %s()\n", file, line, f.Name())
-			stackTrace = append(stackTrace, traceLine)
-		}
-		excep.Backtrace = stackTrace
-		err := col.Insert(excep)
-		if err != nil {
-			log.Printf("Logging error: %v", err)
-		}
-		panic(excep)
-		return nil
+	case FATAL: // Should call ml.Fatal(payload) directly
+		ml.Fatal(payload)
 	}
 	return nil
 }
 
-func (ml *MongoSemanticLogger) BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger)) {
-	// TODO: Implement
+func (ml *MongoSemanticLogger) Fatal(payload *Payload) {
+	db := ml.session.DB(ml.dbName)
+	col := db.C(ml.colName)
+
+	var stackTrace []string
+
+	for skip := 1; ; skip++ {
+		pc, file, line, ok := runtime.Caller(skip)
+		if !ok {
+			break
+		}
+		f := runtime.FuncForPC(pc)
+		traceLine := fmt.Sprintf("%s:%d %s()\n", file, line, f.Name())
+		stackTrace = append(stackTrace, traceLine)
+	}
+
+	payload.Backtrace = stackTrace
+	err := col.Insert(payload)
+	if err != nil {
+		log.Printf("Logging error: %v", err)
+	}
+	panic(payload)
+}
+
+func (ml *MongoSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
+		f func(logger SemanticLogger)) {
+		// TODO: Implement
 }
