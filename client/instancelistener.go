@@ -85,7 +85,7 @@ func (l *InstanceListener) notifyEmpty() {
 }
 
 func (l *InstanceListener) notify(n InstanceMonitorNotification) {
-	if l.includeStats {
+	if l.includeStats && n.Service.Stats == nil {
 		n.Service.FetchStats(l.monitor.doozer)
 	}
 
