@@ -37,6 +37,7 @@ const (
 	InstanceAddNotification = iota
 	InstanceUpdateNotification
 	InstanceRemoveNotification
+	InstanceStatsUpdateNotification
 )
 
 type instanceListRequest struct {
@@ -83,6 +84,7 @@ func (im *InstanceMonitor) mux() {
 
 			// Update internal instance list
 			switch notification.Type {
+			// Stats updates don't update our internal map
 			case InstanceAddNotification, InstanceUpdateNotification:
 				im.instances[notification.Path] = notification.Service
 			case InstanceRemoveNotification:
@@ -95,7 +97,14 @@ func (im *InstanceMonitor) mux() {
 				}
 
 				if c.Query.ServiceMatches(notification.Service) {
-					c.notify(notification)
+					// Stats updates should appear as normal updates for any clients who have included Stats
+					if notification.Type == InstanceStatsUpdateNotification && c.includeStats {
+						notification.Type = InstanceUpdateNotification
+						c.notify(notification)
+					} else if notification.Type != InstanceStatsUpdateNotification {
+						c.notify(notification)
+					}
+
 				} else if notification.OldService.Config != nil && c.Query.ServiceMatches(notification.OldService) {
 					// Used to match, we need to send a remove notification
 					notification.Type = InstanceRemoveNotification
@@ -283,7 +292,7 @@ func (im *InstanceMonitor) monitorInstanceStats() {
 					Path:       ev.Path,
 					Service:    s,
 					OldService: im.instances[servicePath],
-					Type:       InstanceUpdateNotification,
+					Type:       InstanceStatsUpdateNotification,
 				}
 			}
 		}
