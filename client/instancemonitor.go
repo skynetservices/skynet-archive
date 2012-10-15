@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/bketelsen/skynet"
 	"path"
+	"strings"
 )
 
 type InstanceMonitorNotification struct {
@@ -53,7 +54,7 @@ type InstanceMonitor struct {
 	notificationChan chan InstanceMonitorNotification
 }
 
-func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
+func NewInstanceMonitor(doozer *skynet.DoozerConnection, monitorStats bool) (im *InstanceMonitor) {
 	im = &InstanceMonitor{
 		doozer:           doozer,
 		clients:          make(map[string]*InstanceListener, 0),
@@ -66,6 +67,10 @@ func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 
 	go im.mux()
 	go im.monitorInstances()
+
+	if monitorStats {
+		go im.monitorInstanceStats()
+	}
 
 	return
 }
@@ -237,7 +242,52 @@ func (im *InstanceMonitor) monitorInstances() {
 			}
 		}
 	}
+}
 
+func (im *InstanceMonitor) monitorInstanceStats() {
+	rev := im.doozer.GetCurrentRevision()
+
+	watchPath := path.Join("/statistics", "**")
+
+	for {
+		ev, err := im.doozer.Wait(watchPath, rev+1)
+		rev = ev.Rev
+
+		if err != nil {
+			continue
+		}
+
+		// If it's being removed no need to send notification, it's sent my monitorInstances
+		if ev.IsDel() {
+			continue
+		} else {
+			var s skynet.ServiceInfo
+			var stats skynet.ServiceStatistics
+			var ok bool
+
+			buf := bytes.NewBuffer(ev.Body)
+			err = json.Unmarshal(buf.Bytes(), &stats)
+
+			if err != nil {
+				fmt.Println("error unmarshalling service")
+				continue
+			}
+
+			servicePath := strings.Replace(ev.Path, "/statistics", "/services", 1)
+			// If InstanceMonitor doesn't know about it, it was probably deleted, safe not to send notification
+			if s, ok = im.instances[servicePath]; ok {
+				s.Stats = &stats
+
+				// Let's create an update notification to send, with our new statistics
+				im.notificationChan <- InstanceMonitorNotification{
+					Path:       ev.Path,
+					Service:    s,
+					OldService: im.instances[servicePath],
+					Type:       InstanceUpdateNotification,
+				}
+			}
+		}
+	}
 }
 
 func (im *InstanceMonitor) buildInstanceList(l *InstanceListener) {
