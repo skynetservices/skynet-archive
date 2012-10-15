@@ -274,6 +274,13 @@ func (im *InstanceMonitor) monitorInstanceStats() {
 			var stats skynet.ServiceStatistics
 			var ok bool
 
+			servicePath := strings.Replace(ev.Path, "/statistics", "/services", 1)
+
+			// If InstanceMonitor doesn't know about it, it was probably deleted, safe not to send notification
+			if s, ok = im.instances[servicePath]; !ok {
+				continue
+			}
+
 			buf := bytes.NewBuffer(ev.Body)
 			err = json.Unmarshal(buf.Bytes(), &stats)
 
@@ -282,18 +289,14 @@ func (im *InstanceMonitor) monitorInstanceStats() {
 				continue
 			}
 
-			servicePath := strings.Replace(ev.Path, "/statistics", "/services", 1)
-			// If InstanceMonitor doesn't know about it, it was probably deleted, safe not to send notification
-			if s, ok = im.instances[servicePath]; ok {
-				s.Stats = &stats
+			s.Stats = &stats
 
-				// Let's create an update notification to send, with our new statistics
-				im.notificationChan <- InstanceMonitorNotification{
-					Path:       ev.Path,
-					Service:    s,
-					OldService: im.instances[servicePath],
-					Type:       InstanceStatsUpdateNotification,
-				}
+			// Let's create an update notification to send, with our new statistics
+			im.notificationChan <- InstanceMonitorNotification{
+				Path:       ev.Path,
+				Service:    s,
+				OldService: im.instances[servicePath],
+				Type:       InstanceStatsUpdateNotification,
 			}
 		}
 	}
