@@ -341,6 +341,9 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.R
 	ts("sendToInstance", requestInfo)
 	defer te("sendToInstance", requestInfo)
 
+	sr.service.FetchStats(c.client.doozer())
+	dbgf("stats: %+v\n", sr.service.Stats)
+
 	sin := skynet.ServiceRPCIn{
 		RequestInfo: requestInfo,
 		Method:      funcName,
