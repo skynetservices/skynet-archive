@@ -119,7 +119,7 @@ func main() {
 	http.Handle("/favicon.ico", http.FileServer(http.Dir(*webroot+"/tmpl/images")))
 	http.Handle("/logs/ws", websocket.Handler(wsHandler))
 
-	im := client.NewInstanceMonitor(DC)
+	im := client.NewInstanceMonitor(DC, true)
 	http.Handle("/instances/ws", websocket.Handler(func(ws *websocket.Conn) {
 		NewInstanceSocket(ws, im)
 	}))

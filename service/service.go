@@ -79,7 +79,7 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	}
 
 	s.Config = c
-	s.Stats = skynet.ServiceStatistics{
+	s.Stats = &skynet.ServiceStatistics{
 		StartTime: time.Now().Format("2006-01-02T15:04:05Z-0700"),
 	}
 
@@ -190,7 +190,7 @@ loop:
 			break loop
 
 		case _ = <-s.updateTicker.C:
-			s.UpdateCluster()
+			s.UpdateDoozerStats()
 		}
 	}
 }
@@ -202,6 +202,7 @@ type doozerSetConfig struct {
 
 type doozerRemoveFromCluster struct {
 	ConfigPath string
+	StatsPath  string
 }
 
 type doozerFinish struct{}
@@ -219,6 +220,11 @@ loop:
 		case doozerRemoveFromCluster:
 			rev := s.doozer().GetCurrentRevision()
 			err := s.doozer().Del(i.ConfigPath, rev)
+			if err != nil {
+				s.Log.Panic(err.Error())
+			}
+
+			err = s.doozer().Del(i.StatsPath, rev)
 			if err != nil {
 				s.Log.Panic(err.Error())
 			}
@@ -286,7 +292,7 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	s.doozerWaiter.Add(1)
 	go s.doozerMux()
 
-	s.UpdateCluster()
+	s.UpdateDoozerServiceInfo()
 
 	if register == true {
 		s.register()
@@ -317,11 +323,18 @@ func (s *Service) cleanupDoozerEntriesForAddr(addr *skynet.BindAddr) {
 	for _, i := range instances {
 		s.Log.Item("Cleaning up old doozer entry with conflicting addr " + addr.String() + "(" + i.GetConfigPath() + ")")
 		s.doozer().Del(i.GetConfigPath(), s.doozer().GetCurrentRevision())
+		s.doozer().Del(i.GetStatsPath(), s.doozer().GetCurrentRevision())
 	}
 }
 
-func (s *Service) UpdateCluster() {
-	b, err := json.Marshal(s.ServiceInfo)
+func (s *Service) UpdateDoozerServiceInfo() {
+
+	// We're going to create a copy of our ServiceInfo so that we can nil out the Stats, which will match the omitempty and won't marshal 
+	// this is cheap as it's a single bool, and 2 pointers.
+	si := s.ServiceInfo
+	si.Stats = nil
+
+	b, err := json.Marshal(si)
 	if err != nil {
 		s.Log.Panic(err.Error())
 	}
@@ -333,9 +346,21 @@ func (s *Service) UpdateCluster() {
 	}
 }
 
+func (s *Service) UpdateDoozerStats() {
+	b, err := json.Marshal(s.ServiceInfo.Stats)
+	if err != nil {
+		s.Log.Panic(err.Error())
+	}
+	s.doozerChan <- doozerSetConfig{
+		ConfigPath: s.GetStatsPath(),
+		ConfigData: b,
+	}
+}
+
 func (s *Service) RemoveFromCluster() {
 	s.doozerChan <- doozerRemoveFromCluster{
 		ConfigPath: s.GetConfigPath(),
+		StatsPath:  s.GetStatsPath(),
 	}
 }
 
@@ -346,7 +371,7 @@ func (s *Service) register() {
 	}
 	s.Registered = true
 	s.Log.Item(ServiceRegistered{s.Config})
-	s.UpdateCluster()
+	s.UpdateDoozerServiceInfo()
 	s.Delegate.Registered(s) // Call user defined callback
 }
 
@@ -361,7 +386,7 @@ func (s *Service) unregister() {
 	}
 	s.Registered = false
 	s.Log.Item(ServiceUnregistered{s.Config})
-	s.UpdateCluster()
+	s.UpdateDoozerServiceInfo()
 	s.Delegate.Unregistered(s) // Call user defined callback
 }
 
@@ -399,12 +424,19 @@ func initializeConfig(c *skynet.ServiceConfig) {
 		c.Region = "local"
 	}
 
+	if c.ServiceAddr == nil {
+		c.ServiceAddr = &skynet.BindAddr{}
+	}
+
 	if c.ServiceAddr.IPAddress == "" {
 		c.ServiceAddr.IPAddress = "127.0.0.1"
 	}
 
 	if c.ServiceAddr.Port == 0 {
 		c.ServiceAddr.Port = 9000
+	}
+	if c.ServiceAddr.MaxPort == 0 {
+		c.ServiceAddr.MaxPort = 9999
 	}
 
 	if c.DoozerConfig == nil {

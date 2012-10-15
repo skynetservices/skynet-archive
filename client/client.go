@@ -62,7 +62,7 @@ func NewClient(config *skynet.ClientConfig) *Client {
 
 	client.DoozerConn.Connect()
 
-	client.instanceMonitor = NewInstanceMonitor(client.DoozerConn)
+	client.instanceMonitor = NewInstanceMonitor(client.DoozerConn, false)
 
 	return client
 }

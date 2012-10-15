@@ -18,7 +18,7 @@ import (
 )
 
 var requests = flag.Int("requests", 10, "number of concurrent requests")
-var doozer = flag.String("doozer", "127.0.0.1:8046", "doozer instance to connect to")
+var doozer = flag.String("doozer", skynet.GetDefaultEnvVar("SKYNET_DZHOST", "127.0.0.1:8046"), "doozer instance to connect to")
 
 var totalRequests = expvar.NewInt("total-requests")
 var successfulRequests = expvar.NewInt("successful-requests")
