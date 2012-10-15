@@ -79,7 +79,7 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	}
 
 	s.Config = c
-	s.Stats = skynet.ServiceStatistics{
+	s.Stats = &skynet.ServiceStatistics{
 		StartTime: time.Now().Format("2006-01-02T15:04:05Z-0700"),
 	}
 
