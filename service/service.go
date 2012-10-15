@@ -328,7 +328,13 @@ func (s *Service) cleanupDoozerEntriesForAddr(addr *skynet.BindAddr) {
 }
 
 func (s *Service) UpdateDoozerServiceInfo() {
-	b, err := json.Marshal(s.ServiceInfo)
+
+	// We're going to create a copy of our ServiceInfo so that we can nil out the Stats, which will match the omitempty and won't marshal 
+	// this is cheap as it's a single bool, and 2 pointers.
+	si := s.ServiceInfo
+	si.Stats = nil
+
+	b, err := json.Marshal(si)
 	if err != nil {
 		s.Log.Panic(err.Error())
 	}

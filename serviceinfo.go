@@ -33,7 +33,7 @@ type ServiceInfo struct {
 	// Registered indicates if the instance is currently accepting requests.
 	Registered bool
 	// Stats is transient data about instance load and other things.
-	Stats *ServiceStatistics `json:"-"`
+	Stats *ServiceStatistics `json:",omitempty"`
 }
 
 // *ServiceInfo.GetConfigPath() returns the doozer path where it's stored. The statistics are not included.
