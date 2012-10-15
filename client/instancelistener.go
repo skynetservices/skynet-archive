@@ -64,14 +64,16 @@ type InstanceListener struct {
 	NotificationChan NotificationChan
 	monitor          *InstanceMonitor
 	id               string
+	includeStats     bool
 	doneInitializing chan bool
 }
 
-func NewInstanceListener(im *InstanceMonitor, id string, q *skynet.Query) *InstanceListener {
+func NewInstanceListener(im *InstanceMonitor, id string, q *skynet.Query, includeStats bool) *InstanceListener {
 	return &InstanceListener{
 		Query:            q,
 		monitor:          im,
 		id:               id,
+		includeStats:     includeStats,
 		NotificationChan: make(NotificationChan, 1),
 		doneInitializing: make(chan bool, 1),
 	}
@@ -83,6 +85,10 @@ func (l *InstanceListener) notifyEmpty() {
 }
 
 func (l *InstanceListener) notify(n InstanceMonitorNotification) {
+	if l.includeStats {
+		n.Service.FetchStats(l.monitor.doozer)
+	}
+
 	ln := NewInstanceListenerNotification(n)
 	l.notifyAux(ln)
 }

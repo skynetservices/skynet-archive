@@ -111,6 +111,10 @@ func (im *InstanceMonitor) mux() {
 			for _, s := range services {
 				path := s.GetConfigPath()
 				if listener.Query.ServiceMatches(s) {
+					if listener.includeStats {
+						s.FetchStats(im.doozer)
+					}
+
 					listener.notify(InstanceMonitorNotification{
 						Path:    path,
 						Service: s,
@@ -242,8 +246,8 @@ func (im *InstanceMonitor) buildInstanceList(l *InstanceListener) {
 	<-l.doneInitializing
 }
 
-func (im *InstanceMonitor) Listen(id string, q *skynet.Query) (l *InstanceListener) {
-	l = NewInstanceListener(im, id, q)
+func (im *InstanceMonitor) Listen(id string, q *skynet.Query, includeStats bool) (l *InstanceListener) {
+	l = NewInstanceListener(im, id, q, includeStats)
 
 	im.buildInstanceList(l)
 
