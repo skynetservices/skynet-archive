@@ -48,10 +48,6 @@ func (s *ServiceInfo) GetStatsPath() string {
 
 // *ServiceInfo.FetchStats will query the provided doozer connection and update its .Stats field. 
 func (s *ServiceInfo) FetchStats(doozer *DoozerConnection) (err error) {
-	if s.Stats != nil {
-		return
-	}
-
 	rev := doozer.GetCurrentRevision()
 	data, _, err := doozer.Get(s.GetStatsPath(), rev)
 	if err != nil {
