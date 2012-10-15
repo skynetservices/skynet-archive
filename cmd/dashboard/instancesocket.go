@@ -44,7 +44,7 @@ func NewInstanceSocket(ws *websocket.Conn, im *client.InstanceMonitor) {
 
 	go instanceSocketRead(ws, readChan, closeChan)
 
-	l := im.Listen(skynet.UUID(), &skynet.Query{})
+	l := im.Listen(skynet.UUID(), &skynet.Query{}, true)
 
 	instances := <-l.NotificationChan
 	err := websocket.JSON.Send(ws, SocketResponse{Action: "List", Data: instances})
