@@ -202,6 +202,7 @@ type doozerSetConfig struct {
 
 type doozerRemoveFromCluster struct {
 	ConfigPath string
+	StatsPath  string
 }
 
 type doozerFinish struct{}
@@ -219,6 +220,11 @@ loop:
 		case doozerRemoveFromCluster:
 			rev := s.doozer().GetCurrentRevision()
 			err := s.doozer().Del(i.ConfigPath, rev)
+			if err != nil {
+				s.Log.Panic(err.Error())
+			}
+
+			err = s.doozer().Del(i.StatsPath, rev)
 			if err != nil {
 				s.Log.Panic(err.Error())
 			}
@@ -317,6 +323,7 @@ func (s *Service) cleanupDoozerEntriesForAddr(addr *skynet.BindAddr) {
 	for _, i := range instances {
 		s.Log.Item("Cleaning up old doozer entry with conflicting addr " + addr.String() + "(" + i.GetConfigPath() + ")")
 		s.doozer().Del(i.GetConfigPath(), s.doozer().GetCurrentRevision())
+		s.doozer().Del(i.GetStatsPath(), s.doozer().GetCurrentRevision())
 	}
 }
 
@@ -347,6 +354,7 @@ func (s *Service) UpdateDoozerStats() {
 func (s *Service) RemoveFromCluster() {
 	s.doozerChan <- doozerRemoveFromCluster{
 		ConfigPath: s.GetConfigPath(),
+		StatsPath:  s.GetStatsPath(),
 	}
 }
 
