@@ -5,34 +5,52 @@ import (
 	"io"
 	"labix.org/v2/mgo"
 	"log"
+	"os"
 	"runtime"
 	"strings"
 	"time"
 )
 
 type Payload struct {
-	Name        string        `json:"name"`
-	Application string        `json:"application"`
-	HostName    string        `json:"host_name"`
+	// Set by user
 	ThreadName  string        `json:"thread_name"`
+	Level       LogLevel      `json:"level"`
 	Message     string        `json:"message"`
 	Tags        []string      `json:"tags"`
-	PID         int           `json:"pid"`
-	Level       LogLevel      `json:"level"`
-	Time        time.Time     `json:"time"`
-	Duration    time.Duration `json:"duration"`
-	Table       string        `json:"table"`
 	Action      string        `json:"action"`
-	UUID        string        `json:"uuid"`
-	Backtrace   []string      `json:"backtrace"`
+	// Set by setUnexportedPayloadFields()
+	hostname    string        `json:"host_name"`
+	pid         int           `json:"pid"`
+	time        time.Time     `json:"time"`
+	// Should be set by Log() method
+	name        string        `json:"name"`
+	uuid        string        `json:"uuid"`
+	table       string        `json:"table"` // Set automatically???
+	// Set by Fatal() method if need be
+	backtrace   []string      `json:"backtrace"`
+	// Should be set by BenchmarkInfo() if called
+	duration    time.Duration `json:"duration"`
+	// TODO: When should payload.Application be set?
+	Application string        `json:"application"`
 }
 
 func (pl *Payload) Exception() string {
 	// message << " -- " << "#{exception.class}: #{exception.message}\n
 	// #{(exception.backtrace || []).join("\n")}"
 	formatStr := "%s -- %s: %s\n%s"
-	backtrace := strings.Join(pl.Backtrace, "\n")
+	backtrace := strings.Join(pl.backtrace, "\n")
 	return fmt.Sprintf(formatStr, pl.Message, "panic", pl.Message, backtrace)
+}
+
+func setUnexportedPayloadFields(payload *Payload) error {
+	payload.pid = os.Getpid()
+	payload.time = time.Now()
+	hostname, err := os.Hostname()
+	if err != nil {
+		return fmt.Errorf("Error getting hostname: %v", err)
+	}
+	payload.hostname = hostname
+	return nil
 }
 
 type LogLevel int
@@ -175,8 +193,16 @@ func (ml *MongoSemanticLogger) Log(payload *Payload) error {
 	db := ml.session.DB(ml.dbName)
 	col := db.C(ml.colName)
 
-	// TODO: Remove once basics are in place (MongoDB logging, etc);
-	// `switch` for testing purposes only
+	err := setUnexportedPayloadFields(payload)
+	if err != nil {
+		// Don't return this error; too minor an issue to be worth
+		// it. (Onward!)
+		errStr := "From setUnexportedPayloadFields for payload '%+v': %v\n"
+		log.Printf(errStr, payload, err)
+	}
+	payload.uuid = ml.uuid
+	payload.table = ml.colName
+	
 	switch payload.Level {
 	case TRACE, DEBUG, INFO, WARN, ERROR: // Use Payload
 		if payload != nil {
@@ -208,10 +234,11 @@ func (ml *MongoSemanticLogger) Fatal(payload *Payload) {
 		stackTrace = append(stackTrace, traceLine)
 	}
 
-	payload.Backtrace = stackTrace
+	payload.backtrace = stackTrace
 	err := col.Insert(payload)
 	if err != nil {
-		log.Printf("Logging error: %v", err)
+		log.Printf("Error inserting '%+v' into %s collection: %v",
+			payload, ml.colName, err)
 	}
 	panic(payload)
 }
