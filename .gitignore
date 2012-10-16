@@ -11,3 +11,5 @@ examples/.vagrant
 examples/testing/fibonacci/fibservice/fibservice
 examples/testing/fibonacci/fibclient/fibclient
 examples/testing/vagranttests/vagranttests
+*~
+*.swp
