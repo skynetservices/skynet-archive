@@ -86,10 +86,10 @@ func (d *DoozerConnection) mux() {
 
 	for {
 		payload := &Payload{
-			Action: "*DoozerConnection.mux",
-			Level: DEBUG,
+			Action:     "*DoozerConnection.mux",
+			Level:      DEBUG,
 			ThreadName: "doozer",
-			Tags: []string{"doozer"},
+			Tags:       []string{"doozer"},
 		}
 		select {
 		case m := <-d.instancesChan:
@@ -177,10 +177,10 @@ func (d *DoozerConnection) dialMux(server string, boot string) error {
 	d.currentInstance = server
 	//d.Log.Println("Connected to Doozer Instance: " + server)
 	payload := &Payload{
-		Action: "*DoozerConnection.dialMux",
-		Level: DEBUG,
+		Action:     "*DoozerConnection.dialMux",
+		Level:      DEBUG,
 		ThreadName: "doozer",
-		Tags: []string{"doozer"},
+		Tags:       []string{"doozer"},
 	}
 	connected := DoozerConnected{Addr: server}
 	// Log connection
@@ -195,10 +195,10 @@ func (d *DoozerConnection) dialMux(server string, boot string) error {
 
 func (d *DoozerConnection) recoverFromError(err interface{}) {
 	payload := &Payload{
-		Action: "*DoozerConnection.recoverFromError",
-		Level: DEBUG,
+		Action:     "*DoozerConnection.recoverFromError",
+		Level:      DEBUG,
 		ThreadName: "doozer",
-		Tags: []string{"doozer"},
+		Tags:       []string{"doozer"},
 	}
 	if err == "EOF" {
 		// d.Log.Println("Lost connection to Doozer: Reconnecting...")
@@ -238,10 +238,10 @@ func (d *DoozerConnection) monitorCluster() {
 
 	for {
 		payload := &Payload{
-			Action: "*DoozerConnection.monitorCluster",
-			Level: DEBUG,
+			Action:     "*DoozerConnection.monitorCluster",
+			Level:      DEBUG,
 			ThreadName: "doozer",
-			Tags: []string{"doozer"},
+			Tags:       []string{"doozer"},
 		}
 		// blocking wait call returns on a change
 		ev, err := d.Wait("/ctl/cal/*", rev+1)
@@ -287,12 +287,12 @@ func (d *DoozerConnection) getDoozerServer(key string) *DoozerServer {
 
 func (d *DoozerConnection) Connect() {
 	payload := &Payload{
-		Action: "*DoozerConnection.Connect",
-		Level: DEBUG,
+		Action:     "*DoozerConnection.Connect",
+		Level:      DEBUG,
 		ThreadName: "doozer",
-		Tags: []string{"doozer"},
+		Tags:       []string{"doozer"},
 	}
-	
+
 	if d.Config == nil || (d.Config.Uri == "" && d.Config.BootUri == "") {
 		payload.Message = "You must supply a doozer server and/or boot uri"
 		d.Log.Fatal(payload)
@@ -336,10 +336,10 @@ func (d *DoozerConnection) getDoozerInstances() {
 
 func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
 	payload := &Payload{
-		Action: "*DoozerConnection.GetCurrentRevision",
-		Level: DEBUG,
+		Action:     "*DoozerConnection.GetCurrentRevision",
+		Level:      DEBUG,
 		ThreadName: "doozer",
-		Tags: []string{"doozer"},
+		Tags:       []string{"doozer"},
 	}
 	defer func() {
 		if err := recover(); err != nil {
