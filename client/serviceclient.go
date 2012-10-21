@@ -6,6 +6,7 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/pools"
 	"labix.org/v2/mgo/bson"
+	"log"
 	"time"
 )
 
@@ -52,7 +53,7 @@ func (se serviceError) Error() string {
 
 type ServiceClient struct {
 	client  *Client
-	Log     skynet.Logger `json:"-"`
+	Log     skynet.SemanticLogger `json:"-"`
 	cconfig *skynet.ClientConfig
 	query   *skynet.Query
 	// a list of the known instances
@@ -118,7 +119,17 @@ func (c *ServiceClient) addInstanceMux(instance *skynet.ServiceInfo) {
 		// we got a new pool, put it into the wild
 		c.instances[key] = c.client.getServicePool(m.Service)
 		c.chooser.Add(m.Service)
-		c.Log.Item(m)
+		// Create and log event
+		payload := &skynet.Payload{
+			Action: "*ServiceClient.addInstanceMux",
+			Level: skynet.DEBUG,
+			ThreadName: "serviceclient",
+			Tags: []string{"serviceclient"},
+		}
+		payload.Message = fmt.Sprintf("%T: %+v", m, m)
+		if err := c.Log.Log(payload); err != nil {
+			log.Printf("Error logging payload '%+v': %v\n", payload, err)
+		}
 	}
 }
 
@@ -131,7 +142,17 @@ func (c *ServiceClient) removeInstanceMux(instance *skynet.ServiceInfo) {
 	}
 	c.chooser.Remove(m.Service)
 	delete(c.instances, m.Service.Config.ServiceAddr.String())
-	c.Log.Item(m)
+	// Create and log event
+	payload := &skynet.Payload{
+		Action: "*ServiceClient.removeInstanceMux",
+		Level: skynet.DEBUG,
+		ThreadName: "serviceclient",
+		Tags: []string{"serviceclient"},
+	}
+	payload.Message = fmt.Sprintf("%T: %+v", m, m)
+	if err := c.Log.Log(payload); err != nil {
+		log.Printf("Error logging payload '%+v': %v\n", payload, err)
+	}
 }
 
 func (c *ServiceClient) mux() {
@@ -276,7 +297,16 @@ type sendAttempt struct {
 	err    error
 }
 
-func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}) {
+func (c *ServiceClient) attemptSend(timeout chan bool,
+	attempts chan sendAttempt, ri *skynet.RequestInfo,
+	fn string, in interface{}) {
+
+	payload := &skynet.Payload{
+		Action: "*ServiceClient.attemptSend",
+		Level: skynet.ERROR,
+		ThreadName: "serviceclient",
+		Tags: []string{"serviceclient"},
+	}
 
 	ts("attemptSend")
 	defer te("attemptSend")
@@ -308,12 +338,21 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 			}
 			// TODO: report connection failure
 			c.chooser.Remove(instance)
-			c.Log.Item(FailedConnection{err})
+			failed := FailedConnection{err}
+			// Log failure
+			payload.Message = fmt.Sprintf("%T: %+v", failed, failed)
+			if err := c.Log.Log(payload); err != nil {
+				log.Printf("Error logging payload '%+v': %v\n", payload, err)
+			}
 		}
 	}
 
 	if err != nil {
-		c.Log.Item(err)
+		payload.Message = fmt.Sprintf("Error: %v", err)
+		if err := c.Log.Log(payload); err != nil {
+			log.Printf("Error logging payload '%+v': %v\n", payload, err)
+		}
+
 		attempts <- sendAttempt{err: err}
 		return
 	}
@@ -337,7 +376,9 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 }
 
 // ServiceClient.sendToInstance() tries to make an RPC request on a particular connection to an instance
-func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.RequestInfo, funcName string, in interface{}) (result []byte, serviceErr, err error) {
+func (c *ServiceClient) sendToInstance(sr ServiceResource,
+	requestInfo *skynet.RequestInfo, funcName string, in interface{}) (
+	result []byte, serviceErr, err error) {
 	ts("sendToInstance", requestInfo)
 	defer te("sendToInstance", requestInfo)
 
@@ -349,6 +390,7 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.R
 
 	sin.In, err = bson.Marshal(in)
 	if err != nil {
+		err = fmt.Errorf("Error calling bson.Marshal: %v", err)
 		return
 	}
 
@@ -358,7 +400,18 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.R
 	if err != nil {
 		sr.Close()
 		dbg("(sr.rpcClient.Call)", err)
-		c.Log.Item(err)
+
+		// Log failure
+		payload := &skynet.Payload{
+			Action: "*ServiceClient.sendToInstance",
+			Level: skynet.ERROR,
+			ThreadName: "serviceclient",
+			Tags: []string{"serviceclient"},
+		}
+		payload.Message = "Error calling sr.rpcClient.Call: " + err.Error()
+		if err := c.Log.Log(payload); err != nil {
+			log.Printf("Error logging payload '%+v': %v\n", payload, err)
+		}
 	}
 
 	if sout.ErrString != "" {
