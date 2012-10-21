@@ -22,25 +22,25 @@ import (
 // slice -- include TRACE, DEBUG, INFO, WARN, ERROR, and FATAL.
 type Payload struct {
 	// Set by user
-	ThreadName  string        `json:"thread_name"`
-	Level       LogLevel      `json:"level"`
-	Message     string        `json:"message"`
-	Tags        []string      `json:"tags"`
-	Action      string        `json:"action"`
+	ThreadName string   `json:"thread_name"`
+	Level      LogLevel `json:"level"`
+	Message    string   `json:"message"`
+	Tags       []string `json:"tags"`
+	Action     string   `json:"action"`
 	// Set by setUnexportedPayloadFields()
-	hostname    string        `json:"host_name"`
-	pid         int           `json:"pid"`
-	time        time.Time     `json:"time"`
+	hostname string    `json:"host_name"`
+	pid      int       `json:"pid"`
+	time     time.Time `json:"time"`
 	// Should be set by Log() method
-	name        string        `json:"name"`
-	uuid        string        `json:"uuid"`
-	table       string        `json:"table"` // Set automatically???
+	name  string `json:"name"`
+	uuid  string `json:"uuid"`
+	table string `json:"table"` // Set automatically???
 	// Set by Fatal() method if need be
-	backtrace   []string      `json:"backtrace"`
+	backtrace []string `json:"backtrace"`
 	// Should be set by BenchmarkInfo() if called
-	duration    time.Duration `json:"duration"`
+	duration time.Duration `json:"duration"`
 	// TODO: When should payload.Application be set?
-	Application string        `json:"application"`
+	Application string `json:"application"`
 }
 
 // Exception formats the payload just as
@@ -215,7 +215,6 @@ func (cl *ConsoleSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
 	// TODO: Implement
 }
 
-
 //
 // MongoSemanticLogger
 //
@@ -232,9 +231,9 @@ type MongoSemanticLogger struct {
 func NewMongoSemanticLogger(addr, dbName, collectionName,
 	uuid string) (ml *MongoSemanticLogger, err error) {
 	ml = &MongoSemanticLogger{
-		dbName:         dbName,
-		colName:        collectionName,
-		uuid:           uuid,
+		dbName:  dbName,
+		colName: collectionName,
+		uuid:    uuid,
 	}
 	ml.session, err = mgo.Dial(addr)
 	return
@@ -304,7 +303,6 @@ func (ml *MongoSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
 	f func(logger SemanticLogger)) {
 	// TODO: Implement
 }
-
 
 // genStacktrace is a helper function for generating stacktrace
 // data. Used to populate payload.backtrace
