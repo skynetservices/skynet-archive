@@ -47,7 +47,7 @@ func TestGetServiceConfigFromFlagsDefaults(t *testing.T) {
 		t.Error("Address not set to default value")
 	}
 
-	if config.ServiceAddr.Port != 9999 {
+	if config.ServiceAddr.Port != 9000 {
 		t.Error("Port not set to default value")
 	}
 
