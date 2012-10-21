@@ -260,7 +260,7 @@ type FileSemanticLogger struct {
 	log *log.Logger
 }
 
-func NewFileSemanticLogger(filename string) (*FileSemanticLogger, error) {
+func NewFileSemanticLogger(name, filename string) (*FileSemanticLogger, error) {
 	// Open file with append permissions
 	flags := os.O_APPEND | os.O_WRONLY | os.O_CREATE
 	file, err := os.OpenFile(filename, flags, 0666)
@@ -269,7 +269,7 @@ func NewFileSemanticLogger(filename string) (*FileSemanticLogger, error) {
 	}
 	// `file.Close()` apparently unnecessary; works fine
 	fl := FileSemanticLogger{
-		log: log.New(file, "", log.LstdFlags),
+		log: log.New(file, fmt.Sprintf("%s: ", name), log.LstdFlags),
 	}
 	return &fl, nil
 }
