@@ -27,15 +27,14 @@ type Payload struct {
 	Message    string   `json:"message"`
 	Tags       []string `json:"tags"`
 	Action     string   `json:"action"`
-	// TODO: When should payload.Application be set?
-	Application string `json:"application"`
 	// Set by setKnownPayloadFields()
-	HostName string    `json:"host_name"`
+	Application string `json:"application"`
 	PID      int       `json:"pid"`
 	Time     time.Time `json:"time"`
+	HostName string    `json:"host_name"`
 	// Should be set by Log() method
 	Name  string `json:"name"` // Store "class name" (type)
-	UUID  string `json:"uuid"`
+	UUID  string `json:"uuid"` // Logger's UUID
 	Table string `json:"table"` // Set automatically???
 	// Set by Fatal() method if need be
 	Backtrace []string `json:"backtrace"`
@@ -63,6 +62,10 @@ func (payload *Payload) Exception() string {
 // type for which fields should be set where, and by whom (the user)
 // or what (a function or method).
 func setKnownPayloadFields(payload *Payload) error {
+	// Set Application to os.Args[0] if it wasn't set by the user
+	if payload.Application == "" {
+		payload.Application = os.Args[0]
+	}
 	payload.PID = os.Getpid()
 	payload.Time = time.Now()
 	hostname, err := os.Hostname()
