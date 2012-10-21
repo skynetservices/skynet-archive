@@ -136,24 +136,24 @@ func (ml MultiSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
 //
 
 type ConsoleSemanticLogger struct {
-	l *log.Logger
+	log *log.Logger
 }
 
 func NewConsoleSemanticLogger(name string, w io.Writer) *ConsoleSemanticLogger {
 	cl := ConsoleSemanticLogger{
 		// TODO: Set this format to match Clarity's Ruby SemanticLogger
-		l: log.New(w, fmt.Sprintf("%s: ", name), log.LstdFlags),
+		log: log.New(w, fmt.Sprintf("%s: ", name), log.LstdFlags),
 	}
 	return &cl
 }
 
 func (cl *ConsoleSemanticLogger) Log(payload *Payload) error {
-	cl.l.Printf("%v: %s\n", payload.Level, payload.Message)
+	cl.log.Printf("%v: %s\n", payload.Level, payload.Message)
 	return nil
 }
 
 func (cl *ConsoleSemanticLogger) Fatal(payload *Payload) {
-	cl.l.Fatal(payload)
+	cl.log.Fatal(payload)
 }
 
 func (cl *ConsoleSemanticLogger) BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger)) {
@@ -202,7 +202,7 @@ func (ml *MongoSemanticLogger) Log(payload *Payload) error {
 	}
 	payload.uuid = ml.uuid
 	payload.table = ml.colName
-	
+
 	switch payload.Level {
 	case TRACE, DEBUG, INFO, WARN, ERROR: // Use Payload
 		if payload != nil {
