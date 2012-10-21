@@ -2,7 +2,6 @@ package skynet
 
 import (
 	"fmt"
-	"github.com/elimisteve/fun"
 	"io"
 	"labix.org/v2/mgo"
 	"log"
@@ -258,24 +257,26 @@ func genStacktrace() (stacktrace []string) {
 //
 
 type FileSemanticLogger struct {
-	Filename string
+	log *log.Logger
 }
 
-func NewFileSemanticLogger(filename string) *FileSemanticLogger {
-	fl := FileSemanticLogger{
-		Filename: filename,
+func NewFileSemanticLogger(filename string) (*FileSemanticLogger, error) {
+	// Open file with append permissions
+	flags := os.O_APPEND | os.O_WRONLY | os.O_CREATE
+	file, err := os.OpenFile(filename, flags, 0666)
+	if err != nil {
+		return nil, fmt.Errorf("Error opening '%v': %v", filename, err)
 	}
-	return &fl
+	// `file.Close()` unnecessary; `log.New()` takes care of this
+	fl := FileSemanticLogger{
+		log: log.New(file, "", log.LstdFlags),
+	}
+	return &fl, nil
 }
 
 func (fl *FileSemanticLogger) Log(payload *Payload) error {
 	// Log payload
-	msg := fmt.Sprintf("%v: %s\n", payload.Level, payload.Message)
-	err := fun.OpenAndAppend(fl.Filename, msg)
-	if err != nil {
-		return fmt.Errorf("Error appending to log file '%v': %v",
-			fl.Filename, err)
-	}
+	fl.log.Printf("%v: %s\n", payload.Level, payload.Message)
 	return nil
 }
 
