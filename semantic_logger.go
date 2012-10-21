@@ -27,20 +27,20 @@ type Payload struct {
 	Message    string   `json:"message"`
 	Tags       []string `json:"tags"`
 	Action     string   `json:"action"`
-	// Set by setUnexportedPayloadFields()
-	hostname string    `json:"host_name"`
-	pid      int       `json:"pid"`
-	time     time.Time `json:"time"`
-	// Should be set by Log() method
-	name  string `json:"name"`
-	uuid  string `json:"uuid"`
-	table string `json:"table"` // Set automatically???
-	// Set by Fatal() method if need be
-	backtrace []string `json:"backtrace"`
-	// Should be set by BenchmarkInfo() if called
-	duration time.Duration `json:"duration"`
 	// TODO: When should payload.Application be set?
 	Application string `json:"application"`
+	// Set by setKnownPayloadFields()
+	HostName string    `json:"host_name"`
+	PID      int       `json:"pid"`
+	Time     time.Time `json:"time"`
+	// Should be set by Log() method
+	Name  string `json:"name"` // Store "class name" (type)
+	UUID  string `json:"uuid"`
+	Table string `json:"table"` // Set automatically???
+	// Set by Fatal() method if need be
+	Backtrace []string `json:"backtrace"`
+	// Should be set by BenchmarkInfo() if called
+	Duration time.Duration `json:"duration"`
 }
 
 // Exception formats the payload just as
@@ -53,23 +53,23 @@ func (payload *Payload) Exception() string {
 	// message << " -- " << "#{exception.class}: #{exception.message}\n
 	// #{(exception.backtrace || []).join("\n")}"
 	formatStr := "%s -- %s: %s\n%s"
-	backtrace := strings.Join(payload.backtrace, "\n")
+	backtrace := strings.Join(payload.Backtrace, "\n")
 	return fmt.Sprintf(formatStr, payload.Message, "panic",
 		payload.Message, backtrace)
 }
 
-// setUnexportedPayloadFields sets the `pid`, `time`, and `hostname`
+// setKnownPayloadFields sets the `PID`, `Time`, and `HostName`
 // fields of the given payload. See the documentation on the Payload
 // type for which fields should be set where, and by whom (the user)
 // or what (a function or method).
-func setUnexportedPayloadFields(payload *Payload) error {
-	payload.pid = os.Getpid()
-	payload.time = time.Now()
+func setKnownPayloadFields(payload *Payload) error {
+	payload.PID = os.Getpid()
+	payload.Time = time.Now()
 	hostname, err := os.Hostname()
 	if err != nil {
 		return fmt.Errorf("Error getting hostname: %v", err)
 	}
-	payload.hostname = hostname
+	payload.HostName = hostname
 	return nil
 }
 
@@ -254,15 +254,15 @@ func (ml *MongoSemanticLogger) Log(payload *Payload) error {
 	db := ml.session.DB(ml.dbName)
 	col := db.C(ml.colName)
 
-	err := setUnexportedPayloadFields(payload)
+	err := setKnownPayloadFields(payload)
 	if err != nil {
 		// Don't return this error; too minor an issue to be worth
 		// it. (Onward!)
-		errStr := "From setUnexportedPayloadFields for payload '%+v': %v\n"
+		errStr := "From setKnownPayloadFields for payload '%+v': %v\n"
 		log.Printf(errStr, payload, err)
 	}
-	payload.uuid = ml.uuid
-	payload.table = ml.colName
+	payload.UUID = ml.uuid
+	payload.Table = ml.colName
 
 	switch payload.Level {
 	case FATAL: // User should call `ml.Fatal(payload)` directly
@@ -288,7 +288,7 @@ func (ml *MongoSemanticLogger) Fatal(payload *Payload) {
 	col := db.C(ml.colName)
 
 	// Generate stacktrace, then log to MongoDB before panicking
-	payload.backtrace = genStacktrace()
+	payload.Backtrace = genStacktrace()
 	err := col.Insert(payload)
 	if err != nil {
 		log.Printf("Error inserting '%+v' into %s collection: %v",
@@ -305,7 +305,7 @@ func (ml *MongoSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
 }
 
 // genStacktrace is a helper function for generating stacktrace
-// data. Used to populate payload.backtrace
+// data. Used to populate payload.Backtrace
 func genStacktrace() (stacktrace []string) {
 	// TODO: Make sure that `skip` should begin at 1, not 2
 	for skip := 1; ; skip++ {
@@ -352,9 +352,9 @@ func (fl *FileSemanticLogger) Log(payload *Payload) error {
 	return nil
 }
 
-// Fatal populates payload.backtrace then panics
+// Fatal populates payload.Backtrace then panics
 func (fl *FileSemanticLogger) Fatal(payload *Payload) {
-	payload.backtrace = genStacktrace()
+	payload.Backtrace = genStacktrace()
 	// Should this call `fl.Log(payload)` before panicking?
 	panic(payload)
 }
