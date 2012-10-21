@@ -2,8 +2,9 @@ package skynet
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 	"github.com/4ad/doozer"
+	"log"
 	"os"
 	"path"
 	"sync"
@@ -36,7 +37,7 @@ type doozerconn interface {
 type DoozerConnection struct {
 	Config     *DoozerConfig
 	connection doozerconn
-	Log        Logger
+	Log        SemanticLogger
 
 	connectionMutex sync.Mutex
 
@@ -50,7 +51,8 @@ type DoozerConnection struct {
 	muxing bool
 }
 
-func NewDoozerConnection(uri string, boot string, discover bool, logger Logger) *DoozerConnection {
+func NewDoozerConnection(uri, boot string, discover bool,
+	logger SemanticLogger) *DoozerConnection {
 	return NewDoozerConnectionFromConfig(DoozerConfig{
 		Uri:          uri,
 		BootUri:      boot,
@@ -58,9 +60,10 @@ func NewDoozerConnection(uri string, boot string, discover bool, logger Logger) 
 	}, logger)
 }
 
-func NewDoozerConnectionFromConfig(config DoozerConfig, logger Logger) (d *DoozerConnection) {
+func NewDoozerConnectionFromConfig(config DoozerConfig,
+	logger SemanticLogger) (d *DoozerConnection) {
 	if logger == nil {
-		logger = NewConsoleLogger("doozer", os.Stderr)
+		logger = NewConsoleSemanticLogger("doozer", os.Stderr)
 	}
 
 	d = &DoozerConnection{
@@ -82,14 +85,30 @@ type dialInstance struct {
 func (d *DoozerConnection) mux() {
 
 	for {
+		payload := &Payload{
+			Action: "*DoozerConnection.mux",
+			Level: DEBUG,
+			ThreadName: "doozer",
+			Tags: []string{"doozer"},
+		}
 		select {
 		case m := <-d.instancesChan:
 			switch m := m.(type) {
 			case DoozerDiscovered:
-				d.Log.Item(m)
+				// Log event
+				payload.Message = fmt.Sprintf("DoozerDiscovered: %+v", m)
+				err := d.Log.Log(payload)
+				if err != nil {
+					log.Printf("Error logging payload '%+v': %v", payload, err)
+				}
 				d.doozerInstances[m.DoozerServer.Key] = m.DoozerServer
 			case DoozerRemoved:
-				d.Log.Item(m)
+				// Log event
+				payload.Message = fmt.Sprintf("DoozerRemoved: %+v", m)
+				err := d.Log.Log(payload)
+				if err != nil {
+					log.Printf("Error logging payload '%+v': %v", payload, err)
+				}
 
 				delete(d.doozerInstances, m.DoozerServer.Key)
 			}
@@ -142,7 +161,7 @@ func (d *DoozerConnection) dialAnInstanceMux() (err error) {
 		}
 		delete(d.doozerInstances, key)
 	}
-	err = errors.New("Couldn't connect to any doozer instance")
+	err = fmt.Errorf("Couldn't connect to any doozer instance")
 	return
 }
 
@@ -157,28 +176,50 @@ func (d *DoozerConnection) dialMux(server string, boot string) error {
 
 	d.currentInstance = server
 	//d.Log.Println("Connected to Doozer Instance: " + server)
-	d.Log.Item(DoozerConnected{
-		Addr: server,
-	})
+	payload := &Payload{
+		Action: "*DoozerConnection.dialMux",
+		Level: DEBUG,
+		ThreadName: "doozer",
+		Tags: []string{"doozer"},
+	}
+	connected := DoozerConnected{Addr: server}
+	// Log connection
+	payload.Message = fmt.Sprintf("%T: %+v", connected, connected)
+	err = d.Log.Log(payload)
+	if err != nil {
+		return fmt.Errorf("Error logging payload '%+v': %v", payload, err)
+	}
 
 	return nil
 }
 
 func (d *DoozerConnection) recoverFromError(err interface{}) {
+	payload := &Payload{
+		Action: "*DoozerConnection.recoverFromError",
+		Level: DEBUG,
+		ThreadName: "doozer",
+		Tags: []string{"doozer"},
+	}
 	if err == "EOF" {
 		// d.Log.Println("Lost connection to Doozer: Reconnecting...")
-		d.Log.Item(DoozerLostConnection{
-			DoozerConfig: d.Config,
-		})
+		connection := DoozerLostConnection{DoozerConfig: d.Config}
+		payload.Message = "Lost connection to Doozer: Reconnecting... "
+		payload.Message += fmt.Sprintf("%T: %+v", connection, connection)
+		err := d.Log.Log(payload)
+		if err != nil {
+			log.Printf("Error logging payload '%+v': %v", payload, err)
+		}
 
 		dialErr := d.dialAnInstance()
 		if dialErr != nil {
-			d.Log.Panic(dialErr)
+			payload.Message = "Couldn't reconnect to doozer"
+			d.Log.Fatal(payload)
 		}
 
 	} else {
 		// Don't know how to handle, go ahead and panic
-		d.Log.Panic(err)
+		payload.Message = fmt.Sprintf("Unknown doozer error: %+v", err)
+		d.Log.Fatal(payload)
 	}
 }
 
@@ -196,10 +237,17 @@ func (d *DoozerConnection) monitorCluster() {
 	rev := d.GetCurrentRevision()
 
 	for {
+		payload := &Payload{
+			Action: "*DoozerConnection.monitorCluster",
+			Level: DEBUG,
+			ThreadName: "doozer",
+			Tags: []string{"doozer"},
+		}
 		// blocking wait call returns on a change
 		ev, err := d.Wait("/ctl/cal/*", rev+1)
 		if err != nil {
-			d.Log.Panic(err.Error())
+			payload.Message = "Error near d.Wait: " + err.Error()
+			d.Log.Fatal(payload)
 		}
 
 		buf := bytes.NewBuffer(ev.Body)
@@ -238,8 +286,16 @@ func (d *DoozerConnection) getDoozerServer(key string) *DoozerServer {
 }
 
 func (d *DoozerConnection) Connect() {
+	payload := &Payload{
+		Action: "*DoozerConnection.Connect",
+		Level: DEBUG,
+		ThreadName: "doozer",
+		Tags: []string{"doozer"},
+	}
+	
 	if d.Config == nil || (d.Config.Uri == "" && d.Config.BootUri == "") {
-		d.Log.Panic("You must supply a doozer server and/or boot uri")
+		payload.Message = "You must supply a doozer server and/or boot uri"
+		d.Log.Fatal(payload)
 	}
 
 	if !d.muxing {
@@ -249,7 +305,9 @@ func (d *DoozerConnection) Connect() {
 
 	err := d.dialAnInstance()
 	if err != nil {
-		d.Log.Panic("Failed to connect to any of the supplied Doozer Servers: " + err.Error())
+		payload.Message = "Failed to connect to any of the supplied "
+		payload.Message += "Doozer Servers: " + err.Error()
+		d.Log.Fatal(payload)
 	}
 
 	// Let's watch doozers internal config to check for new servers
@@ -277,6 +335,12 @@ func (d *DoozerConnection) getDoozerInstances() {
 }
 
 func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
+	payload := &Payload{
+		Action: "*DoozerConnection.GetCurrentRevision",
+		Level: DEBUG,
+		ThreadName: "doozer",
+		Tags: []string{"doozer"},
+	}
 	defer func() {
 		if err := recover(); err != nil {
 			d.recoverFromError(err)
@@ -288,7 +352,8 @@ func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
 	revision, err := d.Connection().Rev()
 
 	if err != nil {
-		d.Log.Panic(err.Error())
+		payload.Message = "Error near d.Connection().Rev(): " + err.Error()
+		d.Log.Fatal(payload)
 	}
 
 	return revision
@@ -330,7 +395,8 @@ func (d *DoozerConnection) Get(file string, rev int64) (data []byte, revision in
 	return d.Connection().Get(file, &rev)
 }
 
-func (d *DoozerConnection) Getdir(path string, rev int64, offset int, limit int) (files []string, err error) {
+func (d *DoozerConnection) Getdir(path string, rev int64, offset int,
+	limit int) (files []string, err error) {
 	defer func() {
 		if err := recover(); err != nil {
 			d.recoverFromError(err)
@@ -342,7 +408,8 @@ func (d *DoozerConnection) Getdir(path string, rev int64, offset int, limit int)
 	return d.Connection().Getdir(path, rev, offset, limit)
 }
 
-func (d *DoozerConnection) Getdirinfo(path string, rev int64, offset int, limit int) (files []doozer.FileInfo, err error) {
+func (d *DoozerConnection) Getdirinfo(path string, rev int64, offset int,
+	limit int) (files []doozer.FileInfo, err error) {
 	defer func() {
 		if err := recover(); err != nil {
 			d.recoverFromError(err)
