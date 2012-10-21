@@ -219,22 +219,12 @@ func (ml *MongoSemanticLogger) Log(payload *Payload) error {
 }
 
 func (ml *MongoSemanticLogger) Fatal(payload *Payload) {
+	// Log to proper DB and collection name
 	db := ml.session.DB(ml.dbName)
 	col := db.C(ml.colName)
 
-	var stackTrace []string
-
-	for skip := 1; ; skip++ {
-		pc, file, line, ok := runtime.Caller(skip)
-		if !ok {
-			break
-		}
-		f := runtime.FuncForPC(pc)
-		traceLine := fmt.Sprintf("%s:%d %s()\n", file, line, f.Name())
-		stackTrace = append(stackTrace, traceLine)
-	}
-
-	payload.backtrace = stackTrace
+	// Generate stacktrace, then log to MongoDB before panicking
+	payload.backtrace = genStacktrace()
 	err := col.Insert(payload)
 	if err != nil {
 		log.Printf("Error inserting '%+v' into %s collection: %v",
@@ -246,4 +236,18 @@ func (ml *MongoSemanticLogger) Fatal(payload *Payload) {
 func (ml *MongoSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
 		f func(logger SemanticLogger)) {
 		// TODO: Implement
+}
+
+func genStacktrace() (stacktrace []string) {
+	// TODO: Make sure that `skip` should begin at 1, not 2
+	for skip := 1; ; skip++ {
+		pc, file, line, ok := runtime.Caller(skip)
+		if !ok {
+			break
+		}
+		f := runtime.FuncForPC(pc)
+		traceLine := fmt.Sprintf("%s:%d %s()\n", file, line, f.Name())
+		stacktrace = append(stacktrace, traceLine)
+	}
+	return
 }
