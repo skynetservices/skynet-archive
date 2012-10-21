@@ -2,6 +2,7 @@ package skynet
 
 import (
 	"fmt"
+	"github.com/elimisteve/fun"
 	"io"
 	"labix.org/v2/mgo"
 	"log"
@@ -250,4 +251,40 @@ func genStacktrace() (stacktrace []string) {
 		stacktrace = append(stacktrace, traceLine)
 	}
 	return
+}
+
+//
+// FileSemanticLogger
+//
+
+type FileSemanticLogger struct {
+	Filename string
+}
+
+func NewFileSemanticLogger(filename string) *FileSemanticLogger {
+	fl := FileSemanticLogger{
+		Filename: filename,
+	}
+	return &fl
+}
+
+func (fl *FileSemanticLogger) Log(payload *Payload) error {
+	// Log payload
+	msg := fmt.Sprintf("%v: %s\n", payload.Level, payload.Message)
+	err := fun.OpenAndAppend(fl.Filename, msg)
+	if err != nil {
+		return fmt.Errorf("Error appending to log file '%v': %v",
+			fl.Filename, err)
+	}
+	return nil
+}
+
+func (fl *FileSemanticLogger) Fatal(payload *Payload) {
+	payload.backtrace = genStacktrace()
+	panic(payload)
+}
+
+func (fl *FileSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
+	f func(logger SemanticLogger)) {
+	// TODO: Implement
 }
