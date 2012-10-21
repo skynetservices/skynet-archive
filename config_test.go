@@ -6,9 +6,12 @@ import (
 )
 
 func TestGetServiceConfigFromFlags(t *testing.T) {
-	os.Args = []string{"test", "--l=localhost:1234", "--region=TestRegion", "--doozer=localhost:8046", "--doozerboot=localhost:1232", "--autodiscover=true"}
+	os.Args = []string{"test", "--l=localhost:1234", "--region=TestRegion",
+		"--doozer=localhost:8046", "--doozerboot=localhost:1232",
+		"--autodiscover=true",
+	}
 
-	config, _ := GetServiceConfigFromFlags()
+	config, _ := GetServiceConfigFromFlags(os.Args[1:])
 
 	if config.ServiceAddr.IPAddress != "localhost" {
 		t.Error("Address not set through flag")
@@ -38,7 +41,7 @@ func TestGetServiceConfigFromFlags(t *testing.T) {
 func TestGetServiceConfigFromFlagsDefaults(t *testing.T) {
 	os.Args = []string{"test"}
 
-	config, _ := GetServiceConfigFromFlags()
+	config, _ := GetServiceConfigFromFlags(os.Args[1:])
 
 	if config.ServiceAddr.IPAddress != "127.0.0.1" {
 		t.Error("Address not set to default value")
