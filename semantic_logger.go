@@ -267,7 +267,7 @@ func NewFileSemanticLogger(filename string) (*FileSemanticLogger, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error opening '%v': %v", filename, err)
 	}
-	// `file.Close()` unnecessary; `log.New()` takes care of this
+	// `file.Close()` apparently unnecessary; works fine
 	fl := FileSemanticLogger{
 		log: log.New(file, "", log.LstdFlags),
 	}
