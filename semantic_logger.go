@@ -261,6 +261,7 @@ func (ml *MongoSemanticLogger) Log(payload *Payload) error {
 		errStr := "From setKnownPayloadFields for payload '%+v': %v\n"
 		log.Printf(errStr, payload, err)
 	}
+	payload.Name = fmt.Sprintf("%T", ml)
 	payload.UUID = ml.uuid
 	payload.Table = ml.colName
 
