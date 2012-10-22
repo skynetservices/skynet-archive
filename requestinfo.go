@@ -1,5 +1,6 @@
 package skynet
 
+// RequestInfo is information about a request, and is provided to every skynet RPC call.
 type RequestInfo struct {
 	// OriginAddress is the reported address of the originating client, typically from outside the service cluster.
 	OriginAddress string

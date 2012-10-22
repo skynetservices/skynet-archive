@@ -85,7 +85,7 @@ func newServiceClient(query *skynet.Query, c *Client) (sc *ServiceClient) {
 		giveupTimeout: skynet.DefaultTimeoutDuration,
 	}
 	sc.listenID = skynet.UUID()
-	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query)
+	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query, false)
 
 	go sc.mux()
 	return
@@ -381,6 +381,9 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource,
 	result []byte, serviceErr, err error) {
 	ts("sendToInstance", requestInfo)
 	defer te("sendToInstance", requestInfo)
+
+	sr.service.FetchStats(c.client.doozer())
+	dbgf("stats: %+v\n", sr.service.Stats)
 
 	sin := skynet.ServiceRPCIn{
 		RequestInfo: requestInfo,

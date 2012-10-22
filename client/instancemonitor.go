@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/bketelsen/skynet"
 	"path"
+	"strings"
 )
 
 type InstanceMonitorNotification struct {
@@ -36,6 +37,7 @@ const (
 	InstanceAddNotification = iota
 	InstanceUpdateNotification
 	InstanceRemoveNotification
+	InstanceStatsUpdateNotification
 )
 
 type instanceListRequest struct {
@@ -53,7 +55,7 @@ type InstanceMonitor struct {
 	notificationChan chan InstanceMonitorNotification
 }
 
-func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
+func NewInstanceMonitor(doozer *skynet.DoozerConnection, monitorStats bool) (im *InstanceMonitor) {
 	im = &InstanceMonitor{
 		doozer:           doozer,
 		clients:          make(map[string]*InstanceListener, 0),
@@ -67,6 +69,10 @@ func NewInstanceMonitor(doozer *skynet.DoozerConnection) (im *InstanceMonitor) {
 	go im.mux()
 	go im.monitorInstances()
 
+	if monitorStats {
+		go im.monitorInstanceStats()
+	}
+
 	return
 }
 
@@ -78,6 +84,7 @@ func (im *InstanceMonitor) mux() {
 
 			// Update internal instance list
 			switch notification.Type {
+			// Stats updates don't update our internal map
 			case InstanceAddNotification, InstanceUpdateNotification:
 				im.instances[notification.Path] = notification.Service
 			case InstanceRemoveNotification:
@@ -90,7 +97,14 @@ func (im *InstanceMonitor) mux() {
 				}
 
 				if c.Query.ServiceMatches(notification.Service) {
-					c.notify(notification)
+					// Stats updates should appear as normal updates for any clients who have included Stats
+					if notification.Type == InstanceStatsUpdateNotification && c.includeStats {
+						notification.Type = InstanceUpdateNotification
+						c.notify(notification)
+					} else if notification.Type != InstanceStatsUpdateNotification {
+						c.notify(notification)
+					}
+
 				} else if notification.OldService.Config != nil && c.Query.ServiceMatches(notification.OldService) {
 					// Used to match, we need to send a remove notification
 					notification.Type = InstanceRemoveNotification
@@ -111,6 +125,10 @@ func (im *InstanceMonitor) mux() {
 			for _, s := range services {
 				path := s.GetConfigPath()
 				if listener.Query.ServiceMatches(s) {
+					if listener.includeStats {
+						s.FetchStats(im.doozer)
+					}
+
 					listener.notify(InstanceMonitorNotification{
 						Path:    path,
 						Service: s,
@@ -233,7 +251,55 @@ func (im *InstanceMonitor) monitorInstances() {
 			}
 		}
 	}
+}
 
+func (im *InstanceMonitor) monitorInstanceStats() {
+	rev := im.doozer.GetCurrentRevision()
+
+	watchPath := path.Join("/statistics", "**")
+
+	for {
+		ev, err := im.doozer.Wait(watchPath, rev+1)
+		rev = ev.Rev
+
+		if err != nil {
+			continue
+		}
+
+		// If it's being removed no need to send notification, it's sent my monitorInstances
+		if ev.IsDel() {
+			continue
+		} else {
+			var s skynet.ServiceInfo
+			var stats skynet.ServiceStatistics
+			var ok bool
+
+			servicePath := strings.Replace(ev.Path, "/statistics", "/services", 1)
+
+			// If InstanceMonitor doesn't know about it, it was probably deleted, safe not to send notification
+			if s, ok = im.instances[servicePath]; !ok {
+				continue
+			}
+
+			buf := bytes.NewBuffer(ev.Body)
+			err = json.Unmarshal(buf.Bytes(), &stats)
+
+			if err != nil {
+				fmt.Println("error unmarshalling service")
+				continue
+			}
+
+			s.Stats = &stats
+
+			// Let's create an update notification to send, with our new statistics
+			im.notificationChan <- InstanceMonitorNotification{
+				Path:       ev.Path,
+				Service:    s,
+				OldService: im.instances[servicePath],
+				Type:       InstanceStatsUpdateNotification,
+			}
+		}
+	}
 }
 
 func (im *InstanceMonitor) buildInstanceList(l *InstanceListener) {
@@ -242,8 +308,8 @@ func (im *InstanceMonitor) buildInstanceList(l *InstanceListener) {
 	<-l.doneInitializing
 }
 
-func (im *InstanceMonitor) Listen(id string, q *skynet.Query) (l *InstanceListener) {
-	l = NewInstanceListener(im, id, q)
+func (im *InstanceMonitor) Listen(id string, q *skynet.Query, includeStats bool) (l *InstanceListener) {
+	l = NewInstanceListener(im, id, q, includeStats)
 
 	im.buildInstanceList(l)
 

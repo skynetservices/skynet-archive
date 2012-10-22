@@ -1,27 +1,27 @@
 ![logo](/bketelsen/skynet/raw/master/documentation/SkyNetLogo.png)
 
 ##Introduction
-Skynet is a communication protocol for building massively distributed apps in Go.  
-It is not constrained to Go, so it will lend itself nicely to polyglot environments.  
+Skynet is a communication protocol for building massively distributed apps in Go.
+It is not constrained to Go, so it will lend itself nicely to polyglot environments.
 The first planned language addition is Ruby.
 
 ##Tell me more:
-Servers die, stop communicating, catch on fire, get killed by robots from the future, and should not be trusted. 
+Servers die, stop communicating, catch on fire, get killed by robots from the future, and should not be trusted.
 
-If your site won’t work with a Chaos Monkey, it isn’t safe. 
+If your site won’t work with a Chaos Monkey, it isn’t safe.
 Enter Skynet. Each Skynet module is self–contained and self–aware – if you have one server with an authentication module on it, and that server melts, Skynet will notice, kill it, and automatically create a new one. (if you let it)
 
 Skynet probably won’t die unless your data center gets hit by a comet.  We recommend at least 2 data centers in that scenario.
 
-[Skynet Services](wiki/Services) are where the work gets done.  These are the processes that service the requests, process the API calls, get the external data, log the requests, authenticate the users, etc. 
+[Skynet Services](wiki/Services) are where the work gets done.  These are the processes that service the requests, process the API calls, get the external data, log the requests, authenticate the users, etc.
 
-			
-Before you can run skynet you'll need to have at least one [doozerd](wiki/Setting-up-a-Doozer-cluster) process running.  
+
+Before you can run skynet you'll need to have at least one [doozerd](wiki/Setting-up-a-Doozer-cluster) process running.
 
 ##How?
 Each process in SkyNet receives its configuration from a centralized configuration repository (currently [Doozer](wiki/Setting-up-a-Doozer-cluster) - possibly pluggable in the future).
 
-Configuration changes are pushed to each process when new skynet services are started.  
+Configuration changes are pushed to each process when new skynet services are started.
 This means that starting a new service automatically advertises that service's availability to the rest of the members of the skynet cluster.
 
 Processes are monitored, and restarted when they die, and are removed from the cluster configuration management system so that clients do not create new connections. Currently connected clients will notice these removals and adjust their internal pool of connections as services are added/removed/die.
@@ -44,6 +44,12 @@ Examples can be found in the *examples/* directory.
 
 Clients contain a pool of connections to a given service, up to a specified size to load balance requests across. Instances are removed from Skynet when they crash, the pools are smart enough to remove any connections to any instances that are no longer available and replace them with connections to valid instances to maintain the pool.
 
+To use the Go client in your own program to call Skynet services, see [Creating a simple client](https://github.com/bketelsen/skynet/wiki/Client-Tutorial)
+The Go client is part of this project. Clients in other languages are also available:
+* [Ruby Skynet Client](http://github.com/ClarityServices/ruby_skynet)
+
+To build a Client in your favorite language see the [Skynet Protocol Guide](https://github.com/bketelsen/skynet/blob/master/protocol.md)
+
 ##Management
 
 ####Sky
@@ -65,7 +71,7 @@ In the future you will be able to live search your logs, as well as see graph da
 
 ##Internals
 #####Query
-The sky command and the client connectivity logic is all backed by [Query](wiki/Query). A struct that can be used to search the cluster for instances of services, regions, hosts, service names, service versions that Skynet is currently aware of. It's exposed for any custom need you may have for searching the cluster. 
+The sky command and the client connectivity logic is all backed by [Query](wiki/Query). A struct that can be used to search the cluster for instances of services, regions, hosts, service names, service versions that Skynet is currently aware of. It's exposed for any custom need you may have for searching the cluster.
 
 [https://github.com/bketelsen/skynet/wiki/Query](https://github.com/bketelsen/skynet/wiki/Query)
 
@@ -79,7 +85,7 @@ The [wiki](wiki) has tons of documentation and tutorials on how to get started.
 
 The *examples/* directory has example services & clients
 
-Also in the *examples*/ directory is a Vagrant setup with chef recipes to deploy a mock cluster using virtual machines so that you can see it in action. The wiki has a nice walkthrough on setting up and running a simulated cluster with Vagrant: [https://github.com/bketelsen/skynet/wiki/Vagrant-Example](wiki/Vagrant-Example) 
+Also in the *examples*/ directory is a Vagrant setup with chef recipes to deploy a mock cluster using virtual machines so that you can see it in action. The wiki has a nice walkthrough on setting up and running a simulated cluster with Vagrant: [https://github.com/bketelsen/skynet/wiki/Vagrant-Example](wiki/Vagrant-Example)
 
 
 ## Work In Progress

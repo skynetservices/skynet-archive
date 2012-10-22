@@ -9,14 +9,24 @@ import (
 	"strings"
 )
 
+// Query is used for finding collections of service instances, according to the criteria it is given.
 type Query struct {
-	Service    string
-	Version    string
-	Host       string
-	Port       string
-	Region     string
-	UUID       string
+	// Service is the name of the service being queried. Blank for all services.
+	Service string
+	// Version is the version of the service being queried. Blank for all versions.
+	Version string
+	// Host is the host of the service being queried. Blank for all hosts.
+	Host string
+	// Port is the port of the service being queried. Blank for all ports.
+	Port string
+	// Region is the region of the service being queried. Blank for all regions.
+	Region string
+	// UUID is the UUID of the service being queried. Blank for any UUID.
+	UUID string
+
+	// Registered is the registered status of the service. Nil for any status.
 	Registered *bool
+
 	DoozerConn *DoozerConnection
 	doozerRev  int64
 
@@ -26,7 +36,9 @@ type Query struct {
 	files      map[string]*doozer.FileInfo
 }
 
-func (q *Query) VisitDir(path string, f *doozer.FileInfo) bool {
+type queryVisitor Query
+
+func (q *queryVisitor) VisitDir(path string, f *doozer.FileInfo) bool {
 	parts := strings.Split(path, "/")
 
 	// If we know we are looking for dir's at a specified level no need to dig deeper
@@ -42,7 +54,7 @@ func (q *Query) VisitDir(path string, f *doozer.FileInfo) bool {
 	return true
 }
 
-func (q *Query) VisitFile(path string, f *doozer.FileInfo) {
+func (q *queryVisitor) VisitFile(path string, f *doozer.FileInfo) {
 	q.files[path] = f
 }
 
@@ -85,9 +97,10 @@ func (q *Query) search() {
 
 	path := q.makePath()
 
-	q.DoozerConn.Walk(q.doozerRev, path, q, nil)
+	q.DoozerConn.Walk(q.doozerRev, path, (*queryVisitor)(q), nil)
 }
 
+// *Query.FindHosts() finds all the hosts with services that match the query.
 func (q *Query) FindHosts() []string {
 	q.pathLength = 6
 	q.search()
@@ -95,6 +108,7 @@ func (q *Query) FindHosts() []string {
 	return q.matchingPaths()
 }
 
+// *Query.FindRegions() finds all the regions with services that match the query.
 func (q *Query) FindRegions() []string {
 	q.pathLength = 5
 	q.search()
@@ -102,6 +116,7 @@ func (q *Query) FindRegions() []string {
 	return q.matchingPaths()
 }
 
+// *Query.FindServices() finds paths for all the services that match the query.
 func (q *Query) FindServices() []string {
 	q.pathLength = 3
 	q.search()
@@ -109,6 +124,7 @@ func (q *Query) FindServices() []string {
 	return q.matchingPaths()
 }
 
+// *Query.FindServiceVersions finds all the versions with services that match the query.
 func (q *Query) FindServiceVersions() []string {
 	q.pathLength = 4
 	q.search()
@@ -116,6 +132,7 @@ func (q *Query) FindServiceVersions() []string {
 	return q.matchingPaths()
 }
 
+// *Query.FindInstances fetches the services that match the query.
 func (q *Query) FindInstances() []*ServiceInfo {
 	q.search()
 
@@ -224,6 +241,7 @@ func (q *Query) pathMatches(path string) bool {
 	return true
 }
 
+// *Query.ServiceMatches indicates if the query matches the given service.
 func (q *Query) ServiceMatches(s ServiceInfo) bool {
 	if q.Service != "" && s.Config.Name != q.Service {
 		return false
@@ -256,6 +274,7 @@ func (q *Query) ServiceMatches(s ServiceInfo) bool {
 	return true
 }
 
+// *Query.Reset erases this query, making it match all services until fields are set.
 func (q *Query) Reset() {
 	q.Service = ""
 	q.Version = ""
