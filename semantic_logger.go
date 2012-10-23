@@ -22,20 +22,20 @@ import (
 // slice -- include TRACE, DEBUG, INFO, WARN, ERROR, and FATAL.
 type LogPayload struct {
 	// Set by user by passing values to NewLogPayload()
-	Level      LogLevel `json:"level"`
-	Message    string   `json:"message"`
+	Level   LogLevel `json:"level"`
+	Message string   `json:"message"`
 	// Set automatically within NewLogPayload()
-	Action     string   `json:"action"`
+	Action string `json:"action"`
 	// Set by .setKnownFields()
-	Application string `json:"application"`
-	PID      int       `json:"pid"`
-	Time     time.Time `json:"time"`
-	HostName string    `json:"host_name"`
+	Application string    `json:"application"`
+	PID         int       `json:"pid"`
+	Time        time.Time `json:"time"`
+	HostName    string    `json:"host_name"`
 	// Set by .SetTags() convenience method
 	Tags []string `json:"tags"`
 	// Should be set by .Log()
-	Name  string `json:"name"` // Store "class name" (type)
-	UUID  string `json:"uuid"` // Logger's UUID
+	Name  string `json:"name"`  // Store "class name" (type)
+	UUID  string `json:"uuid"`  // Logger's UUID
 	Table string `json:"table"` // Mongo collection name
 	// Set by Fatal() method if need be
 	Backtrace []string `json:"backtrace"`
@@ -86,10 +86,11 @@ func NewLogPayload(level LogLevel, formatStr string,
 	vars ...interface{}) *LogPayload {
 
 	payload := &LogPayload{
-	Level: level,
-	Message: fmt.Sprintf(formatStr, vars...),
-	Action: getCallerName(2), // TODO: Make sure that `2` is the
-							  // number that should be passed in here
+		Level:   level,
+		Message: fmt.Sprintf(formatStr, vars...),
+		// TODO: Make sure that `2` is the number that should be
+		// passed in here
+		Action:  getCallerName(2), 
 	}
 	payload.setKnownFields()
 
