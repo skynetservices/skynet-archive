@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// LogPayload stores detailed logging information, including all fields
-// used by Clarity Service's semantic_logger (see
+// LogPayload stores detailed logging information, including all
+// fields used by Clarity Service's semantic_logger (see
 // https://github.com/ClarityServices/semantic_logger). See the
 // LogPayload struct's inline comments for instructions as to which
 // fields should be populated by whom or what (e.g., the user
@@ -21,25 +21,28 @@ import (
 // Valid log levels -- a list of which is stored in the `LogLevels`
 // slice -- include TRACE, DEBUG, INFO, WARN, ERROR, and FATAL.
 type LogPayload struct {
-	// Set by NewLogPayload or by user manually
-	ThreadName string   `json:"thread_name"`
+	// Set by user by passing values to NewLogPayload()
 	Level      LogLevel `json:"level"`
 	Message    string   `json:"message"`
-	Tags       []string `json:"tags"`
+	// Set automatically within NewLogPayload()
 	Action     string   `json:"action"`
 	// Set by .setKnownFields()
 	Application string `json:"application"`
 	PID      int       `json:"pid"`
 	Time     time.Time `json:"time"`
 	HostName string    `json:"host_name"`
+	// Set by .SetTags() convenience method
+	Tags []string `json:"tags"`
 	// Should be set by .Log()
 	Name  string `json:"name"` // Store "class name" (type)
 	UUID  string `json:"uuid"` // Logger's UUID
-	Table string `json:"table"` // Set automatically???
+	Table string `json:"table"` // Mongo collection name
 	// Set by Fatal() method if need be
 	Backtrace []string `json:"backtrace"`
 	// Should be set by BenchmarkInfo() if called
 	Duration time.Duration `json:"duration"`
+	// Optionally set by user manually
+	ThreadName string `json:"thread_name"`
 }
 
 // Exception formats the payload just as
@@ -57,10 +60,10 @@ func (payload *LogPayload) Exception() string {
 		payload.Message, backtrace)
 }
 
-// setKnownFields sets the `PID`, `Time`, and `HostName`
-// fields of the given payload. See the documentation on the LogPayload
-// type for which fields should be set where, and by whom (the user)
-// or what (a function or method).
+// setKnownFields sets the `Application`, `PID`, `Time`, and
+// `HostName` fields of the given payload. See the documentation on
+// the LogPayload type for which fields should be set where, and by
+// whom (the user) or what (a function or method).
 func (payload *LogPayload) setKnownFields() {
 	// Set Application to os.Args[0] if it wasn't set by the user
 	if payload.Application == "" {
@@ -73,6 +76,30 @@ func (payload *LogPayload) setKnownFields() {
 		log.Printf("Error getting hostname: %v\n", err)
 	}
 	payload.HostName = hostname
+}
+
+func (payload *LogPayload) SetTags(tags ...string) {
+	payload.Tags = tags
+}
+
+func NewLogPayload(level LogLevel, formatStr string,
+	vars ...interface{}) *LogPayload {
+
+	payload := &LogPayload{
+	Level: level,
+	Message: fmt.Sprintf(formatStr, vars...),
+	Action: getCallerName(2), // TODO: Make sure that `2` is the
+							  // number that should be passed in here
+	}
+	payload.setKnownFields()
+
+	return payload
+}
+
+func getCallerName(skip int) string {
+	pc, _, _, _ := runtime.Caller(skip)
+	f := runtime.FuncForPC(pc)
+	return f.Name()
 }
 
 // LogLevels are ints for the sake of having a well-defined
