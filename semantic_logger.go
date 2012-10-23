@@ -61,7 +61,7 @@ func (payload *LogPayload) Exception() string {
 // fields of the given payload. See the documentation on the LogPayload
 // type for which fields should be set where, and by whom (the user)
 // or what (a function or method).
-func (payload *LogPayload) SetKnownFields() error {
+func (payload *LogPayload) SetKnownFields() {
 	// Set Application to os.Args[0] if it wasn't set by the user
 	if payload.Application == "" {
 		payload.Application = os.Args[0]
@@ -70,10 +70,9 @@ func (payload *LogPayload) SetKnownFields() error {
 	payload.Time = time.Now()
 	hostname, err := os.Hostname()
 	if err != nil {
-		return fmt.Errorf("Error getting hostname: %v", err)
+		log.Printf("Error getting hostname: %v\n", err)
 	}
 	payload.HostName = hostname
-	return nil
 }
 
 // LogLevels are ints for the sake of having a well-defined
@@ -130,7 +129,7 @@ func (level LogLevel) String() string {
 // SemanticLogger is meant to match the format and functionality of
 // github.com/ClarityServices/semantic_logger
 type SemanticLogger interface {
-	Log(payload *LogPayload) error
+	Log(payload *LogPayload)
 	Fatal(payload *LogPayload)
 	BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger))
 }
@@ -151,18 +150,16 @@ func NewMultiSemanticLogger(loggers ...SemanticLogger) (ml MultiSemanticLogger) 
 // MultiSemanticLogger. For each logger, logging behavior may vary
 // depending upon the LogLevel.
 func (ml MultiSemanticLogger) Log(level LogLevel, msg string,
-	payload *LogPayload) error {
+	payload *LogPayload) {
+
 	switch level {
 	case TRACE, DEBUG, INFO, WARN, ERROR, FATAL:
 		for _, lgr := range ml {
 			// Note that this won't work very well if
 			// payload.LogLevel == FATAL; the first logger will panic.
-			if err := lgr.Log(payload); err != nil {
-				log.Printf("Error calling .Log: %v\n", err)
-			}
+			lgr.Log(payload)
 		}
 	}
-	return nil
 }
 
 // BenchmarkInfo runs .BenchmarkInfo(level, msg, f) on every logger in
@@ -196,18 +193,14 @@ func NewConsoleSemanticLogger(name string, w io.Writer) *ConsoleSemanticLogger {
 
 // Log uses select parts of the given payload and logs it to the
 // console.
-func (cl *ConsoleSemanticLogger) Log(payload *LogPayload) error {
+func (cl *ConsoleSemanticLogger) Log(payload *LogPayload) {
 	// TODO: Consider using more payload fields
 	cl.log.Printf("%v: %s\n", payload.Level, payload.Message)
-	return nil
 }
 
 // Fatal logs the given payload to the console, then panics.
 func (cl *ConsoleSemanticLogger) Fatal(payload *LogPayload) {
-	err := cl.Log(payload)
-	if err != nil {
-		fmt.Printf("Error logging payload to cl\n")
-	}
+	cl.Log(payload)
 	cl.log.Fatal(payload)
 }
 
@@ -245,25 +238,22 @@ func NewMongoSemanticLogger(addr, dbName, collectionName,
 // Log saves all fields of the given payload to MongoDB, setting
 // unexported fields as necessary. May behave differently based upon
 // payload.LogLevel.
-func (ml *MongoSemanticLogger) Log(payload *LogPayload) error {
+func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 	// Sanity checks
 	if ml == nil {
-		return fmt.Errorf("Can't log to nil *MongoSemanticLogger")
+		log.Printf("Can't log to nil *MongoSemanticLogger\n")
+		return
 	}
 	if payload == nil {
-		return fmt.Errorf("Can't log nil *LogPayload")
+		log.Printf("Can't log nil *LogPayload\n")
+		return
 	}
 
 	db := ml.session.DB(ml.dbName)
 	col := db.C(ml.colName)
 
-	err := payload.SetKnownFields()
-	if err != nil {
-		// Don't return this error; too minor an issue to be worth
-		// it. (Onward!)
-		errStr := "From SetKnownFields for payload '%+v': %v\n"
-		log.Printf(errStr, payload, err)
-	}
+	payload.SetKnownFields()
+
 	payload.Name = fmt.Sprintf("%T", ml)
 	payload.UUID = ml.uuid
 	payload.Table = ml.colName
@@ -278,11 +268,10 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) error {
 			err := col.Insert(payload)
 			if err != nil {
 				errStr := "Error logging with MongoSemanticLogger %s: %v"
-				return fmt.Errorf(errStr, ml.uuid, err)
+				log.Printf(errStr, ml.uuid, err)
 			}
 		}
 	}
-	return nil
 }
 
 // Fatal logs the given payload to MongoDB, then panics.
@@ -350,10 +339,9 @@ func NewFileSemanticLogger(name, filename string) (*FileSemanticLogger, error) {
 }
 
 // Log uses select parts of the given payload and logs to fl.log
-func (fl *FileSemanticLogger) Log(payload *LogPayload) error {
+func (fl *FileSemanticLogger) Log(payload *LogPayload) {
 	// TODO: Consider using more payload fields
 	fl.log.Printf("%v: %s\n", payload.Level, payload.Message)
-	return nil
 }
 
 // Fatal populates payload.Backtrace then panics

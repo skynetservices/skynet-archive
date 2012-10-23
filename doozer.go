@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/4ad/doozer"
-	"log"
 	"os"
 	"path"
 	"sync"
@@ -97,18 +96,12 @@ func (d *DoozerConnection) mux() {
 			case DoozerDiscovered:
 				// Log event
 				payload.Message = fmt.Sprintf("DoozerDiscovered: %+v", m)
-				err := d.Log.Log(payload)
-				if err != nil {
-					log.Printf("Error logging payload '%+v': %v", payload, err)
-				}
+				d.Log.Log(payload)
 				d.doozerInstances[m.DoozerServer.Key] = m.DoozerServer
 			case DoozerRemoved:
 				// Log event
 				payload.Message = fmt.Sprintf("DoozerRemoved: %+v", m)
-				err := d.Log.Log(payload)
-				if err != nil {
-					log.Printf("Error logging payload '%+v': %v", payload, err)
-				}
+				d.Log.Log(payload)
 
 				delete(d.doozerInstances, m.DoozerServer.Key)
 			}
@@ -185,10 +178,7 @@ func (d *DoozerConnection) dialMux(server string, boot string) error {
 	connected := DoozerConnected{Addr: server}
 	// Log connection
 	payload.Message = fmt.Sprintf("%T: %+v", connected, connected)
-	err = d.Log.Log(payload)
-	if err != nil {
-		return fmt.Errorf("Error logging payload '%+v': %v", payload, err)
-	}
+	d.Log.Log(payload)
 
 	return nil
 }
@@ -205,10 +195,7 @@ func (d *DoozerConnection) recoverFromError(err interface{}) {
 		connection := DoozerLostConnection{DoozerConfig: d.Config}
 		payload.Message = "Lost connection to Doozer: Reconnecting... "
 		payload.Message += fmt.Sprintf("%T: %+v", connection, connection)
-		err := d.Log.Log(payload)
-		if err != nil {
-			log.Printf("Error logging payload '%+v': %v", payload, err)
-		}
+		d.Log.Log(payload)
 
 		dialErr := d.dialAnInstance()
 		if dialErr != nil {
