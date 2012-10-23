@@ -120,7 +120,7 @@ func (c *ServiceClient) addInstanceMux(instance *skynet.ServiceInfo) {
 		c.instances[key] = c.client.getServicePool(m.Service)
 		c.chooser.Add(m.Service)
 		// Create and log event
-		payload := &skynet.Payload{
+		payload := &skynet.LogPayload{
 			Action: "*ServiceClient.addInstanceMux",
 			Level: skynet.DEBUG,
 			ThreadName: "serviceclient",
@@ -143,7 +143,7 @@ func (c *ServiceClient) removeInstanceMux(instance *skynet.ServiceInfo) {
 	c.chooser.Remove(m.Service)
 	delete(c.instances, m.Service.Config.ServiceAddr.String())
 	// Create and log event
-	payload := &skynet.Payload{
+	payload := &skynet.LogPayload{
 		Action: "*ServiceClient.removeInstanceMux",
 		Level: skynet.DEBUG,
 		ThreadName: "serviceclient",
@@ -301,7 +301,7 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 	attempts chan sendAttempt, ri *skynet.RequestInfo,
 	fn string, in interface{}) {
 
-	payload := &skynet.Payload{
+	payload := &skynet.LogPayload{
 		Action: "*ServiceClient.attemptSend",
 		Level: skynet.ERROR,
 		ThreadName: "serviceclient",
@@ -405,7 +405,7 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource,
 		dbg("(sr.rpcClient.Call)", err)
 
 		// Log failure
-		payload := &skynet.Payload{
+		payload := &skynet.LogPayload{
 			Action: "*ServiceClient.sendToInstance",
 			Level: skynet.ERROR,
 			ThreadName: "serviceclient",

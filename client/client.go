@@ -53,7 +53,7 @@ func NewClient(config *skynet.ClientConfig) *Client {
 		config.DoozerConfig = &skynet.DoozerConfig{Uri: "localhost:8046"}
 	}
 
-	payload := &skynet.Payload{
+	payload := &skynet.LogPayload{
 		Action: "client.NewClient",
 		Level: skynet.DEBUG,
 		ThreadName: "client",
