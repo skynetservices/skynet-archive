@@ -85,7 +85,7 @@ type dialInstance struct {
 func (d *DoozerConnection) mux() {
 
 	for {
-		payload := &Payload{
+		payload := &LogPayload{
 			Action:     "*DoozerConnection.mux",
 			Level:      DEBUG,
 			ThreadName: "doozer",
@@ -176,7 +176,7 @@ func (d *DoozerConnection) dialMux(server string, boot string) error {
 
 	d.currentInstance = server
 	//d.Log.Println("Connected to Doozer Instance: " + server)
-	payload := &Payload{
+	payload := &LogPayload{
 		Action:     "*DoozerConnection.dialMux",
 		Level:      DEBUG,
 		ThreadName: "doozer",
@@ -194,7 +194,7 @@ func (d *DoozerConnection) dialMux(server string, boot string) error {
 }
 
 func (d *DoozerConnection) recoverFromError(err interface{}) {
-	payload := &Payload{
+	payload := &LogPayload{
 		Action:     "*DoozerConnection.recoverFromError",
 		Level:      DEBUG,
 		ThreadName: "doozer",
@@ -237,7 +237,7 @@ func (d *DoozerConnection) monitorCluster() {
 	rev := d.GetCurrentRevision()
 
 	for {
-		payload := &Payload{
+		payload := &LogPayload{
 			Action:     "*DoozerConnection.monitorCluster",
 			Level:      DEBUG,
 			ThreadName: "doozer",
@@ -286,7 +286,7 @@ func (d *DoozerConnection) getDoozerServer(key string) *DoozerServer {
 }
 
 func (d *DoozerConnection) Connect() {
-	payload := &Payload{
+	payload := &LogPayload{
 		Action:     "*DoozerConnection.Connect",
 		Level:      DEBUG,
 		ThreadName: "doozer",
@@ -335,7 +335,7 @@ func (d *DoozerConnection) getDoozerInstances() {
 }
 
 func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
-	payload := &Payload{
+	payload := &LogPayload{
 		Action:     "*DoozerConnection.GetCurrentRevision",
 		Level:      DEBUG,
 		ThreadName: "doozer",
