@@ -93,6 +93,8 @@ func NewLogPayload(level LogLevel, formatStr string,
 		Action: getCallerName(2),
 	}
 	payload.setKnownFields()
+	// TODO: Come up with a way to intelligently auto-fill ThreadName,
+	// if possible
 
 	return payload
 }
