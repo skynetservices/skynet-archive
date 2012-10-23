@@ -27,7 +27,7 @@ type LogPayload struct {
 	Message    string   `json:"message"`
 	Tags       []string `json:"tags"`
 	Action     string   `json:"action"`
-	// Set by .SetKnownFields()
+	// Set by .setKnownFields()
 	Application string `json:"application"`
 	PID      int       `json:"pid"`
 	Time     time.Time `json:"time"`
@@ -57,11 +57,11 @@ func (payload *LogPayload) Exception() string {
 		payload.Message, backtrace)
 }
 
-// SetKnownFields sets the `PID`, `Time`, and `HostName`
+// setKnownFields sets the `PID`, `Time`, and `HostName`
 // fields of the given payload. See the documentation on the LogPayload
 // type for which fields should be set where, and by whom (the user)
 // or what (a function or method).
-func (payload *LogPayload) SetKnownFields() {
+func (payload *LogPayload) setKnownFields() {
 	// Set Application to os.Args[0] if it wasn't set by the user
 	if payload.Application == "" {
 		payload.Application = os.Args[0]
@@ -252,7 +252,7 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 	db := ml.session.DB(ml.dbName)
 	col := db.C(ml.colName)
 
-	payload.SetKnownFields()
+	payload.setKnownFields()
 
 	payload.Name = fmt.Sprintf("%T", ml)
 	payload.UUID = ml.uuid
