@@ -90,7 +90,7 @@ func NewLogPayload(level LogLevel, formatStr string,
 		Message: fmt.Sprintf(formatStr, vars...),
 		// TODO: Make sure that `2` is the number that should be
 		// passed in here
-		Action:  getCallerName(2), 
+		Action: getCallerName(2),
 	}
 	payload.setKnownFields()
 
@@ -245,9 +245,9 @@ func (cl *ConsoleSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
 
 // MongoSemanticLogger saves logging data to a MongoDB instance.
 type MongoSemanticLogger struct {
-	session         *mgo.Session
-	dbName, colName string
-	uuid            string
+	session                *mgo.Session
+	dbName, collectionName string
+	uuid                   string
 }
 
 // NewMongoSemanticLogger connects to a MongoDB instance at the given
@@ -255,9 +255,9 @@ type MongoSemanticLogger struct {
 func NewMongoSemanticLogger(addr, dbName, collectionName,
 	uuid string) (ml *MongoSemanticLogger, err error) {
 	ml = &MongoSemanticLogger{
-		dbName:  dbName,
-		colName: collectionName,
-		uuid:    uuid,
+		dbName:         dbName,
+		collectionName: collectionName,
+		uuid:           uuid,
 	}
 	ml.session, err = mgo.Dial(addr)
 	return
@@ -278,13 +278,13 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 	}
 
 	db := ml.session.DB(ml.dbName)
-	col := db.C(ml.colName)
+	col := db.C(ml.collectionName)
 
 	payload.setKnownFields()
 
 	payload.Name = fmt.Sprintf("%T", ml)
 	payload.UUID = ml.uuid
-	payload.Table = ml.colName
+	payload.Table = ml.collectionName
 
 	switch payload.Level {
 	case FATAL: // User should call `ml.Fatal(payload)` directly
@@ -306,14 +306,14 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 func (ml *MongoSemanticLogger) Fatal(payload *LogPayload) {
 	// Log to proper DB and collection name
 	db := ml.session.DB(ml.dbName)
-	col := db.C(ml.colName)
+	col := db.C(ml.collectionName)
 
 	// Generate stacktrace, then log to MongoDB before panicking
 	payload.Backtrace = genStacktrace()
 	err := col.Insert(payload)
 	if err != nil {
 		log.Printf("Error inserting '%+v' into %s collection: %v",
-			payload, ml.colName, err)
+			payload, ml.collectionName, err)
 	}
 	panic(payload)
 }
