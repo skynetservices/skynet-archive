@@ -84,24 +84,16 @@ type dialInstance struct {
 func (d *DoozerConnection) mux() {
 
 	for {
-		payload := &LogPayload{
-			Action:     "*DoozerConnection.mux",
-			Level:      DEBUG,
-			ThreadName: "doozer",
-			Tags:       []string{"doozer"},
-		}
 		select {
 		case m := <-d.instancesChan:
 			switch m := m.(type) {
 			case DoozerDiscovered:
 				// Log event
-				payload.Message = fmt.Sprintf("DoozerDiscovered: %+v", m)
-				d.Log.Log(payload)
+				d.Log.Debug(fmt.Sprintf("DoozerDiscovered: %+v", m))
 				d.doozerInstances[m.DoozerServer.Key] = m.DoozerServer
 			case DoozerRemoved:
 				// Log event
-				payload.Message = fmt.Sprintf("DoozerRemoved: %+v", m)
-				d.Log.Log(payload)
+				d.Log.Debug(fmt.Sprintf("DoozerRemoved: %+v", m))
 
 				delete(d.doozerInstances, m.DoozerServer.Key)
 			}
@@ -169,44 +161,29 @@ func (d *DoozerConnection) dialMux(server string, boot string) error {
 
 	d.currentInstance = server
 	//d.Log.Println("Connected to Doozer Instance: " + server)
-	payload := &LogPayload{
-		Action:     "*DoozerConnection.dialMux",
-		Level:      DEBUG,
-		ThreadName: "doozer",
-		Tags:       []string{"doozer"},
-	}
 	connected := DoozerConnected{Addr: server}
 	// Log connection
-	payload.Message = fmt.Sprintf("%T: %+v", connected, connected)
-	d.Log.Log(payload)
+	d.Log.Trace(fmt.Sprintf("%T: %+v", connected, connected))
 
 	return nil
 }
 
 func (d *DoozerConnection) recoverFromError(err interface{}) {
-	payload := &LogPayload{
-		Action:     "*DoozerConnection.recoverFromError",
-		Level:      DEBUG,
-		ThreadName: "doozer",
-		Tags:       []string{"doozer"},
-	}
 	if err == "EOF" {
 		// d.Log.Println("Lost connection to Doozer: Reconnecting...")
 		connection := DoozerLostConnection{DoozerConfig: d.Config}
-		payload.Message = "Lost connection to Doozer: Reconnecting... "
-		payload.Message += fmt.Sprintf("%T: %+v", connection, connection)
-		d.Log.Log(payload)
+		msg := "Lost connection to Doozer: Reconnecting... "
+		msg += fmt.Sprintf("%T: %+v", connection, connection)
+		d.Log.Debug(msg)
 
 		dialErr := d.dialAnInstance()
 		if dialErr != nil {
-			payload.Message = "Couldn't reconnect to doozer"
-			d.Log.Fatal(payload)
+			d.Log.Fatal("Couldn't reconnect to doozer")
 		}
 
 	} else {
 		// Don't know how to handle, go ahead and panic
-		payload.Message = fmt.Sprintf("Unknown doozer error: %+v", err)
-		d.Log.Fatal(payload)
+		d.Log.Fatal(fmt.Sprintf("Unknown doozer error: %+v", err))
 	}
 }
 
@@ -224,17 +201,10 @@ func (d *DoozerConnection) monitorCluster() {
 	rev := d.GetCurrentRevision()
 
 	for {
-		payload := &LogPayload{
-			Action:     "*DoozerConnection.monitorCluster",
-			Level:      DEBUG,
-			ThreadName: "doozer",
-			Tags:       []string{"doozer"},
-		}
 		// blocking wait call returns on a change
 		ev, err := d.Wait("/ctl/cal/*", rev+1)
 		if err != nil {
-			payload.Message = "Error near d.Wait: " + err.Error()
-			d.Log.Fatal(payload)
+			d.Log.Fatal("Error near d.Wait: " + err.Error())
 		}
 
 		buf := bytes.NewBuffer(ev.Body)
@@ -273,18 +243,9 @@ func (d *DoozerConnection) getDoozerServer(key string) *DoozerServer {
 }
 
 func (d *DoozerConnection) Connect() {
-	payload := &LogPayload{
-		Action:     "*DoozerConnection.Connect",
-		Level:      DEBUG,
-		ThreadName: "doozer",
-		Tags:       []string{"doozer"},
-	}
-
 	if d.Config == nil || (d.Config.Uri == "" && d.Config.BootUri == "") {
-		payload.Message = "You must supply a doozer server and/or boot uri"
-		d.Log.Fatal(payload)
+		d.Log.Fatal("You must supply a doozer server and/or boot uri")
 	}
-
 	if !d.muxing {
 		d.muxing = true
 		go d.mux()
@@ -292,9 +253,9 @@ func (d *DoozerConnection) Connect() {
 
 	err := d.dialAnInstance()
 	if err != nil {
-		payload.Message = "Failed to connect to any of the supplied "
-		payload.Message += "Doozer Servers: " + err.Error()
-		d.Log.Fatal(payload)
+		msg := "Failed to connect to any of the supplied "
+		msg += "Doozer Servers: " + err.Error()
+		d.Log.Fatal(msg)
 	}
 
 	// Let's watch doozers internal config to check for new servers
@@ -322,12 +283,6 @@ func (d *DoozerConnection) getDoozerInstances() {
 }
 
 func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
-	payload := &LogPayload{
-		Action:     "*DoozerConnection.GetCurrentRevision",
-		Level:      DEBUG,
-		ThreadName: "doozer",
-		Tags:       []string{"doozer"},
-	}
 	defer func() {
 		if err := recover(); err != nil {
 			d.recoverFromError(err)
@@ -339,8 +294,7 @@ func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
 	revision, err := d.Connection().Rev()
 
 	if err != nil {
-		payload.Message = "Error near d.Connection().Rev(): " + err.Error()
-		d.Log.Fatal(payload)
+		d.Log.Fatal("Error near d.Connection().Rev(): " + err.Error())
 	}
 
 	return revision
