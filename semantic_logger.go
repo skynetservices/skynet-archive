@@ -80,6 +80,7 @@ func (payload *LogPayload) SetTags(tags ...string) {
 	payload.Tags = tags
 }
 
+// NewLogPayload is a convenience function for creating *LogPayload's
 func NewLogPayload(level LogLevel, formatStr string,
 	vars ...interface{}) *LogPayload {
 
@@ -90,7 +91,8 @@ func NewLogPayload(level LogLevel, formatStr string,
 		// passed in here
 		Action: getCallerName(2),
 	}
-	payload.setKnownFields()
+	// payload.setKnownFields() called in .Log() method; not calling here
+
 	// TODO: Come up with a way to intelligently auto-fill ThreadName,
 	// if possible
 
