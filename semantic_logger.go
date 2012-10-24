@@ -181,13 +181,31 @@ func (ml MultiSemanticLogger) Log(level LogLevel, msg string,
 	payload *LogPayload) {
 
 	switch level {
+	default:
+		// Log payloads with custom log levels just like those with
+		// the known/defult log levels
+		fallthrough
 	case TRACE, DEBUG, INFO, WARN, ERROR, FATAL:
 		for _, lgr := range ml {
-			// Note that this won't work very well if
-			// payload.LogLevel == FATAL; the first logger will panic.
 			lgr.Log(payload)
 		}
 	}
+}
+
+// Fatal calls .Log(payload) for each logger in the
+// MultiSemanticLogger, then panics.
+func (ml MultiSemanticLogger) Fatal(level LogLevel, msg string,
+	payload *LogPayload) {
+
+	switch level {
+	case TRACE, DEBUG, INFO, WARN, ERROR, FATAL:
+		for _, lgr := range ml {
+			// Calling .Fatal for each would result in panicking on
+			// the first logger, so we log them all, then panic.
+			lgr.Log(payload)
+		}
+	}
+	panic(payload)
 }
 
 // BenchmarkInfo runs .BenchmarkInfo(level, msg, f) on every logger in
@@ -200,7 +218,7 @@ func (ml MultiSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
 }
 
 // genStacktrace is a helper function for generating stacktrace
-// data. Used to populate payload.Backtrace
+// data. Used to populate (*LogPayload).Backtrace
 func genStacktrace() (stacktrace []string) {
 	// TODO: Make sure that `skip` should begin at 1, not 2
 	for skip := 1; ; skip++ {
