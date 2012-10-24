@@ -271,52 +271,39 @@ func NewMongoSemanticLogger(addr, dbName, collectionName,
 func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 	// Sanity checks
 	if ml == nil {
-		log.Printf("Can't log to nil *MongoSemanticLogger\n")
+		log.Printf("NOT LOGGING: Can't log to nil *MongoSemanticLogger\n")
 		return
 	}
 	if payload == nil {
-		log.Printf("Can't log nil *LogPayload\n")
+		log.Printf("NOT LOGGING: Can't log nil *LogPayload\n")
 		return
 	}
 
-	db := ml.session.DB(ml.dbName)
-	col := db.C(ml.collectionName)
-
 	payload.setKnownFields()
-
 	payload.Name = fmt.Sprintf("%T", ml)
 	payload.UUID = ml.uuid
 	payload.Table = ml.collectionName
 
 	switch payload.Level {
 	case FATAL: // User should call `ml.Fatal(payload)` directly
-		ml.Fatal(payload)
+		payload.Backtrace = genStacktrace()
 	default: // LogPayloads with custom log levels should be logged
 		fallthrough
 	case TRACE, DEBUG, INFO, WARN, ERROR:
-		if payload != nil {
-			err := col.Insert(payload)
-			if err != nil {
-				errStr := "Error logging with MongoSemanticLogger %s: %v"
-				log.Printf(errStr, ml.uuid, err)
-			}
-		}
+		// Nothing extra to do here
+	}
+	// Log regardless of the log level
+	err := ml.session.DB(ml.dbName).C(ml.collectionName).Insert(payload)
+	if err != nil {
+		errStr := "Error logging with MongoSemanticLogger %s: %v"
+		log.Printf(errStr, ml.uuid, err)
 	}
 }
 
 // Fatal logs the given payload to MongoDB, then panics.
 func (ml *MongoSemanticLogger) Fatal(payload *LogPayload) {
-	// Log to proper DB and collection name
-	db := ml.session.DB(ml.dbName)
-	col := db.C(ml.collectionName)
-
-	// Generate stacktrace, then log to MongoDB before panicking
-	payload.Backtrace = genStacktrace()
-	err := col.Insert(payload)
-	if err != nil {
-		log.Printf("Error inserting '%+v' into %s collection: %v",
-			payload, ml.collectionName, err)
-	}
+	payload.Level = FATAL
+	ml.Log(payload)
 	panic(payload)
 }
 
@@ -376,8 +363,8 @@ func (fl *FileSemanticLogger) Log(payload *LogPayload) {
 
 // Fatal populates payload.Backtrace then panics
 func (fl *FileSemanticLogger) Fatal(payload *LogPayload) {
-	payload.Backtrace = genStacktrace()
-	// Should this call `fl.Log(payload)` before panicking?
+	payload.Level = FATAL
+	fl.Log(payload) 
 	panic(payload)
 }
 
