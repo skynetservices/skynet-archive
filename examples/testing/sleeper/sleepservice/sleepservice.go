@@ -24,7 +24,9 @@ func (f *Sleeper) Unregistered(s *service.Service) {}
 func (f *Sleeper) Started(s *service.Service)      {}
 func (f *Sleeper) Stopped(s *service.Service)      {}
 
-func (f *Sleeper) Sleep(ri *skynet.RequestInfo, req sleeper.Request, resp *sleeper.Response) (err error) {
+func (f *Sleeper) Sleep(ri *skynet.RequestInfo, req sleeper.Request,
+	resp *sleeper.Response) (err error) {
+
 	log.Println("sleeping for", req.Duration, req.Message)
 
 	if req.UnregisterHalfwayThrough {
@@ -71,15 +73,17 @@ func main() {
 	}
 
 	var err error
-	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
-	clogger := skynet.NewConsoleLogger("sleepservice", os.Stdout)
-	config.Log = skynet.NewMultiLogger(mlogger, clogger)
+	mlogger, err := skynet.NewMongoSemanticLogger("localhost", "skynet",
+		"log", config.UUID)
+	clogger := skynet.NewConsoleSemanticLogger("sleepservice", os.Stdout)
+	config.Log = skynet.NewMultiSemanticLogger(mlogger, clogger)
 	if err != nil {
-		config.Log.Item("Could not connect to mongo db for logging")
+		config.Log.Error("Could not connect to mongo db for logging")
 	}
 	f.service = service.CreateService(f, config)
 
-	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
+	// handle panic so that we remove ourselves from the pool in case
+	// of catastrophic failure
 	defer func() {
 		f.service.Shutdown()
 		if err := recover(); err != nil {
@@ -87,10 +91,12 @@ func main() {
 		}
 	}()
 
-	// If we pass false here service will not be Registered
-	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
+	// If we pass false here service will not be Registered we could
+	// do other work/tasks by implementing the Started method and
+	// calling Register() when we're ready
 	waiter := f.service.Start(true)
 
-	// waiting on the sync.WaitGroup returned by service.Start() will wait for the service to finish running.
+	// waiting on the sync.WaitGroup returned by service.Start() will
+	// wait for the service to finish running.
 	waiter.Wait()
 }

@@ -42,7 +42,9 @@ func (f *Fibonacci) Unregistered(s *service.Service) {}
 func (f *Fibonacci) Started(s *service.Service)      {}
 func (f *Fibonacci) Stopped(s *service.Service)      {}
 
-func (f *Fibonacci) Index(ri *skynet.RequestInfo, req fibonacci.Request, resp *fibonacci.Response) (err error) {
+func (f *Fibonacci) Index(ri *skynet.RequestInfo, req fibonacci.Request,
+	resp *fibonacci.Response) (err error) {
+
 	if req.Index < 0 {
 		err = errors.New(fmt.Sprintf("Invalid request: %+v", req))
 		return
@@ -76,7 +78,8 @@ func (f *Fibonacci) Index(ri *skynet.RequestInfo, req fibonacci.Request, resp *f
 	return
 }
 
-func (f *Fibonacci) lookupValue(ri *skynet.RequestInfo, index int, vchan chan<- uint64) {
+func (f *Fibonacci) lookupValue(ri *skynet.RequestInfo, index int,
+	vchan chan<- uint64) {
 
 	remoteService := f.client.GetService("Fibonacci", "", "", "")
 
@@ -92,7 +95,7 @@ func (f *Fibonacci) lookupValue(ri *skynet.RequestInfo, index int, vchan chan<- 
 			vchan <- resp.Value
 			return
 		}
-		f.client.Log.Item(err)
+		f.client.Log.Error(err.Error())
 	}
 }
 
@@ -114,15 +117,17 @@ func main() {
 	}
 
 	var err error
-	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
-	clogger := skynet.NewConsoleLogger("fibservice", os.Stdout)
-	config.Log = skynet.NewMultiLogger(mlogger, clogger)
+	mlogger, err := skynet.NewMongoSemanticLogger("localhost", "skynet",
+		"log", config.UUID)
+	clogger := skynet.NewConsoleSemanticLogger("fibservice", os.Stdout)
+	config.Log = skynet.NewMultiSemanticLogger(mlogger, clogger)
 	if err != nil {
-		config.Log.Item("Could not connect to mongo db for logging")
+		config.Log.Error("Could not connect to mongo db for logging")
 	}
 	service := service.CreateService(f, config)
 
-	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
+	// handle panic so that we remove ourselves from the pool in case
+	// of catastrophic failure
 	defer func() {
 		service.Shutdown()
 		if err := recover(); err != nil {
@@ -130,10 +135,12 @@ func main() {
 		}
 	}()
 
-	// If we pass false here service will not be Registered
-	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
+	// If we pass false here service will not be Registered we could
+	// do other work/tasks by implementing the Started method and
+	// calling Register() when we're ready
 	waiter := service.Start(true)
 
-	// waiting on the sync.WaitGroup returned by service.Start() will wait for the service to finish running.
+	// waiting on the sync.WaitGroup returned by service.Start() will
+	// wait for the service to finish running.
 	waiter.Wait()
 }

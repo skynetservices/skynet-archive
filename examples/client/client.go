@@ -11,15 +11,19 @@ func main() {
 	config, _ := skynet.GetClientConfig()
 
 	var err error
-	config.Log = skynet.NewConsoleLogger("TestServiceClient", os.Stderr)
+
+	config.Log = skynet.NewConsoleSemanticLogger("TestServiceClient", os.Stderr)
 
 	client := client.NewClient(config)
 
-	// This will not fail if no services currently exist, as connections are created on demand
-	// this saves from chicken and egg issues with dependencies between services
-	service := client.GetService("TestService", "", "", "") // any version, any region, any host
+	// This will not fail if no services currently exist, as
+	// connections are created on demand this saves from chicken and
+	// egg issues with dependencies between services
+	service := client.GetService("TestService", "", "", "")
+	// (any version, any region, any host)
 
-	// This on the other hand will fail if it can't find a service to connect to
+	// This on the other hand will fail if it can't find a service to
+	// connect to
 	in := map[string]interface{}{
 		"data": "Upcase me!!",
 	}
