@@ -16,6 +16,7 @@ func main() {
 
 	if len(args) == 0 {
 		fmt.Printf("Usage: %s <positive number>*\n", args[0])
+		return
 	}
 
 	for _, arg := range args[1:] {
