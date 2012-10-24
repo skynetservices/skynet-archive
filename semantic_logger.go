@@ -20,8 +20,9 @@ import (
 // slice -- include TRACE, DEBUG, INFO, WARN, ERROR, and FATAL.
 type LogPayload struct {
 	// Set by user by passing values to NewLogPayload()
-	Level   LogLevel `json:"level"`
-	Message string   `json:"message"`
+	Level      LogLevel `json:"level"`
+	LevelIndex int      `json:"level_index"`
+	Message    string   `json:"message"`
 	// Set automatically within NewLogPayload()
 	Action string `json:"action"`
 	// Set by .setKnownFields()
@@ -40,7 +41,8 @@ type LogPayload struct {
 	// Should be set by BenchmarkInfo() if called
 	Duration time.Duration `json:"duration"`
 	// Optionally set by user manually
-	ThreadName string `json:"thread_name"`
+	ThreadName string      `json:"thread_name"`
+	Payload    interface{} `json:"payload"` // Arbitrary data
 }
 
 // Exception formats the payload just as
