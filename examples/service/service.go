@@ -16,14 +16,14 @@ import (
 )
 
 type TestService struct {
-	Log skynet.Logger
+	Log skynet.SemanticLogger
 }
 
 func (s *TestService) Registered(service *service.Service)   {}
 func (s *TestService) Unregistered(service *service.Service) {}
 func (s *TestService) Started(service *service.Service)      {}
 func (s *TestService) Stopped(service *service.Service) {
-	s.Log.Item("Stopped")
+	s.Log.Trace("Stopped")
 }
 
 func NewTestService() *TestService {
@@ -54,16 +54,18 @@ func main() {
 	}
 
 	var err error
-	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
-	clogger := skynet.NewConsoleLogger("TestService", os.Stdout)
-	testService.Log = skynet.NewMultiLogger(mlogger, clogger)
+	mlogger, err := skynet.NewMongoSemanticLogger("localhost", "skynet",
+		"log", config.UUID)
+	clogger := skynet.NewConsoleSemanticLogger("TestService", os.Stdout)
+	testService.Log = skynet.NewMultiSemanticLogger(mlogger, clogger)
 	config.Log = testService.Log
 	if err != nil {
-		config.Log.Item("Could not connect to mongo db for logging")
+		config.Log.Trace("Could not connect to mongo db for logging")
 	}
 	service := service.CreateService(testService, config)
 
-	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
+	// handle panic so that we remove ourselves from the pool in case
+	// of catastrophic failure
 	defer func() {
 		service.Shutdown()
 		if err := recover(); err != nil {
@@ -71,10 +73,12 @@ func main() {
 		}
 	}()
 
-	// If we pass false here service will not be Registered
-	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
+	// If we pass false here service will not be Registered we could
+	// do other work/tasks by implementing the Started method and
+	// calling Register() when we're ready
 	waiter := service.Start(true)
 
-	// waiting on the sync.WaitGroup returned by service.Start() will wait for the service to finish running.
+	// waiting on the sync.WaitGroup returned by service.Start() will
+	// wait for the service to finish running.
 	waiter.Wait()
 }

@@ -124,7 +124,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	}
 
 	if srpc.service.Log != nil {
-		srpc.service.Log.Item(mc)
+		srpc.service.Log.Trace(fmt.Sprintf("%+v", mc))
 	}
 
 	m, ok := srpc.methods[in.Method]
@@ -181,7 +181,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	}
 
 	if srpc.service.Log != nil {
-		srpc.service.Log.Item(mcp)
+		srpc.service.Log.Trace(fmt.Sprintf("%+v", mcp))
 	}
 
 	out.Out, err = bson.Marshal(outValue.Interface())
