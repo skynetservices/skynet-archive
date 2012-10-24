@@ -224,18 +224,15 @@ func NewConsoleSemanticLogger(name string, w io.Writer) *ConsoleSemanticLogger {
 // Log uses select parts of the given payload and logs it to the
 // console.
 func (cl *ConsoleSemanticLogger) Log(payload *LogPayload) {
-	if payload.Level == FATAL {
-		payload.Backtrace = genStacktrace()
-		// Panic after logging to console
-		defer panic(payload)
-	}
 	// TODO: Consider using more payload fields
 	cl.log.Printf("%v: %s\n", payload.Level, payload.Message)
 }
 
 // Fatal logs the given payload to the console, then panics.
 func (cl *ConsoleSemanticLogger) Fatal(payload *LogPayload) {
+	payload.Backtrace = genStacktrace()
 	cl.Log(payload)
+	panic(payload)
 }
 
 // BenchmarkInfo currently does nothing but should measure the time
@@ -283,22 +280,12 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 		return
 	}
 
+	// Set various Payload fields
 	payload.setKnownFields()
 	payload.Name = fmt.Sprintf("%T", ml)
 	payload.UUID = ml.uuid
 	payload.Table = ml.collectionName
 
-	switch payload.Level {
-	case FATAL:
-		payload.Backtrace = genStacktrace()
-		// Panic after logging to Mongo
-		defer panic(payload)
-	case TRACE, DEBUG, INFO, WARN, ERROR:
-		// Modify LogPayloads with non-FATAL, non-custom log levels
-		// before logging
-	default:
-		// Modify LogPayloads with custom log levels before logging
-	}
 	// Log regardless of the log level
 	err := ml.session.DB(ml.dbName).C(ml.collectionName).Insert(payload)
 	if err != nil {
@@ -309,7 +296,9 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 
 // Fatal logs the given payload to MongoDB, then panics.
 func (ml *MongoSemanticLogger) Fatal(payload *LogPayload) {
+	payload.Backtrace = genStacktrace()
 	ml.Log(payload)
+	panic(payload)
 }
 
 // BenchmarkInfo currently does nothing but should measure the time
@@ -363,17 +352,14 @@ func NewFileSemanticLogger(name, filename string) (*FileSemanticLogger, error) {
 // Log uses select parts of the given payload and logs to fl.log
 func (fl *FileSemanticLogger) Log(payload *LogPayload) {
 	// TODO: Consider using more payload fields
-	if payload.Level == FATAL {
-		payload.Backtrace = genStacktrace()
-		// Panic after logging to file
-		defer panic(payload)
-	}
 	fl.log.Printf("%v: %s\n", payload.Level, payload.Message)
 }
 
 // Fatal populates payload.Backtrace then panics
 func (fl *FileSemanticLogger) Fatal(payload *LogPayload) {
+	payload.Backtrace = genStacktrace()
 	fl.Log(payload)
+	panic(payload)
 }
 
 // BenchmarkInfo currently does nothing but should measure the time
