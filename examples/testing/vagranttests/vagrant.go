@@ -18,7 +18,9 @@ import (
 )
 
 var requests = flag.Int("requests", 10, "number of concurrent requests")
-var doozer = flag.String("doozer", skynet.GetDefaultEnvVar("SKYNET_DZHOST", "127.0.0.1:8046"), "doozer instance to connect to")
+var doozer = flag.String("doozer",
+	skynet.GetDefaultEnvVar("SKYNET_DZHOST", "127.0.0.1:8046"),
+	"doozer instance to connect to")
 
 var totalRequests = expvar.NewInt("total-requests")
 var successfulRequests = expvar.NewInt("successful-requests")
@@ -82,12 +84,16 @@ func main() {
 			runtime := (stopTime - startTime) / 1000000
 			rqps := float64(total) / (float64(runtime) / 1000)
 
-			fmt.Println("============================================================================")
-			fmt.Printf("Completed in %d Milliseconds, %f Requests/s\n", runtime, rqps)
-			fmt.Printf("\nTotal Requests: %d, Successful: %d (%d%%), Failed: %d (%d%%)\n\n", total, successful, percentSuccess, failed, percentFailed)
+			fmt.Printf("======================================")
+			fmt.Printf("======================================")
+			fmt.Printf("Completed in %d Milliseconds, %f Requests/s\n",
+				runtime, rqps)
+			fmt.Printf("\nTotal Requests: %d, Successful: %d (%d%%)",
+				total, successful, percentSuccess)
+			fmt.Printf(", Failed: %d (%d%%)\n\n", failed, percentFailed)
 			return
-		default:
 
+		default:
 			if requestNum%2 == 0 {
 				requestChan <- "testservice"
 			} else {
@@ -99,7 +105,9 @@ func main() {
 	}
 }
 
-func worker(requestChan chan string, waitGroup *sync.WaitGroup, quitChan chan bool) {
+func worker(requestChan chan string, waitGroup *sync.WaitGroup,
+	quitChan chan bool) {
+
 	waitGroup.Add(1)
 
 	for {
@@ -126,7 +134,8 @@ func worker(requestChan chan string, waitGroup *sync.WaitGroup, quitChan chan bo
 				out := map[string]interface{}{}
 				err := testserviceClient.Send(nil, "Upcase", in, &out)
 
-				if err == nil && out["data"].(string) == strings.ToUpper(randString) {
+				upper := strings.ToUpper(randString)
+				if err == nil && out["data"].(string) == upper {
 					successfulRequests.Add(1)
 					fmt.Println("TestService returned: " + out["data"].(string))
 				}
@@ -136,19 +145,22 @@ func worker(requestChan chan string, waitGroup *sync.WaitGroup, quitChan chan bo
 					Index: rand.Intn(10),
 				}
 
-				// It's possible that rand could have returned 0, and we are using that as our blank Value
-				// let's set it to something else when 0 happens to get selected
+				// It's possible that rand could have returned 0, and
+				// we are using that as our blank Value let's set it
+				// to something else when 0 happens to get selected
 				if req.Index == 0 {
 					req.Index = 1
 				}
 
-				fmt.Println("Sending Fibonacci request: " + strconv.Itoa(req.Index))
+				fmt.Println("Sending Fibonacci request: " +
+					strconv.Itoa(req.Index))
 
 				resp := fibonacci.Response{}
 				err := fibserviceClient.Send(nil, "Index", req, &resp)
 
 				if err == nil && resp.Index != 0 && resp.Value != 0 {
-					fmt.Println("Fibonacci returned: " + strconv.FormatUint(resp.Value, 10))
+					fmt.Println("Fibonacci returned: " +
+						strconv.FormatUint(resp.Value, 10))
 					successfulRequests.Add(1)
 				}
 			}
@@ -158,14 +170,17 @@ func worker(requestChan chan string, waitGroup *sync.WaitGroup, quitChan chan bo
 }
 
 func watchSignals(c chan os.Signal, quitChan chan bool) {
-	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGSEGV,
+		syscall.SIGSTOP, syscall.SIGTERM)
 
 	for {
 		select {
 		case sig := <-c:
 			switch sig.(syscall.Signal) {
 			// Trap signals for clean shutdown
-			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
+			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT,
+				syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
+
 				quitChan <- true
 				return
 			}
