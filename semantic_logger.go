@@ -76,6 +76,9 @@ func (payload *LogPayload) setKnownFields() {
 	payload.HostName = hostname
 }
 
+// SetTags is a convenience method for adding tags to *LogPayload's,
+// since `payload.SetTags("tag1", "tag2")` is cleaner than
+// `payload.Tags = []string{"tag1", "tag2"}`
 func (payload *LogPayload) SetTags(tags ...string) {
 	payload.Tags = tags
 }
