@@ -6,7 +6,6 @@ import (
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/pools"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
-	"log"
 	"net"
 	"net/rpc"
 	"os"
@@ -53,17 +52,8 @@ func NewClient(config *skynet.ClientConfig) *Client {
 		config.DoozerConfig = &skynet.DoozerConfig{Uri: "localhost:8046"}
 	}
 
-	payload := &skynet.LogPayload{
-		Action: "client.NewClient",
-		Level: skynet.DEBUG,
-		ThreadName: "client",
-		Tags: []string{"client"},
-	}
-
 	if config.MaxConnectionsToInstance == 0 {
-		// TODO: Why not just set it to 1?
-		payload.Message = "Must allow at least one instance connection"
-		config.Log.Fatal(payload)
+		config.Log.Fatal("Must allow at least one instance connection")
 	}
 
 	doozerConn := skynet.NewDoozerConnectionFromConfig(*config.DoozerConfig,
@@ -75,11 +65,7 @@ func NewClient(config *skynet.ClientConfig) *Client {
 		servicePools: map[string]*servicePool{},
 	}
 
-	payload.Message = fmt.Sprintf("Created client '%+v'", client)
-	if err := client.Log.Log(payload); err != nil {
-		log.Printf("Error logging payload '%+v' to client '%+v': %v",
-			payload, client, err)
-	}
+	client.Log.Trace(fmt.Sprintf("Created client '%+v'", client))
 
 	client.DoozerConn.Connect()
 
