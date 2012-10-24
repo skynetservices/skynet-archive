@@ -20,7 +20,7 @@ var layoutTmpl *template.Template
 var indexTmpl *template.Template
 var searchTmpl *template.Template
 
-var log skynet.Logger
+var log skynet.SemanticLogger
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	buf := new(bytes.Buffer)
@@ -33,7 +33,9 @@ var session *mgo.Session
 func searchHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if *debug {
-		log.Item(skynet.LogsearchClient{r.RemoteAddr, r.Method, r.URL.Path})
+		log.Trace(fmt.Sprintf("%+v", skynet.LogsearchClient{
+			r.RemoteAddr, r.Method, r.URL.Path,
+		}))
 	}
 
 	sdata := make([]string, 0)
@@ -41,13 +43,15 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	if session == nil {
 		session, err = mgo.Dial(*mgoserver)
 		if err != nil {
-			log.Item(skynet.MongoError{*mgoserver, "can't connect to server"})
+			log.Trace(fmt.Sprintf("%+v", skynet.MongoError{
+				*mgoserver, "can't connect to server",
+			}))
 			// Tell client:
 			// TODO: proper error pages?
 			w.Write([]byte("<html><body>Error establishing MongoDB connection</body></html>"))
 			return
 		}
-		log.Item(skynet.MongoConnected{*mgoserver})
+		log.Trace(fmt.Sprintf("%+v", skynet.MongoConnected{*mgoserver}))
 	}
 
 	var dbs []string
@@ -57,7 +61,10 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		dbs, err = session.DatabaseNames()
 		if err != nil {
-			log.Item(skynet.MongoError{*mgoserver, fmt.Sprintf("unable to obtain database list: %s", err)})
+			log.Trace(fmt.Sprintf("%+v", skynet.MongoError{
+				*mgoserver,
+				fmt.Sprintf("unable to obtain database list: %s", err),
+			}))
 			// TODO: proper error pages?
 			w.Write([]byte("<html><body>Unable to obtain database list</body></html>"))
 			return
@@ -68,7 +75,10 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		ndb := session.DB(db)
 		colls, err := ndb.CollectionNames()
 		if err != nil {
-			log.Item(skynet.MongoError{*mgoserver, fmt.Sprintf("unable to obtain collection names: %s", err)})
+			log.Trace(fmt.Sprintf("%+v", skynet.MongoError{
+				*mgoserver,
+				fmt.Sprintf("unable to obtain collection names: %s", err),
+			}))
 			continue
 		}
 		for _, coll := range colls {
@@ -83,15 +93,26 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 
 var addr = flag.String("addr", ":8080", "dashboard listener address")
 
-var doozer = flag.String("doozer", skynet.GetDefaultEnvVar("SKYNET_DZHOST", skynet.DefaultDoozerdAddr), "initial doozer instance to connect to")
-var doozerboot = flag.String("doozerboot", skynet.GetDefaultEnvVar("SKYNET_DZNSHOST", ""), "initial doozer instance to connect to")
-var autodiscover = flag.Bool("autodiscover", skynet.GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true", "auto discover new doozer instances")
+var doozer = flag.String("doozer",
+	skynet.GetDefaultEnvVar("SKYNET_DZHOST", skynet.DefaultDoozerdAddr),
+	"initial doozer instance to connect to")
+var doozerboot = flag.String("doozerboot",
+	skynet.GetDefaultEnvVar("SKYNET_DZNSHOST", ""),
+	"initial doozer instance to connect to")
+var autodiscover = flag.Bool("autodiscover",
+	skynet.GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true",
+	"auto discover new doozer instances")
 
 var debug = flag.Bool("d", false, "print debug info")
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-var webroot = flag.String("webroot", ".", "root of templates and javascript libraries")
-var mgoserver = flag.String("mgoserver", skynet.GetDefaultEnvVar("SKYNET_MGOSERVER", ""), "comma-separated list of urls of mongodb servers")
-var mgodb = flag.String("mgodb", skynet.GetDefaultEnvVar("SKYNET_MGODB", ""), "mongodb database")
+var webroot = flag.String("webroot", ".",
+	"root of templates and javascript libraries")
+var mgoserver = flag.String("mgoserver",
+	skynet.GetDefaultEnvVar("SKYNET_MGOSERVER", ""),
+	"comma-separated list of urls of mongodb servers")
+var mgodb = flag.String("mgodb",
+	skynet.GetDefaultEnvVar("SKYNET_MGODB", ""),
+	"mongodb database")
 
 var DC *skynet.DoozerConnection
 
@@ -100,16 +121,23 @@ func main() {
 
 	flag.Parse()
 
-	log = skynet.NewConsoleLogger("dashboard", os.Stderr)
+	log = skynet.NewConsoleSemanticLogger("dashboard", os.Stderr)
 	if *mgoserver == "" {
-		log.Item(skynet.MongoError{"", "No mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)"})
+		log.Trace(fmt.Sprintf("%+v", skynet.MongoError{
+			"",
+			"No mongodb server url (both -mgoserver and SKYNET_MGOSERVER missing)",
+		}))
 	}
 
-	mlogger, err := skynet.NewMongoLogger(*mgoserver, "skynet", "log", skynet.UUID())
+	mlogger, err := skynet.NewMongoSemanticLogger(*mgoserver, "skynet",
+		"log", skynet.UUID())
 	if err != nil {
-		log.Item(skynet.MongoError{Addr: "Could not connect to mongo db for logging", Err: err.Error()})
+		log.Error(fmt.Sprintf("%+v", skynet.MongoError{
+			Addr: "Could not connect to mongo db for logging",
+			Err: err.Error(),
+		}))
 	}
-	log = skynet.NewMultiLogger(mlogger, log)
+	log = skynet.NewMultiSemanticLogger(mlogger, log)
 
 	DC = Doozer()
 
@@ -125,25 +153,29 @@ func main() {
 	}))
 
 	// Cache templates
-	layoutTmpl = template.Must(template.ParseFiles(*webroot + "/tmpl/layout.html.template"))
-	indexTmpl = template.Must(template.ParseFiles(*webroot + "/tmpl/index.html.template"))
-	searchTmpl = template.Must(template.ParseFiles(*webroot + "/tmpl/search.html.template"))
+	layoutTmpl = template.Must(template.ParseFiles(*webroot +
+		"/tmpl/layout.html.template"))
+	indexTmpl = template.Must(template.ParseFiles(*webroot +
+		"/tmpl/index.html.template"))
+	searchTmpl = template.Must(template.ParseFiles(*webroot +
+		"/tmpl/search.html.template"))
 
 	err = http.ListenAndServe(*addr, nil)
 	if err != nil {
-		log.Panic("ListenAndServe: " + err.Error())
+		log.Fatal("ListenAndServe: " + err.Error())
 	}
 }
 
 func Doozer() *skynet.DoozerConnection {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("Failed to connect to Doozer")
+			log.Error("Failed to connect to Doozer")
 			os.Exit(1)
 		}
 	}()
 
-	conn := skynet.NewDoozerConnection(*doozer, *doozerboot, true, nil) // nil as the last param will default to a Stdout logger
+	// nil as the last param will default to a Stdout logger
+	conn := skynet.NewDoozerConnection(*doozer, *doozerboot, true, nil)
 	conn.Connect()
 
 	return conn
