@@ -19,7 +19,7 @@ func Register(q *skynet.Query) {
 		}
 		_, err := cladmin.Register(skynet.RegisterRequest{})
 		if err != nil {
-			config.Log.Item(err)
+			config.Log.Error(err.Error())
 		}
 	}
 }
@@ -32,7 +32,7 @@ func Unregister(q *skynet.Query) {
 		}
 		_, err := cladmin.Unregister(skynet.UnregisterRequest{})
 		if err != nil {
-			config.Log.Item(err)
+			config.Log.Error(err.Error())
 		}
 	}
 }
@@ -149,7 +149,7 @@ func AdminStop(q *skynet.Query) {
 			WaitForClients: true,
 		})
 		if err != nil {
-			config.Log.Item(err)
+			config.Log.Error(err.Error())
 		}
 	}
 }
