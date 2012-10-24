@@ -16,7 +16,6 @@ func NewMultiSemanticLogger(loggers ...SemanticLogger) (ml MultiSemanticLogger) 
 // MultiSemanticLogger. For each logger, logging behavior may vary
 // depending upon the LogLevel.
 func (ml MultiSemanticLogger) Log(payload *LogPayload) {
-
 	switch payload.Level {
 	default:
 		// Log payloads with custom log levels just like those with
@@ -29,22 +28,21 @@ func (ml MultiSemanticLogger) Log(payload *LogPayload) {
 	}
 }
 
-// Fatal calls .Log(payload) for each logger in the
-// MultiSemanticLogger, then panics.
+// Fatal adds stacktrace data to the given payload, calls
+// .Log(payload) for each logger in the MultiSemanticLogger, then
+// panics.
 func (ml MultiSemanticLogger) Fatal(payload *LogPayload) {
-	switch payload.Level {
-	case TRACE, DEBUG, INFO, WARN, ERROR, FATAL:
-		for _, lgr := range ml {
-			// Calling .Fatal for each would result in panicking on
-			// the first logger, so we log them all, then panic.
-			lgr.Log(payload)
-		}
+	payload.Backtrace = genStacktrace()
+	for _, lgr := range ml {
+		// Calling .Fatal for each would result in panicking on
+		// the first logger, so we log them all, then panic.
+		lgr.Log(payload)
 	}
 	panic(payload)
 }
 
 // BenchmarkInfo runs .BenchmarkInfo(level, msg, f) on every logger in
-// the MultiSemanticLogger
+// the MultiSemanticLogger.
 func (ml MultiSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
 	f func(logger SemanticLogger)) {
 	for _, lgr := range ml {
