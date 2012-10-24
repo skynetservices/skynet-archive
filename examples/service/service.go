@@ -64,7 +64,8 @@ func main() {
 	}
 	service := service.CreateService(testService, config)
 
-	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
+	// handle panic so that we remove ourselves from the pool in case
+	// of catastrophic failure
 	defer func() {
 		service.Shutdown()
 		if err := recover(); err != nil {
@@ -72,10 +73,12 @@ func main() {
 		}
 	}()
 
-	// If we pass false here service will not be Registered
-	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
+	// If we pass false here service will not be Registered we could
+	// do other work/tasks by implementing the Started method and
+	// calling Register() when we're ready
 	waiter := service.Start(true)
 
-	// waiting on the sync.WaitGroup returned by service.Start() will wait for the service to finish running.
+	// waiting on the sync.WaitGroup returned by service.Start() will
+	// wait for the service to finish running.
 	waiter.Wait()
 }
