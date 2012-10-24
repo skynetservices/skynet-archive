@@ -1,8 +1,8 @@
 package main
 
 import (
-  "github.com/bketelsen/skynet"
-  "github.com/bketelsen/skynet/service"
+	"github.com/bketelsen/skynet"
+	"github.com/bketelsen/skynet/service"
 )
 
 type TutorialService struct {
@@ -15,26 +15,26 @@ func (s *TutorialService) Stopped(service *service.Service) {
 }
 
 type TutorialRequest struct {
-  Value int
+	Value int
 }
 
 type TutorialResponse struct {
-  Value int
+	Value int
 }
 
 func (f *TutorialService) AddOne(ri *skynet.RequestInfo, req *TutorialRequest, resp *TutorialResponse) (err error) {
-  resp.Value = req.Value + 1
+	resp.Value = req.Value + 1
 
-  return nil
+	return nil
 }
 
-func main(){
+func main() {
 	tutorial := &TutorialService{}
 	config, _ := skynet.GetServiceConfig()
 
-  config.Name = "TutorialService"
-  config.Version = "1"
-  config.Region = "Development"
+	config.Name = "TutorialService"
+	config.Version = "1"
+	config.Region = "Development"
 
 	service := service.CreateService(tutorial, config)
 

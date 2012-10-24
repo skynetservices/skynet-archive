@@ -52,7 +52,7 @@ func (se serviceError) Error() string {
 
 type ServiceClient struct {
 	client  *Client
-	Log     skynet.Logger `json:"-"`
+	Log     skynet.SemanticLogger `json:"-"`
 	cconfig *skynet.ClientConfig
 	query   *skynet.Query
 	// a list of the known instances
@@ -84,7 +84,7 @@ func newServiceClient(query *skynet.Query, c *Client) (sc *ServiceClient) {
 		giveupTimeout: skynet.DefaultTimeoutDuration,
 	}
 	sc.listenID = skynet.UUID()
-	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query)
+	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query, false)
 
 	go sc.mux()
 	return
@@ -118,7 +118,8 @@ func (c *ServiceClient) addInstanceMux(instance *skynet.ServiceInfo) {
 		// we got a new pool, put it into the wild
 		c.instances[key] = c.client.getServicePool(m.Service)
 		c.chooser.Add(m.Service)
-		c.Log.Item(m)
+		// Log event
+		c.Log.Debug(fmt.Sprintf("%T: %+v", m, m))
 	}
 }
 
@@ -131,7 +132,8 @@ func (c *ServiceClient) removeInstanceMux(instance *skynet.ServiceInfo) {
 	}
 	c.chooser.Remove(m.Service)
 	delete(c.instances, m.Service.Config.ServiceAddr.String())
-	c.Log.Item(m)
+	// Log event
+	c.Log.Trace(fmt.Sprintf("%T: %+v", m, m))
 }
 
 func (c *ServiceClient) mux() {
@@ -276,7 +278,9 @@ type sendAttempt struct {
 	err    error
 }
 
-func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}) {
+func (c *ServiceClient) attemptSend(timeout chan bool,
+	attempts chan sendAttempt, ri *skynet.RequestInfo,
+	fn string, in interface{}) {
 
 	ts("attemptSend")
 	defer te("attemptSend")
@@ -308,12 +312,15 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 			}
 			// TODO: report connection failure
 			c.chooser.Remove(instance)
-			c.Log.Item(FailedConnection{err})
+			// Log failure
+			failed := FailedConnection{err}
+			c.Log.Error(fmt.Sprintf("%T: %+v", failed, failed))
 		}
 	}
 
 	if err != nil {
-		c.Log.Item(err)
+		c.Log.Error(fmt.Sprintf("Error: %v", err))
+
 		attempts <- sendAttempt{err: err}
 		return
 	}
@@ -337,9 +344,14 @@ func (c *ServiceClient) attemptSend(timeout chan bool, attempts chan sendAttempt
 }
 
 // ServiceClient.sendToInstance() tries to make an RPC request on a particular connection to an instance
-func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.RequestInfo, funcName string, in interface{}) (result []byte, serviceErr, err error) {
+func (c *ServiceClient) sendToInstance(sr ServiceResource,
+	requestInfo *skynet.RequestInfo, funcName string, in interface{}) (
+	result []byte, serviceErr, err error) {
 	ts("sendToInstance", requestInfo)
 	defer te("sendToInstance", requestInfo)
+
+	sr.service.FetchStats(c.client.doozer())
+	dbgf("stats: %+v\n", sr.service.Stats)
 
 	sin := skynet.ServiceRPCIn{
 		RequestInfo: requestInfo,
@@ -349,6 +361,7 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.R
 
 	sin.In, err = bson.Marshal(in)
 	if err != nil {
+		err = fmt.Errorf("Error calling bson.Marshal: %v", err)
 		return
 	}
 
@@ -358,7 +371,9 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource, requestInfo *skynet.R
 	if err != nil {
 		sr.Close()
 		dbg("(sr.rpcClient.Call)", err)
-		c.Log.Item(err)
+
+		// Log failure
+		c.Log.Error("Error calling sr.rpcClient.Call: " + err.Error())
 	}
 
 	if sout.ErrString != "" {

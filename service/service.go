@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"net"
@@ -39,7 +40,7 @@ type Service struct {
 	// for waiting for all shutdown operations
 	doneGroup *sync.WaitGroup
 
-	Log skynet.Logger
+	Log skynet.SemanticLogger
 
 	RPCServ *rpc.Server
 	Admin   *ServiceAdmin
@@ -79,19 +80,19 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	}
 
 	s.Config = c
-	s.Stats = skynet.ServiceStatistics{
+	s.Stats = &skynet.ServiceStatistics{
 		StartTime: time.Now().Format("2006-01-02T15:04:05Z-0700"),
 	}
 
-	c.Log.Item(skynet.ServiceCreated{
+	c.Log.Trace(fmt.Sprintf("%+v", skynet.ServiceCreated{
 		ServiceConfig: s.Config,
-	})
+	}))
 
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
 	rpcForwarder := NewServiceRPC(s)
 
-	c.Log.Item(RegisteredMethods{rpcForwarder.MethodNames})
+	c.Log.Trace(fmt.Sprintf("%+v", RegisteredMethods{rpcForwarder.MethodNames}))
 
 	s.RPCServ.RegisterName(s.Config.Name, rpcForwarder)
 
@@ -105,10 +106,10 @@ func (s *Service) listen(addr *skynet.BindAddr, bindWait *sync.WaitGroup) {
 		panic(err)
 	}
 
-	s.Log.Item(ServiceListening{
+	s.Log.Trace(fmt.Sprintf("%+v", ServiceListening{
 		Addr:          addr,
 		ServiceConfig: s.Config,
-	})
+	}))
 
 	bindWait.Done()
 
@@ -146,7 +147,7 @@ loop:
 			encoder := bsonrpc.NewEncoder(conn)
 			err := encoder.Encode(sh)
 			if err != nil {
-				s.Log.Item(err)
+				s.Log.Error(err.Error())
 
 				atomic.AddInt32(&s.Stats.Clients, -1)
 				break
@@ -162,7 +163,7 @@ loop:
 			decoder := bsonrpc.NewDecoder(conn)
 			err = decoder.Decode(&ch)
 			if err != nil {
-				s.Log.Item(err)
+				s.Log.Error("Error calling bsonrpc.NewDecoder: " + err.Error())
 				atomic.AddInt32(&s.Stats.Clients, -1)
 				break
 			}
@@ -190,7 +191,7 @@ loop:
 			break loop
 
 		case _ = <-s.updateTicker.C:
-			s.UpdateCluster()
+			s.UpdateDoozerStats()
 		}
 	}
 }
@@ -202,6 +203,7 @@ type doozerSetConfig struct {
 
 type doozerRemoveFromCluster struct {
 	ConfigPath string
+	StatsPath  string
 }
 
 type doozerFinish struct{}
@@ -214,13 +216,18 @@ loop:
 			rev := s.doozer().GetCurrentRevision()
 			_, err := s.DoozerConn.Set(i.ConfigPath, rev, i.ConfigData)
 			if err != nil {
-				s.Log.Panic(err.Error())
+				s.Log.Fatal(err.Error())
 			}
 		case doozerRemoveFromCluster:
 			rev := s.doozer().GetCurrentRevision()
 			err := s.doozer().Del(i.ConfigPath, rev)
 			if err != nil {
-				s.Log.Panic(err.Error())
+				s.Log.Fatal(err.Error())
+			}
+
+			err = s.doozer().Del(i.StatsPath, rev)
+			if err != nil {
+				s.Log.Fatal(err.Error())
 			}
 		case doozerFinish:
 			break loop
@@ -265,7 +272,7 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 		bindWait.Add(1)
 		go s.Admin.Listen(s.Config.AdminAddr, bindWait)
 	} else {
-		s.Log.Item(AdminNotListening{s.Config})
+		s.Log.Trace(fmt.Sprintf("%+v", AdminNotListening{s.Config}))
 	}
 
 	// Watch signals for shutdown
@@ -286,7 +293,7 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	s.doozerWaiter.Add(1)
 	go s.doozerMux()
 
-	s.UpdateCluster()
+	s.UpdateDoozerServiceInfo()
 
 	if register == true {
 		s.register()
@@ -315,15 +322,23 @@ func (s *Service) cleanupDoozerEntriesForAddr(addr *skynet.BindAddr) {
 	instances := q.FindInstances()
 
 	for _, i := range instances {
-		s.Log.Item("Cleaning up old doozer entry with conflicting addr " + addr.String() + "(" + i.GetConfigPath() + ")")
+		s.Log.Trace("Cleaning up old doozer entry with conflicting addr " +
+			addr.String() + "(" + i.GetConfigPath() + ")")
 		s.doozer().Del(i.GetConfigPath(), s.doozer().GetCurrentRevision())
+		s.doozer().Del(i.GetStatsPath(), s.doozer().GetCurrentRevision())
 	}
 }
 
-func (s *Service) UpdateCluster() {
-	b, err := json.Marshal(s.ServiceInfo)
+func (s *Service) UpdateDoozerServiceInfo() {
+
+	// We're going to create a copy of our ServiceInfo so that we can nil out the Stats, which will match the omitempty and won't marshal 
+	// this is cheap as it's a single bool, and 2 pointers.
+	si := s.ServiceInfo
+	si.Stats = nil
+
+	b, err := json.Marshal(si)
 	if err != nil {
-		s.Log.Panic(err.Error())
+		s.Log.Fatal(err.Error())
 	}
 	cfgpath := s.GetConfigPath()
 
@@ -333,9 +348,21 @@ func (s *Service) UpdateCluster() {
 	}
 }
 
+func (s *Service) UpdateDoozerStats() {
+	b, err := json.Marshal(s.ServiceInfo.Stats)
+	if err != nil {
+		s.Log.Fatal(err.Error())
+	}
+	s.doozerChan <- doozerSetConfig{
+		ConfigPath: s.GetStatsPath(),
+		ConfigData: b,
+	}
+}
+
 func (s *Service) RemoveFromCluster() {
 	s.doozerChan <- doozerRemoveFromCluster{
 		ConfigPath: s.GetConfigPath(),
+		StatsPath:  s.GetStatsPath(),
 	}
 }
 
@@ -345,8 +372,8 @@ func (s *Service) register() {
 		return
 	}
 	s.Registered = true
-	s.Log.Item(ServiceRegistered{s.Config})
-	s.UpdateCluster()
+	s.Log.Trace(fmt.Sprintf("%+v", ServiceRegistered{s.Config}))
+	s.UpdateDoozerServiceInfo()
 	s.Delegate.Registered(s) // Call user defined callback
 }
 
@@ -360,8 +387,8 @@ func (s *Service) unregister() {
 		return
 	}
 	s.Registered = false
-	s.Log.Item(ServiceUnregistered{s.Config})
-	s.UpdateCluster()
+	s.Log.Trace(fmt.Sprintf("%+v", ServiceUnregistered{s.Config}))
+	s.UpdateDoozerServiceInfo()
 	s.Delegate.Unregistered(s) // Call user defined callback
 }
 
@@ -384,7 +411,7 @@ func (s *Service) Shutdown() {
 
 func initializeConfig(c *skynet.ServiceConfig) {
 	if c.Log == nil {
-		c.Log = skynet.NewConsoleLogger("skynet", os.Stderr)
+		c.Log = skynet.NewConsoleSemanticLogger("skynet", os.Stderr)
 	}
 
 	if c.Name == "" {
@@ -399,12 +426,19 @@ func initializeConfig(c *skynet.ServiceConfig) {
 		c.Region = "local"
 	}
 
+	if c.ServiceAddr == nil {
+		c.ServiceAddr = &skynet.BindAddr{}
+	}
+
 	if c.ServiceAddr.IPAddress == "" {
 		c.ServiceAddr.IPAddress = "127.0.0.1"
 	}
 
 	if c.ServiceAddr.Port == 0 {
 		c.ServiceAddr.Port = 9000
+	}
+	if c.ServiceAddr.MaxPort == 0 {
+		c.ServiceAddr.MaxPort = 9999
 	}
 
 	if c.DoozerConfig == nil {
@@ -443,8 +477,9 @@ func watchSignals(c chan os.Signal, s *Service) {
 		case sig := <-c:
 			switch sig.(syscall.Signal) {
 			// Trap signals for clean shutdown
-			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
-				s.Log.Item(KillSignal{sig.(syscall.Signal)})
+			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT,
+				syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
+				s.Log.Trace(fmt.Sprintf("%+v", KillSignal{sig.(syscall.Signal)}))
 				s.Shutdown()
 			}
 		}

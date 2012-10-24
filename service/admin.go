@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
 	"net/rpc"
@@ -32,7 +33,8 @@ func (sa *ServiceAdmin) Listen(addr *skynet.BindAddr, bindWait *sync.WaitGroup) 
 	}
 
 	bindWait.Done()
-	sa.service.Log.Item(AdminListening{sa.service.Config})
+
+	sa.service.Log.Trace(fmt.Sprintf("%+v", AdminListening{sa.service.Config}))
 
 	for {
 		conn, err := listener.AcceptTCP()
@@ -48,19 +50,19 @@ type Admin struct {
 }
 
 func (sa *Admin) Register(in skynet.RegisterRequest, out *skynet.RegisterResponse) (err error) {
-	sa.service.Log.Println("Got RPC admin command Register")
+	sa.service.Log.Trace("Got RPC admin command Register")
 	sa.service.Register()
 	return
 }
 
 func (sa *Admin) Unregister(in skynet.UnregisterRequest, out *skynet.UnregisterResponse) (err error) {
-	sa.service.Log.Println("Got RPC admin command Unregister")
+	sa.service.Log.Trace("Got RPC admin command Unregister")
 	sa.service.Unregister()
 	return
 }
 
 func (sa *Admin) Stop(in skynet.StopRequest, out *skynet.StopResponse) (err error) {
-	sa.service.Log.Item("Got RPC admin command Stop")
+	sa.service.Log.Trace("Got RPC admin command Stop")
 
 	// TODO: if in.WaitForClients is true, do it
 

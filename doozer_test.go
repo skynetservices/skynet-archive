@@ -6,7 +6,7 @@ import (
 )
 
 func TestNewDoozerConnection(t *testing.T) {
-	logger := NewConsoleLogger(os.Stdout)
+	logger := NewConsoleSemanticLogger("test_logger", os.Stdout)
 
 	doozer := NewDoozerConnection("localhost:1234", "localhost:4321", true, logger)
 
@@ -36,7 +36,7 @@ func TestNewDoozerConnectionDefaultLogger(t *testing.T) {
 }
 
 func TestNewDoozerConnectionFromConfig(t *testing.T) {
-	logger := NewConsoleLogger(os.Stdout)
+	logger := NewConsoleSemanticLogger("test_logger2", os.Stdout)
 
 	config := DoozerConfig{
 		Uri:          "localhost:1234",

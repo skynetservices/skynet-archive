@@ -9,7 +9,6 @@
 package skynet
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -34,7 +33,7 @@ func BindAddrFromString(host string) (ba *BindAddr, err error) {
 	}
 	split := strings.Index(host, ":")
 	if split == -1 {
-		err = errors.New(fmt.Sprintf("Must specify a port for address (got %q)", host))
+		err = fmt.Errorf("Must specify a port for address (got %q)", host)
 		return
 	}
 
@@ -52,7 +51,7 @@ func BindAddrFromString(host string) (ba *BindAddr, err error) {
 
 	var rindex int
 	if rindex = strings.Index(portstr, "-"); rindex == -1 {
-		err = errors.New(fmt.Sprintf("Couldn't process port for %q: %v", host, err))
+		err = fmt.Errorf("Couldn't process port for %q: %v", host, err)
 		return
 	}
 
@@ -60,11 +59,11 @@ func BindAddrFromString(host string) (ba *BindAddr, err error) {
 	portstr = portstr[:rindex]
 
 	if ba.Port, err = strconv.Atoi(portstr); err != nil {
-		err = errors.New(fmt.Sprintf("Couldn't process port for %q: %v", host, err))
+		err = fmt.Errorf("Couldn't process port for %q: %v", host, err)
 		return
 	}
 	if ba.MaxPort, err = strconv.Atoi(maxPortStr); err != nil {
-		err = errors.New(fmt.Sprintf("Couldn't process port for %q: %v", host, err))
+		err = fmt.Errorf("Couldn't process port for %q: %v", host, err)
 		return
 	}
 
@@ -104,7 +103,7 @@ func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
 }
 
 type ServiceConfig struct {
-	Log                  Logger `json:"-"`
+	Log                  SemanticLogger `json:"-"`
 	UUID                 string
 	Name                 string
 	Version              string
@@ -115,30 +114,9 @@ type ServiceConfig struct {
 	DoozerUpdateInterval time.Duration `json:"-"`
 }
 
-type ServiceStatistics struct {
-	Clients        int32
-	StartTime      string
-	LastRequest    string
-	RequestsServed int64
-
-	// For now this will be since startup, we might change it later to be for a given sample interval
-	AverageResponseTime time.Duration
-	TotalDuration       time.Duration `json:"-"`
-}
-
-type ServiceInfo struct {
-	Config     *ServiceConfig
-	Registered bool
-	Stats      ServiceStatistics
-}
-
-func (s *ServiceInfo) GetConfigPath() string {
-	return "/services/" + s.Config.Name + "/" + s.Config.Version + "/" + s.Config.Region + "/" + s.Config.ServiceAddr.IPAddress + "/" + strconv.Itoa(s.Config.ServiceAddr.Port)
-}
-
 type ClientConfig struct {
-	Log                       Logger        `json:"-"`
-	DoozerConfig              *DoozerConfig `json:"-"`
+	Log                       SemanticLogger `json:"-"`
+	DoozerConfig              *DoozerConfig  `json:"-"`
 	IdleConnectionsToInstance int
 	MaxConnectionsToInstance  int
 	IdleTimeout               time.Duration
@@ -153,9 +131,15 @@ func GetDefaultEnvVar(name, def string) (v string) {
 }
 
 func FlagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
-	flagset.StringVar(&dcfg.Uri, "doozer", GetDefaultEnvVar("SKYNET_DZHOST", DefaultDoozerdAddr), "initial doozer instance to connect to")
-	flagset.StringVar(&dcfg.BootUri, "doozerboot", GetDefaultEnvVar("SKYNET_DZNSHOST", DefaultDoozerdAddr), "initial doozer instance to connect to")
-	flagset.BoolVar(&dcfg.AutoDiscover, "autodiscover", GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true", "auto discover new doozer instances")
+	flagset.StringVar(&dcfg.Uri, "doozer",
+			GetDefaultEnvVar("SKYNET_DZHOST", DefaultDoozerdAddr),
+			"initial doozer instance to connect to")
+	flagset.StringVar(&dcfg.BootUri, "doozerboot",
+			GetDefaultEnvVar("SKYNET_DZNSHOST", DefaultDoozerdAddr),
+			"initial doozer instance to connect to")
+	flagset.BoolVar(&dcfg.AutoDiscover, "autodiscover",
+			GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true",
+			"auto discover new doozer instances")
 }
 
 func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
@@ -163,10 +147,14 @@ func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
 		ccfg.DoozerConfig = &DoozerConfig{}
 	}
 	FlagsForDoozer(ccfg.DoozerConfig, flagset)
-	flagset.DurationVar(&ccfg.IdleTimeout, "timeout", DefaultIdleTimeout, "amount of idle time before timeout")
-	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle", DefaultIdleConnectionsToInstance, "maximum number of idle connections to a particular instance")
-	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns", DefaultMaxConnectionsToInstance, "maximum number of concurrent connections to a particular instance")
-
+	flagset.DurationVar(&ccfg.IdleTimeout, "timeout",
+			DefaultIdleTimeout, "amount of idle time before timeout")
+	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle",
+			DefaultIdleConnectionsToInstance,
+			"maximum number of idle connections to a particular instance")
+	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns",
+			DefaultMaxConnectionsToInstance,
+			"maximum number of concurrent connections to a particular instance")
 }
 
 func GetClientConfig() (config *ClientConfig, args []string) {
@@ -186,7 +174,7 @@ func GetClientConfigFromFlags(argv []string) (config *ClientConfig, args []strin
 
 	args = flagset.Args()
 	if err == flag.ErrHelp {
-		// -help was given, pass it on to caller who 
+		// -help was given, pass it on to caller who
 		// may decide to quit instead of continuing
 		args = append(args, "-help")
 	}
@@ -225,7 +213,7 @@ func GetServiceConfigFromFlags(argv []string) (config *ServiceConfig, args []str
 	err := flagset.Parse(argv)
 	args = flagset.Args()
 	if err == flag.ErrHelp {
-		// -help was given, pass it on to caller who 
+		// -help was given, pass it on to caller who
 		// may decide to quit instead of continuing
 		args = append(args, "-help")
 	}
