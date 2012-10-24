@@ -2,8 +2,6 @@ package skynet
 
 import (
 	"fmt"
-	"io"
-	"labix.org/v2/mgo"
 	"log"
 	"os"
 	"runtime"
@@ -201,113 +199,6 @@ func (ml MultiSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
 	}
 }
 
-//
-// ConsoleSemanticLogger
-//
-
-// ConsoleSemanticLogger logs to the console. True story.
-type ConsoleSemanticLogger struct {
-	log *log.Logger
-}
-
-// NewConsoleSemanticLogger returns a *ConsoleSemanticLogger with the
-// given name that logs to the given io.Writer (usually os.Stdin or
-// os.Stderr).
-func NewConsoleSemanticLogger(name string, w io.Writer) *ConsoleSemanticLogger {
-	cl := ConsoleSemanticLogger{
-		// TODO: Set this format to match Clarity's Ruby SemanticLogger
-		log: log.New(w, fmt.Sprintf("%s: ", name), log.LstdFlags),
-	}
-	return &cl
-}
-
-// Log uses select parts of the given payload and logs it to the
-// console.
-func (cl *ConsoleSemanticLogger) Log(payload *LogPayload) {
-	// TODO: Consider using more payload fields
-	cl.log.Printf("%v: %s\n", payload.Level, payload.Message)
-}
-
-// Fatal logs the given payload to the console, then panics.
-func (cl *ConsoleSemanticLogger) Fatal(payload *LogPayload) {
-	payload.Backtrace = genStacktrace()
-	cl.Log(payload)
-	panic(payload)
-}
-
-// BenchmarkInfo currently does nothing but should measure the time
-// it takes to execute `f` based on the log level.
-func (cl *ConsoleSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
-	f func(logger SemanticLogger)) {
-	// TODO: Implement
-}
-
-//
-// MongoSemanticLogger
-//
-
-// MongoSemanticLogger saves logging data to a MongoDB instance.
-type MongoSemanticLogger struct {
-	session                *mgo.Session
-	dbName, collectionName string
-	uuid                   string
-}
-
-// NewMongoSemanticLogger connects to a MongoDB instance at the given
-// address (often "localhost").
-func NewMongoSemanticLogger(addr, dbName, collectionName,
-	uuid string) (ml *MongoSemanticLogger, err error) {
-	ml = &MongoSemanticLogger{
-		dbName:         dbName,
-		collectionName: collectionName,
-		uuid:           uuid,
-	}
-	ml.session, err = mgo.Dial(addr)
-	return
-}
-
-// Log saves all fields of the given payload to MongoDB, setting
-// unexported fields as necessary. May behave differently based upon
-// payload.LogLevel.
-func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
-	// Sanity checks
-	if ml == nil {
-		log.Printf("NOT LOGGING: Can't log to nil *MongoSemanticLogger\n")
-		return
-	}
-	if payload == nil {
-		log.Printf("NOT LOGGING: Can't log nil *LogPayload\n")
-		return
-	}
-
-	// Set various Payload fields
-	payload.setKnownFields()
-	payload.Name = fmt.Sprintf("%T", ml)
-	payload.UUID = ml.uuid
-	payload.Table = ml.collectionName
-
-	// Log regardless of the log level
-	err := ml.session.DB(ml.dbName).C(ml.collectionName).Insert(payload)
-	if err != nil {
-		errStr := "Error logging with MongoSemanticLogger %s: %v"
-		log.Printf(errStr, ml.uuid, err)
-	}
-}
-
-// Fatal logs the given payload to MongoDB, then panics.
-func (ml *MongoSemanticLogger) Fatal(payload *LogPayload) {
-	payload.Backtrace = genStacktrace()
-	ml.Log(payload)
-	panic(payload)
-}
-
-// BenchmarkInfo currently does nothing but should measure the time
-// it takes to execute `f` based on the log level
-func (ml *MongoSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
-	f func(logger SemanticLogger)) {
-	// TODO: Implement
-}
-
 // genStacktrace is a helper function for generating stacktrace
 // data. Used to populate payload.Backtrace
 func genStacktrace() (stacktrace []string) {
@@ -322,49 +213,4 @@ func genStacktrace() (stacktrace []string) {
 		stacktrace = append(stacktrace, traceLine)
 	}
 	return
-}
-
-//
-// FileSemanticLogger
-//
-
-// FileSemanticLogger logs logging data to files... semantically!
-type FileSemanticLogger struct {
-	log *log.Logger
-}
-
-// NewMongoSemanticLogger creates a new logger with the given name
-// that logs to the given filename
-func NewFileSemanticLogger(name, filename string) (*FileSemanticLogger, error) {
-	// Open file with append permissions
-	flags := os.O_APPEND | os.O_WRONLY | os.O_CREATE
-	file, err := os.OpenFile(filename, flags, 0666)
-	if err != nil {
-		return nil, fmt.Errorf("Error opening '%v': %v", filename, err)
-	}
-	// Oddity: `file.Close()` never gets called. Everything seems to work.
-	fl := FileSemanticLogger{
-		log: log.New(file, fmt.Sprintf("%s: ", name), log.LstdFlags),
-	}
-	return &fl, nil
-}
-
-// Log uses select parts of the given payload and logs to fl.log
-func (fl *FileSemanticLogger) Log(payload *LogPayload) {
-	// TODO: Consider using more payload fields
-	fl.log.Printf("%v: %s\n", payload.Level, payload.Message)
-}
-
-// Fatal populates payload.Backtrace then panics
-func (fl *FileSemanticLogger) Fatal(payload *LogPayload) {
-	payload.Backtrace = genStacktrace()
-	fl.Log(payload)
-	panic(payload)
-}
-
-// BenchmarkInfo currently does nothing but should measure the time
-// it takes to execute `f` based on the log level
-func (fl *FileSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
-	f func(logger SemanticLogger)) {
-	// TODO: Implement
 }
