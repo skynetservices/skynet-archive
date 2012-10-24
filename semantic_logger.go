@@ -2,8 +2,6 @@ package skynet
 
 import (
 	"fmt"
-	"io"
-	"labix.org/v2/mgo"
 	"log"
 	"os"
 	"runtime"
@@ -11,48 +9,108 @@ import (
 	"time"
 )
 
-type Payload struct {
-	// Set by user
-	ThreadName  string        `json:"thread_name"`
-	Level       LogLevel      `json:"level"`
-	Message     string        `json:"message"`
-	Tags        []string      `json:"tags"`
-	Action      string        `json:"action"`
-	// Set by setUnexportedPayloadFields()
-	hostname    string        `json:"host_name"`
-	pid         int           `json:"pid"`
-	time        time.Time     `json:"time"`
-	// Should be set by Log() method
-	name        string        `json:"name"`
-	uuid        string        `json:"uuid"`
-	table       string        `json:"table"` // Set automatically???
+// LogPayload stores detailed logging information, including all
+// fields used by Clarity Service's semantic_logger (see
+// https://github.com/ClarityServices/semantic_logger). See the
+// LogPayload struct's inline comments for instructions as to which
+// fields should be populated by whom or what (e.g., the user
+// (manually), helper functions, or methods on the various loggers in
+// this package.)
+// Valid log levels -- a list of which is stored in the `LogLevels`
+// slice -- include TRACE, DEBUG, INFO, WARN, ERROR, and FATAL.
+type LogPayload struct {
+	// Set by user by passing values to NewLogPayload()
+	Level   LogLevel `json:"level"`
+	Message string   `json:"message"`
+	// Set automatically within NewLogPayload()
+	Action string `json:"action"`
+	// Set by .setKnownFields()
+	Application string    `json:"application"`
+	PID         int       `json:"pid"`
+	Time        time.Time `json:"time"`
+	HostName    string    `json:"host_name"`
+	// Set by .SetTags() convenience method
+	Tags []string `json:"tags"`
+	// Should be set by .Log()
+	Name  string `json:"name"`  // Store "class name" (type)
+	UUID  string `json:"uuid"`  // Logger's UUID
+	Table string `json:"table"` // Mongo collection name
 	// Set by Fatal() method if need be
-	backtrace   []string      `json:"backtrace"`
+	Backtrace []string `json:"backtrace"`
 	// Should be set by BenchmarkInfo() if called
-	duration    time.Duration `json:"duration"`
-	// TODO: When should payload.Application be set?
-	Application string        `json:"application"`
+	Duration time.Duration `json:"duration"`
+	// Optionally set by user manually
+	ThreadName string `json:"thread_name"`
 }
 
-func (pl *Payload) Exception() string {
+// Exception formats the payload just as
+// github.com/ClarityServices/semantic_logger formats Exceptions for
+// logging. This package has no Exception data type; all relevant data
+// should be stored in a *LogPayload. The payload's "exception" data is
+// generated from a panic's stacktrace using the `genStacktrace`
+// helper function.
+func (payload *LogPayload) Exception() string {
 	// message << " -- " << "#{exception.class}: #{exception.message}\n
 	// #{(exception.backtrace || []).join("\n")}"
 	formatStr := "%s -- %s: %s\n%s"
-	backtrace := strings.Join(pl.backtrace, "\n")
-	return fmt.Sprintf(formatStr, pl.Message, "panic", pl.Message, backtrace)
+	backtrace := strings.Join(payload.Backtrace, "\n")
+	return fmt.Sprintf(formatStr, payload.Message, "panic",
+		payload.Message, backtrace)
 }
 
-func setUnexportedPayloadFields(payload *Payload) error {
-	payload.pid = os.Getpid()
-	payload.time = time.Now()
+// setKnownFields sets the `Application`, `PID`, `Time`, and
+// `HostName` fields of the given payload. See the documentation on
+// the LogPayload type for which fields should be set where, and by
+// whom (the user) or what (a function or method).
+func (payload *LogPayload) setKnownFields() {
+	// Set Application to os.Args[0] if it wasn't set by the user
+	if payload.Application == "" {
+		payload.Application = os.Args[0]
+	}
+	payload.PID = os.Getpid()
+	payload.Time = time.Now()
 	hostname, err := os.Hostname()
 	if err != nil {
-		return fmt.Errorf("Error getting hostname: %v", err)
+		log.Printf("Error getting hostname: %v\n", err)
 	}
-	payload.hostname = hostname
-	return nil
+	payload.HostName = hostname
 }
 
+// SetTags is a convenience method for adding tags to *LogPayload's,
+// since `payload.SetTags("tag1", "tag2")` is cleaner than
+// `payload.Tags = []string{"tag1", "tag2"}`
+func (payload *LogPayload) SetTags(tags ...string) {
+	payload.Tags = tags
+}
+
+// NewLogPayload is a convenience function for creating *LogPayload's
+func NewLogPayload(level LogLevel, formatStr string,
+	vars ...interface{}) *LogPayload {
+
+	payload := &LogPayload{
+		Level:   level,
+		Message: fmt.Sprintf(formatStr, vars...),
+		// TODO: Make sure that `2` is the number that should be
+		// passed in here
+		Action: getCallerName(2),
+	}
+	// payload.setKnownFields() called in .Log() method; not calling here
+
+	// TODO: Come up with a way to intelligently auto-fill ThreadName,
+	// if possible
+
+	return payload
+}
+
+func getCallerName(skip int) string {
+	pc, _, _, _ := runtime.Caller(skip)
+	f := runtime.FuncForPC(pc)
+	return f.Name()
+}
+
+// LogLevels are ints for the sake of having a well-defined
+// ordering. This is useful for viewing logs more or less severe than
+// a given log level. See the LogLevel.LessSevereThan method.
 type LogLevel int
 
 const (
@@ -64,14 +122,21 @@ const (
 	FATAL
 )
 
+// LogLevel stores the valid log levels as specified by
+// github.com/ClarityServices/semantic_logger.
 var LogLevels = []LogLevel{
 	TRACE, DEBUG, INFO, WARN, ERROR, FATAL,
 }
 
+// LessSevereThan tells you whether or not `level` is a less severe
+// LogLevel than `level2`. This is useful for determining which logs
+// to view.
 func (level LogLevel) LessSevereThan(level2 LogLevel) bool {
 	return int(level) < int(level2)
 }
 
+// String helps make LogLevel's more readable by representing them as
+// strings instead of ints 0 (TRACE) through 5 (FATAL).
 func (level LogLevel) String() string {
 	switch level {
 	case TRACE:
@@ -90,140 +155,27 @@ func (level LogLevel) String() string {
 	return "CUSTOM"
 }
 
-// Goal: When done replicating `Logger` logic as `SemanticLogger`s,
-// s/SemanticLogger/Logger/ in this file
+// NOTE: The data type names are what they are (and rather verbose) in
+// part so that "SemanticLogger" can be replaced with "Logger" in this
+// file once the contents of logger.go is no longer needed.
 
+// SemanticLogger is meant to match the format and functionality of
+// github.com/ClarityServices/semantic_logger
 type SemanticLogger interface {
-	Log(payload *Payload) error
-	Fatal(payload *Payload)
+	Log(payload *LogPayload)
+	Trace(msg string)
+	Debug(msg string)
+	Info(msg string)
+	Warn(msg string)
+	Error(msg string)
+	Fatal(msg string)
 	BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger))
 }
 
-type MultiSemanticLogger []SemanticLogger
-
-func NewMultiSemanticLogger(loggers ...SemanticLogger) (ml MultiSemanticLogger) {
-	ml = loggers
-	return
-}
-
-//
-// Define methods necessary for MultiSemanticLogger to implement
-// SemanticLogger
-//
-
-func (ml MultiSemanticLogger) Log(level LogLevel, msg string,
-	payload *Payload) error {
-	switch level {
-	case TRACE, DEBUG, INFO, WARN, ERROR, FATAL:
-		for _, lgr := range ml {
-			if err := lgr.Log(payload); err != nil {
-				log.Printf("Error calling .Log: %v\n", err)
-			}
-		}
-	}
-	return nil
-}
-
-func (ml MultiSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
-	f func(logger SemanticLogger)) {
-	for _, lgr := range ml {
-		lgr.BenchmarkInfo(level, msg, f)
-	}
-}
-
-//
-// ConsoleSemanticLogger
-//
-
-type ConsoleSemanticLogger struct {
-	l *log.Logger
-}
-
-func NewConsoleSemanticLogger(name string, w io.Writer) *ConsoleSemanticLogger {
-	cl := ConsoleSemanticLogger{
-		// TODO: Set this format to match Clarity's Ruby SemanticLogger
-		l: log.New(w, fmt.Sprintf("%s: ", name), log.LstdFlags),
-	}
-	return &cl
-}
-
-func (cl *ConsoleSemanticLogger) Log(payload *Payload) error {
-	cl.l.Printf("%v: %s\n", payload.Level, payload.Message)
-	return nil
-}
-
-func (cl *ConsoleSemanticLogger) Fatal(payload *Payload) {
-	cl.l.Fatal(payload)
-}
-
-func (cl *ConsoleSemanticLogger) BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger)) {
-	// TODO: Implement
-}
-
-
-//
-// MongoSemanticLogger
-//
-
-type MongoSemanticLogger struct {
-	session         *mgo.Session
-	dbName, colName string
-	uuid            string
-}
-
-func NewMongoSemanticLogger(addr, dbName, collectionName,
-	uuid string) (ml *MongoSemanticLogger, err error) {
-	ml = &MongoSemanticLogger{
-		dbName:         dbName,
-		colName:        collectionName,
-		uuid:           uuid,
-	}
-	ml.session, err = mgo.Dial(addr)
-	return
-}
-
-func (ml *MongoSemanticLogger) Log(payload *Payload) error {
-	if ml == nil {
-		return fmt.Errorf("Can't log to nil *MongoSemanticLogger")
-	}
-	if payload == nil {
-		return fmt.Errorf("Can't log nil *Payload")
-	}
-
-	db := ml.session.DB(ml.dbName)
-	col := db.C(ml.colName)
-
-	err := setUnexportedPayloadFields(payload)
-	if err != nil {
-		// Don't return this error; too minor an issue to be worth
-		// it. (Onward!)
-		errStr := "From setUnexportedPayloadFields for payload '%+v': %v\n"
-		log.Printf(errStr, payload, err)
-	}
-	payload.uuid = ml.uuid
-	payload.table = ml.colName
-	
-	switch payload.Level {
-	case TRACE, DEBUG, INFO, WARN, ERROR: // Use Payload
-		if payload != nil {
-			err := col.Insert(payload)
-			if err != nil {
-				errStr := "Error logging with MongoSemanticLogger %s: %v"
-				return fmt.Errorf(errStr, ml.uuid, err)
-			}
-		}
-	case FATAL: // Should call ml.Fatal(payload) directly
-		ml.Fatal(payload)
-	}
-	return nil
-}
-
-func (ml *MongoSemanticLogger) Fatal(payload *Payload) {
-	db := ml.session.DB(ml.dbName)
-	col := db.C(ml.colName)
-
-	var stackTrace []string
-
+// genStacktrace is a helper function for generating stacktrace
+// data. Used to populate (*LogPayload).Backtrace
+func genStacktrace() (stacktrace []string) {
+	// TODO: Make sure that `skip` should begin at 1, not 2
 	for skip := 1; ; skip++ {
 		pc, file, line, ok := runtime.Caller(skip)
 		if !ok {
@@ -231,19 +183,7 @@ func (ml *MongoSemanticLogger) Fatal(payload *Payload) {
 		}
 		f := runtime.FuncForPC(pc)
 		traceLine := fmt.Sprintf("%s:%d %s()\n", file, line, f.Name())
-		stackTrace = append(stackTrace, traceLine)
+		stacktrace = append(stacktrace, traceLine)
 	}
-
-	payload.backtrace = stackTrace
-	err := col.Insert(payload)
-	if err != nil {
-		log.Printf("Error inserting '%+v' into %s collection: %v",
-			payload, ml.colName, err)
-	}
-	panic(payload)
-}
-
-func (ml *MongoSemanticLogger) BenchmarkInfo(level LogLevel, msg string,
-		f func(logger SemanticLogger)) {
-		// TODO: Implement
+	return
 }

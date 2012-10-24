@@ -2,6 +2,7 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/pools"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
@@ -36,29 +37,35 @@ type Client struct {
 	DoozerConn *skynet.DoozerConnection
 
 	Config *skynet.ClientConfig
-	Log    skynet.Logger `json:"-"`
+	Log    skynet.SemanticLogger `json:"-"`
 
 	servicePools    map[string]*servicePool
 	instanceMonitor *InstanceMonitor
 }
 
 func NewClient(config *skynet.ClientConfig) *Client {
+	// Sanity checks (nil pointers are baaad)
 	if config.Log == nil {
-		config.Log = skynet.NewConsoleLogger("skynet", os.Stderr)
+		config.Log = skynet.NewConsoleSemanticLogger("skynet", os.Stderr)
+	}
+	if config.DoozerConfig == nil {
+		config.DoozerConfig = &skynet.DoozerConfig{Uri: "localhost:8046"}
 	}
 
 	if config.MaxConnectionsToInstance == 0 {
-		panic("must have at least one connection allowed to an instance")
+		config.Log.Fatal("Must allow at least one instance connection")
 	}
 
+	doozerConn := skynet.NewDoozerConnectionFromConfig(*config.DoozerConfig,
+		config.Log)
 	client := &Client{
 		Config:       config,
-		DoozerConn:   skynet.NewDoozerConnectionFromConfig(*config.DoozerConfig, config.Log),
+		DoozerConn:   doozerConn,
 		Log:          config.Log,
 		servicePools: map[string]*servicePool{},
 	}
 
-	client.Log.Item(config)
+	client.Log.Trace(fmt.Sprintf("Created client '%+v'", client))
 
 	client.DoozerConn.Connect()
 
@@ -69,7 +76,8 @@ func NewClient(config *skynet.ClientConfig) *Client {
 
 func (c *Client) doozer() *skynet.DoozerConnection {
 	if c.DoozerConn == nil {
-		c.DoozerConn = skynet.NewDoozerConnectionFromConfig(*c.Config.DoozerConfig, c.Config.Log)
+		c.DoozerConn = skynet.NewDoozerConnectionFromConfig(
+			*c.Config.DoozerConfig, c.Config.Log)
 
 		c.DoozerConn.Connect()
 	}
@@ -90,11 +98,14 @@ func (c *Client) getServicePool(instance *skynet.ServiceInfo) (sp *servicePool) 
 		return
 	}
 
-	dbgf("making service pool, size = %d, %d\n", c.Config.IdleConnectionsToInstance, c.Config.MaxConnectionsToInstance)
+	dbgf("making service pool, size = %d, %d\n",
+		c.Config.IdleConnectionsToInstance, c.Config.MaxConnectionsToInstance)
 
 	sp = &servicePool{
 		service: instance,
-		pool:    pools.NewResourcePool(getConnectionFactory(instance), c.Config.IdleConnectionsToInstance, c.Config.MaxConnectionsToInstance),
+		pool:    pools.NewResourcePool(getConnectionFactory(instance),
+			c.Config.IdleConnectionsToInstance,
+			c.Config.MaxConnectionsToInstance),
 	}
 	return
 }
