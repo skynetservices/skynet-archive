@@ -20,29 +20,27 @@ import (
 // slice -- include TRACE, DEBUG, INFO, WARN, ERROR, and FATAL.
 type LogPayload struct {
 	// Set by user by passing values to NewLogPayload()
-	Level      LogLevel `json:"level"`
-	LevelIndex int      `json:"level_index"`
-	Message    string   `json:"message"`
+	Level   LogLevel `json:"level" bson:"level"`
+	Message string   `json:"message" bson:"message"`
 	// Set automatically within NewLogPayload()
-	Action string `json:"action"`
+	LevelIndex int    `json:"level_index" bson:"level_index"`
+	Name       string `json:"name" bson:"name"` // Name of calling function
 	// Set by .setKnownFields()
-	Application string    `json:"application"`
-	PID         int       `json:"pid"`
-	Time        time.Time `json:"time"`
-	HostName    string    `json:"host_name"`
+	PID      int       `json:"pid" bson:"pid"`
+	Time     time.Time `json:"time" bson:"time"`
+	HostName string    `json:"host_name" bson:"host_name"`
 	// Set by .SetTags() convenience method
-	Tags []string `json:"tags"`
+	Tags []string `json:"tags" bson:"tags"`
 	// Should be set by .Log()
-	Name  string `json:"name"`  // Store "class name" (type)
-	UUID  string `json:"uuid"`  // Logger's UUID
-	Table string `json:"table"` // Mongo collection name
+	UUID string `json:"uuid" bson:"uuid"` // Logger's UUID
 	// Set by Fatal() method if need be
-	Backtrace []string `json:"backtrace"`
+	Backtrace []string `json:"backtrace" bson:"backtrace"`
 	// Should be set by BenchmarkInfo() if called
-	Duration time.Duration `json:"duration"`
+	Duration time.Duration `json:"duration" bson:"duration"`
 	// Optionally set by user manually
-	ThreadName string      `json:"thread_name"`
-	Payload    interface{} `json:"payload"` // Arbitrary data
+	Thread      string      `json:"thread" bson:"thread"`
+	Application string      `json:"application" bson:"application"`
+	Payload     interface{} `json:"payload" bson:"payload"` // Arbitrary data
 }
 
 // Exception formats the payload just as
@@ -65,10 +63,6 @@ func (payload *LogPayload) Exception() string {
 // the LogPayload type for which fields should be set where, and by
 // whom (the user) or what (a function or method).
 func (payload *LogPayload) setKnownFields() {
-	// Set Application to os.Args[0] if it wasn't set by the user
-	if payload.Application == "" {
-		payload.Application = os.Args[0]
-	}
 	payload.PID = os.Getpid()
 	payload.Time = time.Now()
 	hostname, err := os.Hostname()
@@ -90,13 +84,14 @@ func NewLogPayload(level LogLevel, formatStr string,
 	vars ...interface{}) *LogPayload {
 
 	payload := &LogPayload{
-		Level:   level,
-		Message: fmt.Sprintf(formatStr, vars...),
+		Level:      level,
+		LevelIndex: levelIndex(level),
+		Message:    fmt.Sprintf(formatStr, vars...),
 		// 1 == skynet.NewLogPayload
 		// 2 == skynet.(*MongoSemanticLogger).Fatal
 		// 3 == What we want
 		// 4 (or shortly thereafter) == main.main
-		Action: getCallerName(3),
+		Name: getCallerName(3),
 	}
 	// payload.setKnownFields() called in .Log() method; not calling here
 
@@ -112,51 +107,50 @@ func getCallerName(skip int) string {
 	return f.Name()
 }
 
-// LogLevels are ints for the sake of having a well-defined
-// ordering. This is useful for viewing logs more or less severe than
-// a given log level. See the LogLevel.LessSevereThan method.
-type LogLevel int
+type LogLevel string
 
 const (
-	TRACE LogLevel = iota
-	DEBUG
-	INFO
-	WARN
-	ERROR
-	FATAL
+	TRACE LogLevel = "trace"
+	DEBUG LogLevel = "debug"
+	INFO  LogLevel = "info"
+	WARN  LogLevel = "warn"
+	ERROR LogLevel = "error"
+	FATAL LogLevel = "fatal"
 )
 
 // LogLevel stores the valid log levels as specified by
-// github.com/ClarityServices/semantic_logger.
+// github.com/ClarityServices/semantic_logger. Its index corresponds
+// to the log level it represents. (LogLevels[0] == "trace", ...,
+// LogLevels[5] == "fatal")
 var LogLevels = []LogLevel{
 	TRACE, DEBUG, INFO, WARN, ERROR, FATAL,
+}
+
+// levelIndex turns the given level into its corresponding integer
+// value. "trace" == 0, "debug" == 1, ... "fatal" == 5
+func levelIndex(level LogLevel) int {
+	switch level {
+	case TRACE:
+		return 0
+	case DEBUG:
+		return 1
+	case INFO:
+		return 2
+	case WARN:
+		return 3
+	case ERROR:
+		return 4
+	case FATAL:
+		return 5
+	}
+	return -1
 }
 
 // LessSevereThan tells you whether or not `level` is a less severe
 // LogLevel than `level2`. This is useful for determining which logs
 // to view.
 func (level LogLevel) LessSevereThan(level2 LogLevel) bool {
-	return int(level) < int(level2)
-}
-
-// String helps make LogLevel's more readable by representing them as
-// strings instead of ints 0 (TRACE) through 5 (FATAL).
-func (level LogLevel) String() string {
-	switch level {
-	case TRACE:
-		return "TRACE"
-	case DEBUG:
-		return "DEBUG"
-	case INFO:
-		return "INFO"
-	case WARN:
-		return "WARN"
-	case ERROR:
-		return "ERROR"
-	case FATAL:
-		return "FATAL"
-	}
-	return "CUSTOM"
+	return levelIndex(level) < levelIndex(level2)
 }
 
 // NOTE: The data type names are what they are (and rather verbose) in
