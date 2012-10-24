@@ -16,14 +16,14 @@ import (
 )
 
 type TestService struct {
-	Log skynet.Logger
+	Log skynet.SemanticLogger
 }
 
 func (s *TestService) Registered(service *service.Service)   {}
 func (s *TestService) Unregistered(service *service.Service) {}
 func (s *TestService) Started(service *service.Service)      {}
 func (s *TestService) Stopped(service *service.Service) {
-	s.Log.Item("Stopped")
+	s.Log.Trace("Stopped")
 }
 
 func NewTestService() *TestService {
@@ -54,12 +54,13 @@ func main() {
 	}
 
 	var err error
-	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
-	clogger := skynet.NewConsoleLogger("TestService", os.Stdout)
-	testService.Log = skynet.NewMultiLogger(mlogger, clogger)
+	mlogger, err := skynet.NewMongoSemanticLogger("localhost", "skynet",
+		"log", config.UUID)
+	clogger := skynet.NewConsoleSemanticLogger("TestService", os.Stdout)
+	testService.Log = skynet.NewMultiSemanticLogger(mlogger, clogger)
 	config.Log = testService.Log
 	if err != nil {
-		config.Log.Item("Could not connect to mongo db for logging")
+		config.Log.Trace("Could not connect to mongo db for logging")
 	}
 	service := service.CreateService(testService, config)
 
