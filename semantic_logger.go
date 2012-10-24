@@ -163,7 +163,12 @@ func (level LogLevel) String() string {
 // github.com/ClarityServices/semantic_logger
 type SemanticLogger interface {
 	Log(payload *LogPayload)
-	Fatal(payload *LogPayload)
+	Trace(msg string)
+	Debug(msg string)
+	Info(msg string)
+	Warn(msg string)
+	Error(msg string)
+	Fatal(msg string)
 	BenchmarkInfo(level LogLevel, msg string, f func(logger SemanticLogger))
 }
 

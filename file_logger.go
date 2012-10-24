@@ -33,8 +33,34 @@ func (fl *FileSemanticLogger) Log(payload *LogPayload) {
 	fl.log.Printf("%v: %s\n", payload.Level, payload.Message)
 }
 
+func (fl *FileSemanticLogger) Trace(msg string) {
+	// TODO: Consider using more payload fields
+	fl.log.Printf("%v: %s\n", TRACE, msg)
+}
+
+func (fl *FileSemanticLogger) Debug(msg string) {
+	// TODO: Consider using more payload fields
+	fl.log.Printf("%v: %s\n", DEBUG, msg)
+}
+
+func (fl *FileSemanticLogger) Info(msg string) {
+	// TODO: Consider using more payload fields
+	fl.log.Printf("%v: %s\n", INFO, msg)
+}
+
+func (fl *FileSemanticLogger) Warn(msg string) {
+	// TODO: Consider using more payload fields
+	fl.log.Printf("%v: %s\n", WARN, msg)
+}
+
+func (fl *FileSemanticLogger) Error(msg string) {
+	// TODO: Consider using more payload fields
+	fl.log.Printf("%v: %s\n", ERROR, msg)
+}
+
 // Fatal populates payload.Backtrace then panics
-func (fl *FileSemanticLogger) Fatal(payload *LogPayload) {
+func (fl *FileSemanticLogger) Fatal(msg string) {
+	payload := NewLogPayload(FATAL, msg)
 	payload.Backtrace = genStacktrace()
 	fl.Log(payload)
 	panic(payload)

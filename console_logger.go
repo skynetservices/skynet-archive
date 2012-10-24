@@ -29,8 +29,34 @@ func (cl *ConsoleSemanticLogger) Log(payload *LogPayload) {
 	cl.log.Printf("%v: %s\n", payload.Level, payload.Message)
 }
 
+func (cl *ConsoleSemanticLogger) Trace(msg string) {
+	// TODO: Consider using more payload fields
+	cl.log.Printf("%v: %s\n", TRACE, msg)
+}
+
+func (cl *ConsoleSemanticLogger) Debug(msg string) {
+	// TODO: Consider using more payload fields
+	cl.log.Printf("%v: %s\n", DEBUG, msg)
+}
+
+func (cl *ConsoleSemanticLogger) Info(msg string) {
+	// TODO: Consider using more payload fields
+	cl.log.Printf("%v: %s\n", INFO, msg)
+}
+
+func (cl *ConsoleSemanticLogger) Warn(msg string) {
+	// TODO: Consider using more payload fields
+	cl.log.Printf("%v: %s\n", WARN, msg)
+}
+
+func (cl *ConsoleSemanticLogger) Error(msg string) {
+	// TODO: Consider using more payload fields
+	cl.log.Printf("%v: %s\n", ERROR, msg)
+}
+
 // Fatal logs the given payload to the console, then panics.
-func (cl *ConsoleSemanticLogger) Fatal(payload *LogPayload) {
+func (cl *ConsoleSemanticLogger) Fatal(msg string) {
+	payload := NewLogPayload(FATAL, msg)
 	payload.Backtrace = genStacktrace()
 	cl.Log(payload)
 	panic(payload)

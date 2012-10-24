@@ -54,8 +54,35 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 	}
 }
 
-// Fatal logs the given payload to MongoDB, then panics.
-func (ml *MongoSemanticLogger) Fatal(payload *LogPayload) {
+// Trace logs the given payload to MongoDB
+func (ml *MongoSemanticLogger) Trace(msg string) {
+	ml.Log(NewLogPayload(TRACE, msg))
+}
+
+// Debug logs the given payload to MongoDB
+func (ml *MongoSemanticLogger) Debug(msg string) {
+	ml.Log(NewLogPayload(DEBUG, msg))
+}
+
+// Info logs the given payload to MongoDB
+func (ml *MongoSemanticLogger) Info(msg string) {
+	ml.Log(NewLogPayload(INFO, msg))
+}
+
+// Warn logs the given payload to MongoDB
+func (ml *MongoSemanticLogger) Warn(msg string) {
+	ml.Log(NewLogPayload(WARN, msg))
+}
+
+// Error logs the given payload to MongoDB
+func (ml *MongoSemanticLogger) Error(msg string) {
+	ml.Log(NewLogPayload(ERROR, msg))
+}
+
+// Fatal logs the given payload to MongoDB (after adding stacktrace
+// data), then panics.
+func (ml *MongoSemanticLogger) Fatal(msg string) {
+	payload := NewLogPayload(FATAL, msg)
 	payload.Backtrace = genStacktrace()
 	ml.Log(payload)
 	panic(payload)
