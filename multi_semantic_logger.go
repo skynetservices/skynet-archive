@@ -28,10 +28,41 @@ func (ml MultiSemanticLogger) Log(payload *LogPayload) {
 	}
 }
 
-// Fatal adds stacktrace data to the given payload, calls
+func (ml MultiSemanticLogger) Trace(msg string) {
+	for _, lgr := range ml {
+		lgr.Log(NewLogPayload(TRACE, msg))
+	}
+}
+
+func (ml MultiSemanticLogger) Debug(msg string) {
+	for _, lgr := range ml {
+		lgr.Log(NewLogPayload(DEBUG, msg))
+	}
+}
+
+func (ml MultiSemanticLogger) Info(msg string) {
+	for _, lgr := range ml {
+		lgr.Log(NewLogPayload(INFO, msg))
+	}
+}
+
+func (ml MultiSemanticLogger) Warn(msg string) {
+	for _, lgr := range ml {
+		lgr.Log(NewLogPayload(WARN, msg))
+	}
+}
+
+func (ml MultiSemanticLogger) Error(msg string) {
+	for _, lgr := range ml {
+		lgr.Log(NewLogPayload(ERROR, msg))
+	}
+}
+
+// Fatal creates a *LogPayload, adds stacktrace data to it, calls
 // .Log(payload) for each logger in the MultiSemanticLogger, then
 // panics.
-func (ml MultiSemanticLogger) Fatal(payload *LogPayload) {
+func (ml MultiSemanticLogger) Fatal(msg string) {
+	payload := NewLogPayload(FATAL, msg)
 	payload.Backtrace = genStacktrace()
 	for _, lgr := range ml {
 		// Calling .Fatal for each would result in panicking on
