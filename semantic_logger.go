@@ -92,9 +92,11 @@ func NewLogPayload(level LogLevel, formatStr string,
 	payload := &LogPayload{
 		Level:   level,
 		Message: fmt.Sprintf(formatStr, vars...),
-		// TODO: Make sure that `2` is the number that should be
-		// passed in here
-		Action: getCallerName(2),
+		// 1 == skynet.NewLogPayload
+		// 2 == skynet.(*MongoSemanticLogger).Fatal
+		// 3 == What we want
+		// 4 (or shortly thereafter) == main.main
+		Action: getCallerName(3),
 	}
 	// payload.setKnownFields() called in .Log() method; not calling here
 
