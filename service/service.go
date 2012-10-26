@@ -404,7 +404,10 @@ func (s *Service) Shutdown() {
 	s.activeRequests.Wait()
 	s.doozerWaiter.Wait()
 
-	s.Delegate.Stopped(s) // Call user defined callback
+        if s.Delegate != nil {
+	    s.Delegate.Stopped(s) // Call user defined callback
+            s.Delegate = nil
+        }
 
 	s.doneGroup.Done()
 }
