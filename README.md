@@ -47,6 +47,7 @@ Clients contain a pool of connections to a given service, up to a specified size
 To use the Go client in your own program to call Skynet services, see [Creating a simple client](https://github.com/bketelsen/skynet/wiki/Client-Tutorial)
 The Go client is part of this project. Clients in other languages are also available:
 * [Ruby Skynet Client](http://github.com/ClarityServices/ruby_skynet)
+* [PHP Skynet Client](http://github.com/mikespook/php_skynet)
 
 To build a Client in your favorite language see the [Skynet Protocol Guide](https://github.com/bketelsen/skynet/blob/master/protocol.md)
 
