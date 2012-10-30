@@ -397,6 +397,8 @@ func (s *Service) Unregister() {
 }
 
 func (s *Service) Shutdown() {
+	s.Unregister()
+
 	s.doneGroup.Add(1)
 
 	s.doneChan <- true
