@@ -62,7 +62,7 @@ func (payload *LogPayload) SetException() {
 	// logging information:
 	// formatStr := "%s -- %s: %s\n%s"
 	// stacktrace := strings.Join(payload.Exception.StackTrace, "\n")
-	// payload.Message = fmt.Sprintf(formatStr, payload.Message, "panic",
+	// payload.Exception.Message = fmt.Sprintf(formatStr, payload.Message, "panic",
 	// 	payload.Message, stacktrace)
 
 	payload.Exception = &Exception{
