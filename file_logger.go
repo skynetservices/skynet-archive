@@ -58,10 +58,10 @@ func (fl *FileSemanticLogger) Error(msg string) {
 	fl.log.Printf("%v: %s\n", ERROR, msg)
 }
 
-// Fatal populates payload.Backtrace then panics
+// Fatal populates payload.StackTrace then panics
 func (fl *FileSemanticLogger) Fatal(msg string) {
 	payload := NewLogPayload(FATAL, msg)
-	payload.Backtrace = genStacktrace()
+	payload.SetException()
 	fl.Log(payload)
 	panic(payload)
 }

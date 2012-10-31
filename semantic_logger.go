@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"strings"
+	// "strings"
 	"time"
 )
 
@@ -20,42 +20,59 @@ import (
 // slice -- include TRACE, DEBUG, INFO, WARN, ERROR, and FATAL.
 type LogPayload struct {
 	// Set by user by passing values to NewLogPayload()
-	Level   LogLevel `json:"level"`
-	Message string   `json:"message"`
+	Level   LogLevel `json:"level" bson:"level"`
+	Message string   `json:"message" bson:"message"`
 	// Set automatically within NewLogPayload()
-	Action string `json:"action"`
+	LevelIndex int    `json:"level_index" bson:"level_index"`
+	Name       string `json:"name" bson:"name"` // Name of calling function
 	// Set by .setKnownFields()
-	Application string    `json:"application"`
-	PID         int       `json:"pid"`
-	Time        time.Time `json:"time"`
-	HostName    string    `json:"host_name"`
+	PID      int       `json:"pid" bson:"pid"`
+	Time     time.Time `json:"time" bson:"time"`
+	HostName string    `json:"host_name" bson:"host_name"`
 	// Set by .SetTags() convenience method
-	Tags []string `json:"tags"`
+	Tags []string `json:"tags" bson:"tags"`
 	// Should be set by .Log()
-	Name  string `json:"name"`  // Store "class name" (type)
-	UUID  string `json:"uuid"`  // Logger's UUID
-	Table string `json:"table"` // Mongo collection name
-	// Set by Fatal() method if need be
-	Backtrace []string `json:"backtrace"`
+	UUID string `json:"uuid" bson:"uuid"` // Logger's UUID
 	// Should be set by BenchmarkInfo() if called
-	Duration time.Duration `json:"duration"`
+	Duration time.Duration `json:"duration" bson:"duration"`
 	// Optionally set by user manually
-	ThreadName string `json:"thread_name"`
+	ThreadName  string      `json:"thread_name" bson:"thread_name"`
+	Application string      `json:"application" bson:"application"`
+	Payload     interface{} `json:"payload" bson:"payload"` // Arbitrary data
+	Exception   *Exception  `json:"exception" bson:"exception"`
 }
 
-// Exception formats the payload just as
-// github.com/ClarityServices/semantic_logger formats Exceptions for
-// logging. This package has no Exception data type; all relevant data
-// should be stored in a *LogPayload. The payload's "exception" data is
-// generated from a panic's stacktrace using the `genStacktrace`
-// helper function.
-func (payload *LogPayload) Exception() string {
+type Exception struct {
+	Name    string `json:"name" bson:"name"`
+	Message string `json:"message" bson:"message"`
+	// Set by Fatal() method if need be
+	StackTrace []string `json:"stack_trace" bson:"stack_trace"`
+}
+
+// SetException sets the given payload's `Exception` field. The
+// payload's "exception" data is generated from a panic's stacktrace
+// using the `genStacktrace` helper function.
+func (payload *LogPayload) SetException() {
+	// TODO: If the following logging format is still used in by
+	// github.com/ClarityServices/semantic_logger, use it here:
 	// message << " -- " << "#{exception.class}: #{exception.message}\n
 	// #{(exception.backtrace || []).join("\n")}"
-	formatStr := "%s -- %s: %s\n%s"
-	backtrace := strings.Join(payload.Backtrace, "\n")
-	return fmt.Sprintf(formatStr, payload.Message, "panic",
-		payload.Message, backtrace)
+
+	// ...then use this code to fill .Message with the above-formatted
+	// logging information:
+	// formatStr := "%s -- %s: %s\n%s"
+	// stacktrace := strings.Join(payload.Exception.StackTrace, "\n")
+	// payload.Exception.Message = fmt.Sprintf(formatStr, payload.Message, "panic",
+	// 	payload.Message, stacktrace)
+
+	payload.Exception = &Exception{
+		// TODO: Decide what `Name` should be. Go doesn't have
+		// exceptions, and therefore has no exceptions whose names we
+		// can put here.
+		Name:       "",
+		Message:    payload.Message,
+		StackTrace: genStacktrace(),
+	}
 }
 
 // setKnownFields sets the `Application`, `PID`, `Time`, and
@@ -63,10 +80,6 @@ func (payload *LogPayload) Exception() string {
 // the LogPayload type for which fields should be set where, and by
 // whom (the user) or what (a function or method).
 func (payload *LogPayload) setKnownFields() {
-	// Set Application to os.Args[0] if it wasn't set by the user
-	if payload.Application == "" {
-		payload.Application = os.Args[0]
-	}
 	payload.PID = os.Getpid()
 	payload.Time = time.Now()
 	hostname, err := os.Hostname()
@@ -84,15 +97,16 @@ func (payload *LogPayload) SetTags(tags ...string) {
 }
 
 // NewLogPayload is a convenience function for creating *LogPayload's
-func NewLogPayload(level LogLevel, formatStr string,
-	vars ...interface{}) *LogPayload {
-
+func NewLogPayload(level LogLevel, formatStr string, vars ...interface{}) *LogPayload {
 	payload := &LogPayload{
-		Level:   level,
-		Message: fmt.Sprintf(formatStr, vars...),
-		// TODO: Make sure that `2` is the number that should be
-		// passed in here
-		Action: getCallerName(2),
+		Level:      level,
+		LevelIndex: levelIndex(level),
+		Message:    fmt.Sprintf(formatStr, vars...),
+		// 1 == skynet.NewLogPayload
+		// 2 == skynet.(*MongoSemanticLogger).Fatal
+		// 3 == What we want
+		// 4 (or shortly thereafter) == main.main
+		Name: getCallerName(3),
 	}
 	// payload.setKnownFields() called in .Log() method; not calling here
 
@@ -108,51 +122,50 @@ func getCallerName(skip int) string {
 	return f.Name()
 }
 
-// LogLevels are ints for the sake of having a well-defined
-// ordering. This is useful for viewing logs more or less severe than
-// a given log level. See the LogLevel.LessSevereThan method.
-type LogLevel int
+type LogLevel string
 
 const (
-	TRACE LogLevel = iota
-	DEBUG
-	INFO
-	WARN
-	ERROR
-	FATAL
+	TRACE LogLevel = "trace"
+	DEBUG LogLevel = "debug"
+	INFO  LogLevel = "info"
+	WARN  LogLevel = "warn"
+	ERROR LogLevel = "error"
+	FATAL LogLevel = "fatal"
 )
 
 // LogLevel stores the valid log levels as specified by
-// github.com/ClarityServices/semantic_logger.
+// github.com/ClarityServices/semantic_logger. Its index corresponds
+// to the log level it represents. (LogLevels[0] == "trace", ...,
+// LogLevels[5] == "fatal")
 var LogLevels = []LogLevel{
 	TRACE, DEBUG, INFO, WARN, ERROR, FATAL,
+}
+
+// levelIndex turns the given level into its corresponding integer
+// value. "trace" == 0, "debug" == 1, ... "fatal" == 5
+func levelIndex(level LogLevel) int {
+	switch level {
+	case TRACE:
+		return 0
+	case DEBUG:
+		return 1
+	case INFO:
+		return 2
+	case WARN:
+		return 3
+	case ERROR:
+		return 4
+	case FATAL:
+		return 5
+	}
+	return -1
 }
 
 // LessSevereThan tells you whether or not `level` is a less severe
 // LogLevel than `level2`. This is useful for determining which logs
 // to view.
 func (level LogLevel) LessSevereThan(level2 LogLevel) bool {
-	return int(level) < int(level2)
-}
-
-// String helps make LogLevel's more readable by representing them as
-// strings instead of ints 0 (TRACE) through 5 (FATAL).
-func (level LogLevel) String() string {
-	switch level {
-	case TRACE:
-		return "TRACE"
-	case DEBUG:
-		return "DEBUG"
-	case INFO:
-		return "INFO"
-	case WARN:
-		return "WARN"
-	case ERROR:
-		return "ERROR"
-	case FATAL:
-		return "FATAL"
-	}
-	return "CUSTOM"
+	return levelIndex(level) < levelIndex(level2)
 }
 
 // NOTE: The data type names are what they are (and rather verbose) in
@@ -173,7 +186,7 @@ type SemanticLogger interface {
 }
 
 // genStacktrace is a helper function for generating stacktrace
-// data. Used to populate (*LogPayload).Backtrace
+// data. Used to populate (*LogPayload).StackTrace
 func genStacktrace() (stacktrace []string) {
 	// TODO: Make sure that `skip` should begin at 1, not 2
 	for skip := 1; ; skip++ {
