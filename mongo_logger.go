@@ -80,7 +80,7 @@ func (ml *MongoSemanticLogger) Error(msg string) {
 // data), then panics.
 func (ml *MongoSemanticLogger) Fatal(msg string) {
 	payload := NewLogPayload(FATAL, msg)
-	payload.Backtrace = genStacktrace()
+	payload.SetException()
 	ml.Log(payload)
 	panic(payload)
 }
