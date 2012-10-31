@@ -53,12 +53,13 @@ type Exception struct {
 // payload's "exception" data is generated from a panic's stacktrace
 // using the `genStacktrace` helper function.
 func (payload *LogPayload) SetException() {
-	// TODO: If this format is still used in by
-	// github.com/ClarityServices/semantic_logger, use it here.
-
+	// TODO: If the following logging format is still used in by
+	// github.com/ClarityServices/semantic_logger, use it here:
 	// message << " -- " << "#{exception.class}: #{exception.message}\n
 	// #{(exception.backtrace || []).join("\n")}"
 
+	// ...then use this code to fill .Message with the above-formatted
+	// logging information:
 	// formatStr := "%s -- %s: %s\n%s"
 	// stacktrace := strings.Join(payload.Exception.StackTrace, "\n")
 	// payload.Message = fmt.Sprintf(formatStr, payload.Message, "panic",
