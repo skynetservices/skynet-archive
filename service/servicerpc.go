@@ -41,7 +41,8 @@ func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 		methods: make(map[string]reflect.Value),
 	}
 
-	// scan through methods looking for a method (RequestInfo, something, something) error
+	// scan through methods looking for a method (RequestInfo,
+	// something, something) error
 	typ := reflect.TypeOf(srpc.service.Delegate)
 	for i := 0; i < typ.NumMethod(); i++ {
 		m := typ.Method(i)
@@ -58,7 +59,8 @@ func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 		f := m.Func
 		ftyp := f.Type()
 
-		// must have four parameters: (receiver, RequestInfo, somethingIn, somethingOut)
+		// must have four parameters: (receiver, RequestInfo,
+		// somethingIn, somethingOut)
 		if ftyp.NumIn() != 4 {
 			goto problem
 		}

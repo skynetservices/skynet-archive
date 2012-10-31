@@ -1,7 +1,6 @@
 package skynet
 
 import (
-	"fmt"
 	"labix.org/v2/mgo"
 	"log"
 )
@@ -42,9 +41,7 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 
 	// Set various Payload fields
 	payload.setKnownFields()
-	payload.Name = fmt.Sprintf("%T", ml)
 	payload.UUID = ml.uuid
-	payload.Table = ml.collectionName
 
 	// Log regardless of the log level
 	err := ml.session.DB(ml.dbName).C(ml.collectionName).Insert(payload)
@@ -83,7 +80,7 @@ func (ml *MongoSemanticLogger) Error(msg string) {
 // data), then panics.
 func (ml *MongoSemanticLogger) Fatal(msg string) {
 	payload := NewLogPayload(FATAL, msg)
-	payload.Backtrace = genStacktrace()
+	payload.SetException()
 	ml.Log(payload)
 	panic(payload)
 }
