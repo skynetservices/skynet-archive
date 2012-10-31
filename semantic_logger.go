@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"strings"
+	// "strings"
 	"time"
 )
 
@@ -33,29 +33,45 @@ type LogPayload struct {
 	Tags []string `json:"tags" bson:"tags"`
 	// Should be set by .Log()
 	UUID string `json:"uuid" bson:"uuid"` // Logger's UUID
-	// Set by Fatal() method if need be
-	Backtrace []string `json:"backtrace" bson:"backtrace"`
 	// Should be set by BenchmarkInfo() if called
 	Duration time.Duration `json:"duration" bson:"duration"`
 	// Optionally set by user manually
-	Thread      string      `json:"thread" bson:"thread"`
+	ThreadName  string      `json:"thread_name" bson:"thread_name"`
 	Application string      `json:"application" bson:"application"`
 	Payload     interface{} `json:"payload" bson:"payload"` // Arbitrary data
+	Exception   *Exception  `json:"exception" bson:"exception"`
 }
 
-// Exception formats the payload just as
-// github.com/ClarityServices/semantic_logger formats Exceptions for
-// logging. This package has no Exception data type; all relevant data
-// should be stored in a *LogPayload. The payload's "exception" data is
-// generated from a panic's stacktrace using the `genStacktrace`
-// helper function.
-func (payload *LogPayload) Exception() string {
+type Exception struct {
+	Name    string `json:"name" bson:"name"`
+	Message string `json:"message" bson:"message"`
+	// Set by Fatal() method if need be
+	StackTrace []string `json:"stack_trace" bson:"stack_trace"`
+}
+
+// SetException sets the given payload's `Exception` field. The
+// payload's "exception" data is generated from a panic's stacktrace
+// using the `genStacktrace` helper function.
+func (payload *LogPayload) SetException() {
+	// TODO: If this format is still used in by
+	// github.com/ClarityServices/semantic_logger, use it here.
+
 	// message << " -- " << "#{exception.class}: #{exception.message}\n
 	// #{(exception.backtrace || []).join("\n")}"
-	formatStr := "%s -- %s: %s\n%s"
-	backtrace := strings.Join(payload.Backtrace, "\n")
-	return fmt.Sprintf(formatStr, payload.Message, "panic",
-		payload.Message, backtrace)
+
+	// formatStr := "%s -- %s: %s\n%s"
+	// stacktrace := strings.Join(payload.Exception.StackTrace, "\n")
+	// payload.Message = fmt.Sprintf(formatStr, payload.Message, "panic",
+	// 	payload.Message, stacktrace)
+
+	payload.Exception = &Exception{
+		// TODO: Decide what `Name` should be. Go doesn't have
+		// exceptions, and therefore has no exceptions whose names we
+		// can put here.
+		Name:       "",
+		Message:    payload.Message,
+		StackTrace: genStacktrace(),
+	}
 }
 
 // setKnownFields sets the `Application`, `PID`, `Time`, and
@@ -80,9 +96,7 @@ func (payload *LogPayload) SetTags(tags ...string) {
 }
 
 // NewLogPayload is a convenience function for creating *LogPayload's
-func NewLogPayload(level LogLevel, formatStr string,
-	vars ...interface{}) *LogPayload {
-
+func NewLogPayload(level LogLevel, formatStr string, vars ...interface{}) *LogPayload {
 	payload := &LogPayload{
 		Level:      level,
 		LevelIndex: levelIndex(level),
@@ -171,7 +185,7 @@ type SemanticLogger interface {
 }
 
 // genStacktrace is a helper function for generating stacktrace
-// data. Used to populate (*LogPayload).Backtrace
+// data. Used to populate (*LogPayload).StackTrace
 func genStacktrace() (stacktrace []string) {
 	// TODO: Make sure that `skip` should begin at 1, not 2
 	for skip := 1; ; skip++ {
