@@ -46,9 +46,7 @@ func NewInstanceChooser(c *Client) (ic *InstanceChooser) {
 		ic.comparator = func(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
 			return c.Config.Prioritizer(i1, i2)
 		}
-	}
-
-	if c.Config.Region != skynet.DefaultRegion {
+	} else if c.Config.Region != skynet.DefaultRegion {
 		ic.comparator = basicComparator
 	}
 
@@ -121,13 +119,11 @@ func (ic *InstanceChooser) Choose(timeout chan bool) (instance *skynet.ServiceIn
 func (ic *InstanceChooser) choose() (instance *skynet.ServiceInfo) {
 	// if there is no comparator, choose randomly
 	if ic.comparator == nil {
-		i := ic.count % len(ic.instances) //rand.Intn(len(ic.instances))
+		i := ic.count % len(ic.instances)
 		instance = ic.instances[i]
 		ic.count++
 		return
 	}
-
-	// otherwise, choose services in the same region
 
 	// this heap-sorts (in linear time) the instances according to ic.comparator
 	heap.Init((*InstanceHeap)(ic))
