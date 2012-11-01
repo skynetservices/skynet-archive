@@ -17,7 +17,8 @@ type DoozerDiscovered struct {
 }
 
 func (dd DoozerDiscovered) String() string {
-	return fmt.Sprintf("Discovered new doozer %s at %s", dd.DoozerServer.Key, dd.DoozerServer.Addr)
+	return fmt.Sprintf("Discovered new doozer %s at %s",
+		dd.DoozerServer.Key, dd.DoozerServer.Addr)
 }
 
 type DoozerRemoved struct {
@@ -25,7 +26,8 @@ type DoozerRemoved struct {
 }
 
 func (dr DoozerRemoved) String() string {
-	return fmt.Sprintf("Removed doozer %s at %s", dr.DoozerServer.Key, dr.DoozerServer.Addr)
+	return fmt.Sprintf("Removed doozer %s at %s", dr.DoozerServer.Key,
+		dr.DoozerServer.Addr)
 }
 
 type DoozerLostConnection struct {
@@ -57,7 +59,8 @@ type LogsearchClient struct {
 }
 
 func (l LogsearchClient) String() string {
-	return fmt.Sprintf("Log Search client attached: %s → %s %s", l.RemoteAddr, l.Method, l.Path)
+	return fmt.Sprintf("Log Search client attached: %s → %s %s", l.RemoteAddr,
+		l.Method, l.Path)
 }
 
 type ServiceDiscovered struct {
@@ -65,7 +68,8 @@ type ServiceDiscovered struct {
 }
 
 func (sd ServiceDiscovered) String() string {
-	return fmt.Sprintf("Discovered service %q at %s", sd.Service.Config.Name, sd.Service.Config.ServiceAddr)
+	return fmt.Sprintf("Discovered service %q at %s", sd.Service.Config.Name,
+		sd.Service.Config.ServiceAddr)
 }
 
 type ServiceRemoved struct {
@@ -73,7 +77,8 @@ type ServiceRemoved struct {
 }
 
 func (sr ServiceRemoved) String() string {
-	return fmt.Sprintf("Removed service %q at %s", sr.Service.Config.Name, sr.Service.Config.ServiceAddr)
+	return fmt.Sprintf("Removed service %q at %s", sr.Service.Config.Name,
+		sr.Service.Config.ServiceAddr)
 }
 
 type ServiceCreated struct {
