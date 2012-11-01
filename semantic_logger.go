@@ -29,7 +29,7 @@ type LogPayload struct {
 	PID      int       `json:"pid" bson:"pid"`
 	Time     time.Time `json:"time" bson:"time"`
 	HostName string    `json:"host_name" bson:"host_name"`
-	// Set by .SetTags() convenience method
+	// Set by user via .AddTags() convenience method
 	Tags []string `json:"tags" bson:"tags"`
 	// Should be set by .Log()
 	UUID string `json:"uuid" bson:"uuid"` // Logger's UUID
@@ -89,11 +89,12 @@ func (payload *LogPayload) setKnownFields() {
 	payload.HostName = hostname
 }
 
-// SetTags is a convenience method for adding tags to *LogPayload's,
-// since `payload.SetTags("tag1", "tag2")` is cleaner than
-// `payload.Tags = []string{"tag1", "tag2"}`
-func (payload *LogPayload) SetTags(tags ...string) {
-	payload.Tags = tags
+// AddTags is a convenience method for adding tags to *LogPayload's,
+// since `payload.AddTags("tag1", "tag2")` is cleaner than
+// `payload.Tags = []string{"tag1", "tag2"} or `append(payload.Tags,
+// "tag1", "tag2")`.
+func (payload *LogPayload) AddTags(tags ...string) {
+	payload.Tags = append(payload.Tags, tags...)
 }
 
 // NewLogPayload is a convenience function for creating *LogPayload's
