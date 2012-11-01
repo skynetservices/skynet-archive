@@ -36,17 +36,20 @@ type InstanceChooser struct {
 
 func NewInstanceChooser(c *Client) (ic *InstanceChooser) {
 	ic = &InstanceChooser{
-		client:     c,
-		comparator: basicComparator,
-		addCh:      make(chan *skynet.ServiceInfo, 1),
-		remCh:      make(chan *skynet.ServiceInfo, 1),
-		chooseCh:   make(chan chan *skynet.ServiceInfo),
+		client:   c,
+		addCh:    make(chan *skynet.ServiceInfo, 1),
+		remCh:    make(chan *skynet.ServiceInfo, 1),
+		chooseCh: make(chan chan *skynet.ServiceInfo),
 	}
 
 	if c.Config.Prioritizer != nil {
 		ic.comparator = func(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
 			return c.Config.Prioritizer(i1, i2)
 		}
+	}
+
+	if c.Config.Region != skynet.DefaultRegion {
+		ic.comparator = basicComparator
 	}
 
 	go ic.mux()
@@ -116,8 +119,8 @@ func (ic *InstanceChooser) Choose(timeout chan bool) (instance *skynet.ServiceIn
 }
 
 func (ic *InstanceChooser) choose() (instance *skynet.ServiceInfo) {
-	// if the client's region is unknown, choose randomly
-	if ic.client.Config.Region == skynet.DefaultRegion {
+	// if there is no comparator, choose randomly
+	if ic.comparator == nil {
 		i := ic.count % len(ic.instances) //rand.Intn(len(ic.instances))
 		instance = ic.instances[i]
 		ic.count++
