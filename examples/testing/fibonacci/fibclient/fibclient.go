@@ -14,6 +14,11 @@ func main() {
 
 	service := client.GetService("Fibonacci", "", "", "")
 
+	if len(args) == 0 {
+		fmt.Printf("Usage: %s <positive number>*\n", args[0])
+		return
+	}
+
 	for _, arg := range args[1:] {
 		index, err := strconv.Atoi(arg)
 		if err != nil {
