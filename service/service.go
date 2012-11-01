@@ -62,6 +62,8 @@ type Service struct {
 
 	clientMutex sync.Mutex
 	clientInfo  map[string]ClientInfo
+
+	shuttingDown bool
 }
 
 func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
@@ -77,6 +79,7 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		doozerChan:     make(chan interface{}),
 		updateTicker:   time.NewTicker(c.DoozerUpdateInterval),
 		clientInfo:     make(map[string]ClientInfo),
+		shuttingDown:   false,
 	}
 
 	s.Config = c
@@ -397,6 +400,14 @@ func (s *Service) Unregister() {
 }
 
 func (s *Service) Shutdown() {
+	if s.shuttingDown {
+		return
+	}
+
+	s.shuttingDown = true
+
+	s.Unregister()
+
 	s.doneGroup.Add(1)
 
 	s.doneChan <- true

@@ -63,7 +63,7 @@ func (ml MultiSemanticLogger) Error(msg string) {
 // panics.
 func (ml MultiSemanticLogger) Fatal(msg string) {
 	payload := NewLogPayload(FATAL, msg)
-	payload.Backtrace = genStacktrace()
+	payload.SetException()
 	for _, lgr := range ml {
 		// Calling .Fatal for each would result in panicking on
 		// the first logger, so we log them all, then panic.

@@ -57,7 +57,7 @@ func (cl *ConsoleSemanticLogger) Error(msg string) {
 // Fatal logs the given payload to the console, then panics.
 func (cl *ConsoleSemanticLogger) Fatal(msg string) {
 	payload := NewLogPayload(FATAL, msg)
-	payload.Backtrace = genStacktrace()
+	payload.SetException()
 	cl.Log(payload)
 	panic(payload)
 }

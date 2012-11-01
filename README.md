@@ -13,13 +13,13 @@ Enter Skynet. Each Skynet module is self–contained and self–aware – if you
 
 Skynet probably won’t die unless your data center gets hit by a comet.  We recommend at least 2 data centers in that scenario.
 
-[Skynet Services](wiki/Services) are where the work gets done.  These are the processes that service the requests, process the API calls, get the external data, log the requests, authenticate the users, etc.
+[Skynet Services](skynet/wiki/Services) are where the work gets done.  These are the processes that service the requests, process the API calls, get the external data, log the requests, authenticate the users, etc.
 
 
-Before you can run skynet you'll need to have at least one [doozerd](wiki/Setting-up-a-Doozer-cluster) process running.
+Before you can run skynet you'll need to have at least one [doozerd](skynet/wiki/Setting-up-a-Doozer-cluster) process running.
 
 ##How?
-Each process in SkyNet receives its configuration from a centralized configuration repository (currently [Doozer](wiki/Setting-up-a-Doozer-cluster) - possibly pluggable in the future).
+Each process in SkyNet receives its configuration from a centralized configuration repository (currently [Doozer](skynet/wiki/Setting-up-a-Doozer-cluster) - possibly pluggable in the future).
 
 Configuration changes are pushed to each process when new skynet services are started.
 This means that starting a new service automatically advertises that service's availability to the rest of the members of the skynet cluster.
@@ -29,10 +29,10 @@ Processes are monitored, and restarted when they die, and are removed from the c
 [https://github.com/bketelsen/skynet/wiki/Daemon](https://github.com/bketelsen/skynet/wiki/Daemon)
 
 ## Doozer
-Skynet makes heavy usage of [Doozer](wiki/Setting-up-a-Doozer-cluster). You'll need at least 1 Doozer instance to run Skynet, but we recommend a cluster of multiple Doozer nodes to ensure high availability. With only 1 instance you leave yourself with a single point of failure.
+Skynet makes heavy usage of [Doozer](skynet/wiki/Setting-up-a-Doozer-cluster). You'll need at least 1 Doozer instance to run Skynet, but we recommend a cluster of multiple Doozer nodes to ensure high availability. With only 1 instance you leave yourself with a single point of failure.
 
 ##Services
-[Services](wiki/Services) are the heart of your Skynet clusters, they will accept requests via bson rpc requests, although this is abstracted away, you won't have to deal with the protocol, you will just pass objects. Keep in mind that a Service may also be a client. In the case of a Composite style application, a request could be made to one service that makes requests either synchronously or asynchronously to additional Skynet services.
+[Services](skynet/wiki/Services) are the heart of your Skynet clusters, they will accept requests via bson rpc requests, although this is abstracted away, you won't have to deal with the protocol, you will just pass objects. Keep in mind that a Service may also be a client. In the case of a Composite style application, a request could be made to one service that makes requests either synchronously or asynchronously to additional Skynet services.
 
 #####Sweet! How do I create a service?
 Check out the service documentation page on the wiki: [https://github.com/bketelsen/skynet/wiki/Services](https://github.com/bketelsen/skynet/wiki/Services)
@@ -40,20 +40,21 @@ Check out the service documentation page on the wiki: [https://github.com/bketel
 Examples can be found in the *examples/* directory.
 
 ##Clients
-[Clients](wiki/Clients) are responsible for sending requests to Skynet services, and processing their requests.
+[Clients](skynet/wiki/Clients) are responsible for sending requests to Skynet services, and processing their requests.
 
 Clients contain a pool of connections to a given service, up to a specified size to load balance requests across. Instances are removed from Skynet when they crash, the pools are smart enough to remove any connections to any instances that are no longer available and replace them with connections to valid instances to maintain the pool.
 
 To use the Go client in your own program to call Skynet services, see [Creating a simple client](https://github.com/bketelsen/skynet/wiki/Client-Tutorial)
 The Go client is part of this project. Clients in other languages are also available:
 * [Ruby Skynet Client](http://github.com/ClarityServices/ruby_skynet)
+* [PHP Skynet Client](http://github.com/mikespook/php_skynet)
 
 To build a Client in your favorite language see the [Skynet Protocol Guide](https://github.com/bketelsen/skynet/blob/master/protocol.md)
 
 ##Management
 
 ####Sky
-The "[sky](wiki/Sky)" command is a management gateway into the Skynet cluster. It will allow you to probe the network and look for services/versions, hosts, regions etc in your cluster, as well as run administration commands to operate on instances that match the criteria. You can register/unregister/stop/restart services as well as deploy new services to hosts matching your filters.
+The "[sky](skynet/wiki/Sky)" command is a management gateway into the Skynet cluster. It will allow you to probe the network and look for services/versions, hosts, regions etc in your cluster, as well as run administration commands to operate on instances that match the criteria. You can register/unregister/stop/restart services as well as deploy new services to hosts matching your filters.
 
 ####Interactive Shell
 Another option is to use the interactive shell "<b>sky cli</b>". Which will open a shell you can interact with. Setting filters will allow any future commands to only apply to resources that meet those conditions. It supports history, and tab completion of commands, as well as services, hosts, regions, versions Skynet is already aware of.
@@ -61,7 +62,7 @@ Another option is to use the interactive shell "<b>sky cli</b>". Which will open
 [https://github.com/bketelsen/skynet/wiki/Sky](https://github.com/bketelsen/skynet/wiki/Sky)
 
 ####Dashboard
-The [dashboard](wiki/Dashboard) is a live updating web ui. Where you can see the current topology of your network, what regions/hosts/instances are up, average response times, last request, number of connections, if they are registered or not.
+The [dashboard](skynet/wiki/Dashboard) is a live updating web ui. Where you can see the current topology of your network, what regions/hosts/instances are up, average response times, last request, number of connections, if they are registered or not.
 
 In the future you will be able to live search your logs, as well as see graph data surrounding the health of your cluster.
 
@@ -71,7 +72,7 @@ In the future you will be able to live search your logs, as well as see graph da
 
 ##Internals
 #####Query
-The sky command and the client connectivity logic is all backed by [Query](wiki/Query). A struct that can be used to search the cluster for instances of services, regions, hosts, service names, service versions that Skynet is currently aware of. It's exposed for any custom need you may have for searching the cluster.
+The sky command and the client connectivity logic is all backed by [Query](skynet/wiki/Query). A struct that can be used to search the cluster for instances of services, regions, hosts, service names, service versions that Skynet is currently aware of. It's exposed for any custom need you may have for searching the cluster.
 
 [https://github.com/bketelsen/skynet/wiki/Query](https://github.com/bketelsen/skynet/wiki/Query)
 
@@ -81,7 +82,7 @@ You can create an instance listener by passing it a Query object, and be notifie
 [https://github.com/bketelsen/skynet/wiki/Instance-Monitor-&-Instance-Listener](https://github.com/bketelsen/skynet/wiki/Instance-Monitor-&-Instance-Listener)
 
 ## Getting Started
-The [wiki](wiki) has tons of documentation and tutorials on how to get started.
+The [wiki](skynet/wiki) has tons of documentation and tutorials on how to get started.
 
 The *examples/* directory has example services & clients
 

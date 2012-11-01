@@ -14,10 +14,11 @@ import (
 
 // Daemon will run and maintain skynet services.
 //
-// Daemon will initially deploy those specified in the file given in the "-config" option
+// Daemon will initially deploy those specified in the file given in
+// the "-config" option
 //
-// Daemon will run the "SkynetDeployment" service, which can be used to remotely spawn
-// new services on the host.
+// Daemon will run the "SkynetDeployment" service, which can be used
+// to remotely spawn new services on the host.
 func main() {
 	config, args := skynet.GetServiceConfig()
 	config.Name = "SkynetDaemon"
@@ -26,11 +27,12 @@ func main() {
 	config.AdminAddr = nil
 
 	var err error
-	mlogger, err := skynet.NewMongoLogger("localhost", "skynet", "log", config.UUID)
-	clogger := skynet.NewConsoleLogger("skydaemon", os.Stdout)
-	config.Log = skynet.NewMultiLogger(mlogger, clogger)
+	mlogger, err := skynet.NewMongoSemanticLogger("localhost", "skynet",
+		"log", config.UUID)
+	clogger := skynet.NewConsoleSemanticLogger("skydaemon", os.Stdout)
+	config.Log = skynet.NewMultiSemanticLogger(mlogger, clogger)
 	if err != nil {
-		config.Log.Item("Could not connect to mongo db for logging")
+		config.Log.Trace("Could not connect to mongo db for logging")
 	}
 
 	deployment := &SkynetDaemon{
@@ -53,7 +55,7 @@ func main() {
 	if len(args) == 1 {
 		err := deployConfig(deployment, args[0])
 		if err != nil {
-			config.Log.Item(err)
+			config.Log.Error(err.Error())
 		}
 	}
 
