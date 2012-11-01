@@ -115,11 +115,13 @@ type ServiceConfig struct {
 }
 
 type ClientConfig struct {
+	Region                    string
 	Log                       SemanticLogger `json:"-"`
 	DoozerConfig              *DoozerConfig  `json:"-"`
 	IdleConnectionsToInstance int
 	MaxConnectionsToInstance  int
 	IdleTimeout               time.Duration
+	Prioritizer               func(i1, it *ServiceInfo) (i1IsBetter bool) `json:"-"`
 }
 
 func GetDefaultEnvVar(name, def string) (v string) {
@@ -132,14 +134,14 @@ func GetDefaultEnvVar(name, def string) (v string) {
 
 func FlagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
 	flagset.StringVar(&dcfg.Uri, "doozer",
-			GetDefaultEnvVar("SKYNET_DZHOST", DefaultDoozerdAddr),
-			"initial doozer instance to connect to")
+		GetDefaultEnvVar("SKYNET_DZHOST", DefaultDoozerdAddr),
+		"initial doozer instance to connect to")
 	flagset.StringVar(&dcfg.BootUri, "doozerboot",
-			GetDefaultEnvVar("SKYNET_DZNSHOST", DefaultDoozerdAddr),
-			"initial doozer instance to connect to")
+		GetDefaultEnvVar("SKYNET_DZNSHOST", DefaultDoozerdAddr),
+		"initial doozer instance to connect to")
 	flagset.BoolVar(&dcfg.AutoDiscover, "autodiscover",
-			GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true",
-			"auto discover new doozer instances")
+		GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true",
+		"auto discover new doozer instances")
 }
 
 func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
@@ -147,14 +149,10 @@ func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
 		ccfg.DoozerConfig = &DoozerConfig{}
 	}
 	FlagsForDoozer(ccfg.DoozerConfig, flagset)
-	flagset.DurationVar(&ccfg.IdleTimeout, "timeout",
-			DefaultIdleTimeout, "amount of idle time before timeout")
-	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle",
-			DefaultIdleConnectionsToInstance,
-			"maximum number of idle connections to a particular instance")
-	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns",
-			DefaultMaxConnectionsToInstance,
-			"maximum number of concurrent connections to a particular instance")
+	flagset.DurationVar(&ccfg.IdleTimeout, "timeout", DefaultIdleTimeout, "amount of idle time before timeout")
+	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle", DefaultIdleConnectionsToInstance, "maximum number of idle connections to a particular instance")
+	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns", DefaultMaxConnectionsToInstance, "maximum number of concurrent connections to a particular instance")
+	flagset.StringVar(&ccfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region instance is located in")
 }
 
 func GetClientConfig() (config *ClientConfig, args []string) {

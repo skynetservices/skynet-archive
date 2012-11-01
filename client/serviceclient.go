@@ -77,7 +77,7 @@ func newServiceClient(query *skynet.Query, c *Client) (sc *ServiceClient) {
 		cconfig:       c.Config,
 		query:         query,
 		instances:     make(map[string]*servicePool),
-		chooser:       NewInstanceChooser(),
+		chooser:       NewInstanceChooser(c),
 		muxChan:       make(chan interface{}),
 		timeoutChan:   make(chan timeoutLengths),
 		retryTimeout:  skynet.DefaultRetryDuration,
