@@ -55,7 +55,7 @@ func main() {
 
 	var err error
 	mlogger, err := skynet.NewMongoSemanticLogger("localhost", "skynet",
-		"log", config.UUID)
+		"log", config.UUID, config)
 	clogger := skynet.NewConsoleSemanticLogger("TestService", os.Stdout)
 	testService.Log = skynet.NewMultiSemanticLogger(mlogger, clogger)
 	config.Log = testService.Log

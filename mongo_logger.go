@@ -10,16 +10,17 @@ type MongoSemanticLogger struct {
 	session                *mgo.Session
 	dbName, collectionName string
 	uuid                   string
+	serviceConfig          *ServiceConfig
 }
 
 // NewMongoSemanticLogger connects to a MongoDB instance at the given
 // address (often "localhost").
-func NewMongoSemanticLogger(addr, dbName, collectionName,
-	uuid string) (ml *MongoSemanticLogger, err error) {
+func NewMongoSemanticLogger(addr, dbName, collectionName, uuid string, config *ServiceConfig) (ml *MongoSemanticLogger, err error) {
 	ml = &MongoSemanticLogger{
 		dbName:         dbName,
 		collectionName: collectionName,
 		uuid:           uuid,
+		serviceConfig:  config,
 	}
 	ml.session, err = mgo.Dial(addr)
 	return
@@ -42,6 +43,7 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 	// Set various Payload fields
 	payload.setKnownFields()
 	payload.UUID = ml.uuid
+	payload.SkynetServiceConfig = ml.serviceConfig
 
 	// Log regardless of the log level
 	err := ml.session.DB(ml.dbName).C(ml.collectionName).Insert(payload)

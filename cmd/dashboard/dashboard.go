@@ -134,7 +134,7 @@ func main() {
 	}
 
 	mlogger, err := skynet.NewMongoSemanticLogger(*mgoserver, "skynet",
-		"log", skynet.UUID())
+		"log", skynet.UUID(), nil)
 	if err != nil {
 		log.Error(fmt.Sprintf("%+v", skynet.MongoError{
 			Addr: "Could not connect to mongo db for logging",
