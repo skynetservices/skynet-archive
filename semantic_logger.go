@@ -31,7 +31,7 @@ type LogPayload struct {
 	HostName string    `json:"host_name" bson:"host_name"`
 	// Set by user via .AddTags() convenience method
 	Tags []string `json:"tags" bson:"tags"`
-	// Should be set by .Log() or NewMongoSemanticLogger()
+	// Should be set by .Log()
 	UUID string `json:"uuid" bson:"uuid"` // Logger's UUID
 	// Should be set by BenchmarkInfo() if called
 	Duration time.Duration `json:"duration" bson:"duration"`
@@ -40,8 +40,6 @@ type LogPayload struct {
 	Application string      `json:"application" bson:"application"`
 	Payload     interface{} `json:"payload" bson:"payload"` // Arbitrary data
 	Exception   *Exception  `json:"exception" bson:"exception"`
-	// Set by NewMongoSemanticLogger()
-	ServiceConfig *ServiceConfig `json:"service_config" bson:"service_config"`
 }
 
 // Exception stores stacktrace data from Go panics. (The name

@@ -74,7 +74,7 @@ func main() {
 
 	var err error
 	mlogger, err := skynet.NewMongoSemanticLogger("localhost", "skynet",
-		"log", config.UUID, config)
+		"log", config.UUID)
 	clogger := skynet.NewConsoleSemanticLogger("sleepservice", os.Stdout)
 	config.Log = skynet.NewMultiSemanticLogger(mlogger, clogger)
 	if err != nil {
