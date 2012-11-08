@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/bketelsen/skynet"
 	"github.com/bketelsen/skynet/rpc/bsonrpc"
+	"github.com/cactus/go-statsd-client/statsd"
 	"net"
 	"net/rpc"
 	"os"
@@ -29,6 +30,11 @@ type ServiceDelegate interface {
 
 type ClientInfo struct {
 	Address net.Addr
+}
+
+type StatsdConfig struct {
+	IpAddress string
+	AppName   string
 }
 
 type Service struct {
@@ -64,6 +70,8 @@ type Service struct {
 	clientInfo  map[string]ClientInfo
 
 	shuttingDown bool
+
+	statsdClient *statsd.Client
 }
 
 func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
@@ -99,6 +107,16 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 
 	s.RPCServ.RegisterName(s.Config.Name, rpcForwarder)
 
+	//for now initialize_statsd_client function is not necessary,
+	//we will need it when we will have more than one statsd client
+	var err error
+	s.statsdClient, err = statsd.Dial("192.168.50.123:8125", "skynet")
+	// handle any errors
+	if err != nil {
+		//log error in some log
+		s.Log.Trace(fmt.Sprintf("%+v", err))
+	}
+	//	s.statsdClient = initialize_statsd_client()
 	return
 }
 
@@ -403,6 +421,8 @@ func (s *Service) Shutdown() {
 	if s.shuttingDown {
 		return
 	}
+	//going to shut down close connection to statsd
+	s.statsdClient.Close()
 
 	s.shuttingDown = true
 
@@ -462,6 +482,23 @@ func initializeConfig(c *skynet.ServiceConfig) {
 	if c.DoozerUpdateInterval == 0 {
 		c.DoozerUpdateInterval = 5 * time.Second
 	}
+}
+
+func initialize_statsd_client() (c *statsd.Client) {
+
+	var err error
+
+	statsdConfig := StatsdConfig{IpAddress: "192.168.50.123:8125",
+		AppName: "skynet"}
+
+	c, err = statsd.Dial(statsdConfig.IpAddress, statsdConfig.AppName)
+	// handle any errors
+	if err != nil {
+		//log error in some log
+		//	log.Fatal(err)
+		return nil
+	}
+	return c
 }
 
 func (r *Service) Equal(that *Service) bool {

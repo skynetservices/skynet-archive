@@ -170,6 +170,14 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 
 	duration := time.Now().UnixNano() - startTime
 
+	//send duation(reponse time) to statsD/Graphite
+	err = srpc.service.statsdClient.Timing("duration", duration, 1.0)
+	// handle any errors
+	if err != nil {
+		//log this error
+		srpc.service.Log.Trace(fmt.Sprintf("%+v", err))
+	}
+
 	// Update stats
 	atomic.AddInt64(&srpc.service.Stats.RequestsServed, 1)
 	atomic.AddInt64((*int64)(&srpc.service.Stats.TotalDuration), int64(duration)) // ns
