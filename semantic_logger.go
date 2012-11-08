@@ -44,6 +44,9 @@ type LogPayload struct {
 	ServiceConfig *ServiceConfig `json:"service_config" bson:"service_config"`
 }
 
+// Exception stores stacktrace data from Go panics. (The name
+// 'exception' is used to maintain the same naming conventions as
+// github.com/ClarityServices/semantic_logger)
 type Exception struct {
 	Name    string `json:"name" bson:"name"`
 	Message string `json:"message" bson:"message"`
