@@ -195,15 +195,7 @@ func GetServiceConfig() (config *ServiceConfig, args []string) {
 	return GetServiceConfigFromFlags(os.Args[1:])
 }
 
-func GetServiceConfigFromFlags(argv []string) (config *ServiceConfig, args []string) {
-
-	config = &ServiceConfig{
-		DoozerConfig: &DoozerConfig{},
-	}
-
-	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
-
-	FlagsForService(config, flagset)
+func ParseServiceFlags(scfg *ServiceConfig, flagset *flag.FlagSet, argv []string) (config *ServiceConfig, args []string) {
 
 	rpcAddr := flagset.String("l", GetDefaultBindAddr(), "host:port to listen on for RPC")
 	adminAddr := flagset.String("admin", GetDefaultBindAddr(), "host:port to listen on for admin")
@@ -225,8 +217,21 @@ func GetServiceConfigFromFlags(argv []string) (config *ServiceConfig, args []str
 		panic(err)
 	}
 
-	config.ServiceAddr = rpcBA
-	config.AdminAddr = adminBA
+	scfg.ServiceAddr = rpcBA
+	scfg.AdminAddr = adminBA
 
-	return
+	return scfg, args
+}
+
+func GetServiceConfigFromFlags(argv []string) (config *ServiceConfig, args []string) {
+
+	config = &ServiceConfig{
+		DoozerConfig: &DoozerConfig{},
+	}
+
+	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
+
+	FlagsForService(config, flagset)
+
+	return ParseServiceFlags(config, flagset, argv)
 }
