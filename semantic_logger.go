@@ -29,19 +29,22 @@ type LogPayload struct {
 	PID      int       `json:"pid" bson:"pid"`
 	Time     time.Time `json:"time" bson:"time"`
 	HostName string    `json:"host_name" bson:"host_name"`
-	// Set by .SetTags() convenience method
+	// Set by user via .AddTags() convenience method
 	Tags []string `json:"tags" bson:"tags"`
 	// Should be set by .Log()
 	UUID string `json:"uuid" bson:"uuid"` // Logger's UUID
 	// Should be set by BenchmarkInfo() if called
 	Duration time.Duration `json:"duration" bson:"duration"`
 	// Optionally set by user manually
-	ThreadName  string      `json:"thread_name" bson:"thread_name"`
-	Application string      `json:"application" bson:"application"`
-	Payload     interface{} `json:"payload" bson:"payload"` // Arbitrary data
-	Exception   *Exception  `json:"exception" bson:"exception"`
+	ThreadName  string                 `json:"thread_name" bson:"thread_name"`
+	Application string                 `json:"application" bson:"application"`
+	Payload     map[string]interface{} `json:"payload" bson:"payload"` // Arbitrary data
+	Exception   *Exception             `json:"exception" bson:"exception"`
 }
 
+// Exception stores stacktrace data from Go panics. (The name
+// 'exception' is used to maintain the same naming conventions as
+// github.com/ClarityServices/semantic_logger)
 type Exception struct {
 	Name    string `json:"name" bson:"name"`
 	Message string `json:"message" bson:"message"`
@@ -75,25 +78,27 @@ func (payload *LogPayload) SetException() {
 	}
 }
 
-// setKnownFields sets the `Application`, `PID`, `Time`, and
-// `HostName` fields of the given payload. See the documentation on
-// the LogPayload type for which fields should be set where, and by
-// whom (the user) or what (a function or method).
+// setKnownFields sets the `PID`, `Time`, and `HostName` fields of the
+// given payload. See the documentation on the LogPayload type for
+// which fields should be set where, and by whom (the user) or what (a
+// function or method).
 func (payload *LogPayload) setKnownFields() {
 	payload.PID = os.Getpid()
 	payload.Time = time.Now()
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Printf("Error getting hostname: %v\n", err)
+	} else {
+		payload.HostName = hostname
 	}
-	payload.HostName = hostname
 }
 
-// SetTags is a convenience method for adding tags to *LogPayload's,
-// since `payload.SetTags("tag1", "tag2")` is cleaner than
-// `payload.Tags = []string{"tag1", "tag2"}`
-func (payload *LogPayload) SetTags(tags ...string) {
-	payload.Tags = tags
+// AddTags is a convenience method for adding tags to *LogPayload's,
+// since `payload.AddTags("tag1", "tag2")` is cleaner than
+// `payload.Tags = []string{"tag1", "tag2"} or `append(payload.Tags,
+// "tag1", "tag2")`.
+func (payload *LogPayload) AddTags(tags ...string) {
+	payload.Tags = append(payload.Tags, tags...)
 }
 
 // NewLogPayload is a convenience function for creating *LogPayload's
@@ -107,6 +112,7 @@ func NewLogPayload(level LogLevel, formatStr string, vars ...interface{}) *LogPa
 		// 3 == What we want
 		// 4 (or shortly thereafter) == main.main
 		Name: getCallerName(3),
+		Payload: map[string]interface{}{},
 	}
 	// payload.setKnownFields() called in .Log() method; not calling here
 

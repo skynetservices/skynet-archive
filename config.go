@@ -103,25 +103,25 @@ func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
 }
 
 type ServiceConfig struct {
-	Log                  SemanticLogger `json:"-"`
+	Log                  SemanticLogger `json:"-" bson:"-"`
 	UUID                 string
 	Name                 string
 	Version              string
 	Region               string
 	ServiceAddr          *BindAddr
 	AdminAddr            *BindAddr
-	DoozerConfig         *DoozerConfig `json:"-"`
-	DoozerUpdateInterval time.Duration `json:"-"`
+	DoozerConfig         *DoozerConfig `json:"-" bson:"-"`
+	DoozerUpdateInterval time.Duration `json:"-" bson:"-"`
 }
 
 type ClientConfig struct {
 	Region                    string
-	Log                       SemanticLogger `json:"-"`
-	DoozerConfig              *DoozerConfig  `json:"-"`
+	Log                       SemanticLogger `json:"-" bson:"-"`
+	DoozerConfig              *DoozerConfig  `json:"-" bson:"-"`
 	IdleConnectionsToInstance int
 	MaxConnectionsToInstance  int
 	IdleTimeout               time.Duration
-	Prioritizer               func(i1, it *ServiceInfo) (i1IsBetter bool) `json:"-"`
+	Prioritizer               func(i1, it *ServiceInfo) (i1IsBetter bool) `json:"-" bson:"-"`
 }
 
 func GetDefaultEnvVar(name, def string) (v string) {
