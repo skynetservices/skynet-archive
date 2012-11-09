@@ -43,6 +43,11 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 	payload.setKnownFields()
 	payload.UUID = ml.uuid
 
+	if payload.Level == FATAL {
+		payload.SetException()
+		defer panic(payload)
+	}
+
 	// Log regardless of the log level
 	err := ml.session.DB(ml.dbName).C(ml.collectionName).Insert(payload)
 	if err != nil {
