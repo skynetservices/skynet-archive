@@ -112,6 +112,7 @@ func NewLogPayload(level LogLevel, formatStr string, vars ...interface{}) *LogPa
 		// 3 == What we want
 		// 4 (or shortly thereafter) == main.main
 		Name: getCallerName(3),
+		Payload: map[string]interface{}{},
 	}
 	// payload.setKnownFields() called in .Log() method; not calling here
 
