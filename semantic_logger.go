@@ -36,10 +36,10 @@ type LogPayload struct {
 	// Should be set by BenchmarkInfo() if called
 	Duration time.Duration `json:"duration" bson:"duration"`
 	// Optionally set by user manually
-	ThreadName  string      `json:"thread_name" bson:"thread_name"`
-	Application string      `json:"application" bson:"application"`
-	Payload map[string]interface{} `json:"payload" bson:"payload"` // Arbitrary data
-	Exception   *Exception  `json:"exception" bson:"exception"`
+	ThreadName  string                 `json:"thread_name" bson:"thread_name"`
+	Application string                 `json:"application" bson:"application"`
+	Payload     map[string]interface{} `json:"payload" bson:"payload"` // Arbitrary data
+	Exception   *Exception             `json:"exception" bson:"exception"`
 }
 
 // Exception stores stacktrace data from Go panics. (The name
