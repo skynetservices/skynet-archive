@@ -42,7 +42,6 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 	// Set various Payload fields
 	payload.setKnownFields()
 	payload.UUID = ml.uuid
-	payload.ServiceConfig = ml.serviceConfig
 
 	// Log regardless of the log level
 	err := ml.session.DB(ml.dbName).C(ml.collectionName).Insert(payload)
