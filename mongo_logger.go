@@ -39,7 +39,7 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 		return
 	}
 
-	// Set various Payload fields
+	// Set various LogPayload fields
 	payload.setKnownFields()
 	payload.UUID = ml.uuid
 

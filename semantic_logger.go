@@ -78,10 +78,10 @@ func (payload *LogPayload) SetException() {
 	}
 }
 
-// setKnownFields sets the `Application`, `PID`, `Time`, and
-// `HostName` fields of the given payload. See the documentation on
-// the LogPayload type for which fields should be set where, and by
-// whom (the user) or what (a function or method).
+// setKnownFields sets the `PID`, `Time`, and `HostName` fields of the
+// given payload. See the documentation on the LogPayload type for
+// which fields should be set where, and by whom (the user) or what (a
+// function or method).
 func (payload *LogPayload) setKnownFields() {
 	payload.PID = os.Getpid()
 	payload.Time = time.Now()
