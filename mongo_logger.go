@@ -26,8 +26,8 @@ func NewMongoSemanticLogger(addr, dbName, collectionName,
 }
 
 // Log saves all fields of the given payload to MongoDB, setting
-// unexported fields as necessary. May behave differently based upon
-// payload.LogLevel.
+// unexported fields as necessary. Panics after logging if
+// payload.Level == FATAL.
 func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 	// Sanity checks
 	if ml == nil {
