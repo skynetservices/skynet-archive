@@ -88,8 +88,9 @@ func (payload *LogPayload) setKnownFields() {
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Printf("Error getting hostname: %v\n", err)
+	} else {
+		payload.HostName = hostname
 	}
-	payload.HostName = hostname
 }
 
 // AddTags is a convenience method for adding tags to *LogPayload's,
