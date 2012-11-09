@@ -417,8 +417,11 @@ func (s *Service) Shutdown() {
 	if s.shuttingDown {
 		return
 	}
-	//going to shut down close connection to statsd
-	s.statsdClient.Close()
+
+	if s.statsdClient != nil {
+		//going to shut down close connection to statsd
+		s.statsdClient.Close()
+	}
 
 	s.shuttingDown = true
 
