@@ -38,7 +38,7 @@ type LogPayload struct {
 	// Optionally set by user manually
 	ThreadName  string      `json:"thread_name" bson:"thread_name"`
 	Application string      `json:"application" bson:"application"`
-	Payload     interface{} `json:"payload" bson:"payload"` // Arbitrary data
+	Payload map[string]interface{} `json:"payload" bson:"payload"` // Arbitrary data
 	Exception   *Exception  `json:"exception" bson:"exception"`
 }
 
