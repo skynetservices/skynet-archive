@@ -28,6 +28,10 @@ const (
 	DefaultRegion = "unknown"
 	// DefaultVersion is the version specified for a service.
 	DefaultVersion = "unknown"
+	//Default Ip Address and port for Statsd
+	DefaultStatsdAddr = "127.0.0.1:8125"
+	//Default Directory name for metrics in Graphite
+	DefaultStatsdDir = "default"
 )
 
 func GetDefaultBindAddr() string {

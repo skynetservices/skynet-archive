@@ -32,11 +32,6 @@ type ClientInfo struct {
 	Address net.Addr
 }
 
-type StatsdConfig struct {
-	IpAddress string
-	AppName   string
-}
-
 type Service struct {
 	DoozerConn *skynet.DoozerConnection
 	skynet.ServiceInfo
@@ -76,6 +71,8 @@ type Service struct {
 
 func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	// This will set defaults
+	var err error
+
 	initializeConfig(c)
 
 	s = &Service{
@@ -107,16 +104,15 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 
 	s.RPCServ.RegisterName(s.Config.Name, rpcForwarder)
 
-	//for now initialize_statsd_client function is not necessary,
-	//we will need it when we will have more than one statsd client
-	var err error
-	s.statsdClient, err = statsd.Dial("192.168.50.123:8125", "skynet")
-	// handle any errors
-	if err != nil {
-		//log error in some log
-		s.Log.Trace(fmt.Sprintf("%+v", err))
+	if c.StatsCfg != nil {
+
+		s.statsdClient, err = statsd.Dial(c.StatsCfg.Addr, c.StatsCfg.Dir)
+		// handle any errors
+		if err != nil {
+			//log error in some log
+			s.Log.Trace(fmt.Sprintf("%+v", err))
+		}
 	}
-	//	s.statsdClient = initialize_statsd_client()
 	return
 }
 
@@ -482,23 +478,11 @@ func initializeConfig(c *skynet.ServiceConfig) {
 	if c.DoozerUpdateInterval == 0 {
 		c.DoozerUpdateInterval = 5 * time.Second
 	}
-}
 
-func initialize_statsd_client() (c *statsd.Client) {
-
-	var err error
-
-	statsdConfig := StatsdConfig{IpAddress: "192.168.50.123:8125",
-		AppName: "skynet"}
-
-	c, err = statsd.Dial(statsdConfig.IpAddress, statsdConfig.AppName)
-	// handle any errors
-	if err != nil {
-		//log error in some log
-		//	log.Fatal(err)
-		return nil
+	if c.StatsCfg == nil {
+		c.Log.Trace(fmt.Sprint("Configuration parameters for StatsD are not specified."))
+		c.Log.Trace(fmt.Sprint("Metrics will not be collected"))
 	}
-	return c
 }
 
 func (r *Service) Equal(that *Service) bool {

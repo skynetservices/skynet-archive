@@ -102,6 +102,11 @@ func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
 	return
 }
 
+type StatsdConfig struct {
+	Addr string
+	Dir  string
+}
+
 type ServiceConfig struct {
 	Log                  SemanticLogger `json:"-"`
 	UUID                 string
@@ -112,6 +117,7 @@ type ServiceConfig struct {
 	AdminAddr            *BindAddr
 	DoozerConfig         *DoozerConfig `json:"-"`
 	DoozerUpdateInterval time.Duration `json:"-"`
+	StatsCfg             *StatsdConfig
 }
 
 type ClientConfig struct {
@@ -122,6 +128,7 @@ type ClientConfig struct {
 	MaxConnectionsToInstance  int
 	IdleTimeout               time.Duration
 	Prioritizer               func(i1, it *ServiceInfo) (i1IsBetter bool) `json:"-"`
+	StatsCfg                  *StatsdConfig
 }
 
 func GetDefaultEnvVar(name, def string) (v string) {
@@ -148,11 +155,19 @@ func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
 	if ccfg.DoozerConfig == nil {
 		ccfg.DoozerConfig = &DoozerConfig{}
 	}
+
+	if ccfg.StatsCfg == nil {
+		ccfg.StatsCfg = &StatsdConfig{}
+	}
+
 	FlagsForDoozer(ccfg.DoozerConfig, flagset)
 	flagset.DurationVar(&ccfg.IdleTimeout, "timeout", DefaultIdleTimeout, "amount of idle time before timeout")
 	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle", DefaultIdleConnectionsToInstance, "maximum number of idle connections to a particular instance")
 	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns", DefaultMaxConnectionsToInstance, "maximum number of concurrent connections to a particular instance")
 	flagset.StringVar(&ccfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region instance is located in")
+	flagset.StringVar(&ccfg.StatsCfg.Addr, "statsd_address", GetDefaultEnvVar("SKYNET_STADDR", DefaultStatsdAddr), "Ip address and port for StatsD")
+	flagset.StringVar(&ccfg.StatsCfg.Dir, "dir", GetDefaultEnvVar("SKYNET_STDIR", DefaultStatsdDir), "Directory for metrics in Graphite")
+
 }
 
 func GetClientConfig() (config *ClientConfig, args []string) {
@@ -184,11 +199,18 @@ func FlagsForService(scfg *ServiceConfig, flagset *flag.FlagSet) {
 	if scfg.DoozerConfig == nil {
 		scfg.DoozerConfig = &DoozerConfig{}
 	}
+	if scfg.StatsCfg == nil {
+		scfg.StatsCfg = &StatsdConfig{}
+	}
+
 	FlagsForDoozer(scfg.DoozerConfig, flagset)
 	flagset.StringVar(&scfg.UUID, "uuid", UUID(), "UUID for this service")
 	flagset.StringVar(&scfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region service is located in")
 	flagset.StringVar(&scfg.Version, "version", DefaultVersion, "version of service")
 	flagset.DurationVar(&scfg.DoozerUpdateInterval, "dzupdate", DefaultDoozerUpdateInterval, "ns to wait before sending the next status update")
+	flagset.StringVar(&scfg.StatsCfg.Addr, "statsd_address", GetDefaultEnvVar("SKYNET_STADDR", DefaultStatsdAddr), "Ip address and port for StatsD")
+	flagset.StringVar(&scfg.StatsCfg.Dir, "dir", GetDefaultEnvVar("SKYNET_STDIR", DefaultStatsdDir), "Directory for metrics in Graphite")
+
 }
 
 func GetServiceConfig() (config *ServiceConfig, args []string) {
