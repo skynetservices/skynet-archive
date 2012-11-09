@@ -102,6 +102,11 @@ func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
 	return
 }
 
+type MongoConfig struct {
+	MongoHosts	string // comma-separated hosts
+	MongoDb     string
+}
+
 type ServiceConfig struct {
 	Log                  SemanticLogger `json:"-"`
 	UUID                 string
@@ -112,6 +117,7 @@ type ServiceConfig struct {
 	AdminAddr            *BindAddr
 	DoozerConfig         *DoozerConfig `json:"-"`
 	DoozerUpdateInterval time.Duration `json:"-"`
+	MongoConfig			 *MongoConfig  `json:"-"`
 }
 
 type ClientConfig struct {
@@ -122,6 +128,7 @@ type ClientConfig struct {
 	MaxConnectionsToInstance  int
 	IdleTimeout               time.Duration
 	Prioritizer               func(i1, it *ServiceInfo) (i1IsBetter bool) `json:"-"`
+	MongoConfig			 	  *MongoConfig  `json:"-"`
 }
 
 func GetDefaultEnvVar(name, def string) (v string) {
@@ -143,12 +150,20 @@ func FlagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
 		GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true",
 		"auto discover new doozer instances")
 }
+func FlagsForMongo(ccfg *MongoConfig, flagset *flag.FlagSet) {
+	flagset.StringVar(&ccfg.MongoHosts, "mgoserver", GetDefaultEnvVar("SKYNET_MGOSERVER", "localhost"), "comma-separated list of urls of mongodb servers")
+	flagset.StringVar(&ccfg.MongoDb, "mgodb", GetDefaultEnvVar("SKYNET_MGODB", ""), "mongodb database")
+}
 
 func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
 	if ccfg.DoozerConfig == nil {
 		ccfg.DoozerConfig = &DoozerConfig{}
 	}
 	FlagsForDoozer(ccfg.DoozerConfig, flagset)
+	if ccfg.MongoConfig == nil {
+		ccfg.MongoConfig = &MongoConfig{}
+	}
+	FlagsForMongo(ccfg.MongoConfig, flagset)
 	flagset.DurationVar(&ccfg.IdleTimeout, "timeout", DefaultIdleTimeout, "amount of idle time before timeout")
 	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle", DefaultIdleConnectionsToInstance, "maximum number of idle connections to a particular instance")
 	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns", DefaultMaxConnectionsToInstance, "maximum number of concurrent connections to a particular instance")
@@ -185,6 +200,10 @@ func FlagsForService(scfg *ServiceConfig, flagset *flag.FlagSet) {
 		scfg.DoozerConfig = &DoozerConfig{}
 	}
 	FlagsForDoozer(scfg.DoozerConfig, flagset)
+	if scfg.MongoConfig == nil {
+		scfg.MongoConfig = &MongoConfig{}
+	}
+	FlagsForMongo(scfg.MongoConfig, flagset)
 	flagset.StringVar(&scfg.UUID, "uuid", UUID(), "UUID for this service")
 	flagset.StringVar(&scfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region service is located in")
 	flagset.StringVar(&scfg.Version, "version", DefaultVersion, "version of service")
