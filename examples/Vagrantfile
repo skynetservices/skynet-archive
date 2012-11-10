@@ -139,7 +139,7 @@ Vagrant::Config.run do |config|
       c.vm.provision :shell, :inline => "nohup doozerd -timeout 5 -l '192.168.126.10#{i}:8046' -w '192.168.126.10#{i}:8080' -c 'skynet' -b 'doozer:?ca=192.168.126.101:10000' 0<&- &> /var/log/doozer.log &"
 
       # Start Daemon
-      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/skydaemon --version=1 0<&- &> /var/log/skynet_daemon.log &"
+      c.vm.provision :shell, :inline => "nohup /opt/local/gopath/bin/skydaemon -mgoserver='192.168.126.101:27017' --version=1 0<&- &> /var/log/skynet_daemon.log &"
 
       # Start Services
       c.vm.provision :shell, :inline => "sleep 15 && sky --host=192.168.126.10#{i} deploy github.com/bketelsen/skynet/examples/service --version=1"

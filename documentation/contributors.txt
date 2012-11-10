@@ -6,3 +6,4 @@ John Asmuth       jasmuth@gmail.com
 Xing Xing         mikespook@gmail.com
 Reid Morrison     reidmo@gmail.com
 Steve Phillips    elimisteve@gmail.com
+Leo Franchi       lfranchi@kde.org
