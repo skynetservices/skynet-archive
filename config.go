@@ -103,8 +103,8 @@ func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
 }
 
 type MongoConfig struct {
-	MongoHosts	string // comma-separated hosts
-	MongoDb     string
+	MongoHosts string // comma-separated hosts
+	MongoDb    string
 }
 
 type ServiceConfig struct {
@@ -117,7 +117,7 @@ type ServiceConfig struct {
 	AdminAddr            *BindAddr
 	DoozerConfig         *DoozerConfig `json:"-"`
 	DoozerUpdateInterval time.Duration `json:"-"`
-	MongoConfig			 *MongoConfig  `json:"-"`
+	MongoConfig          *MongoConfig  `json:"-"`
 }
 
 type ClientConfig struct {
@@ -128,7 +128,7 @@ type ClientConfig struct {
 	MaxConnectionsToInstance  int
 	IdleTimeout               time.Duration
 	Prioritizer               func(i1, it *ServiceInfo) (i1IsBetter bool) `json:"-"`
-	MongoConfig			 	  *MongoConfig  `json:"-"`
+	MongoConfig               *MongoConfig                                `json:"-"`
 }
 
 func GetDefaultEnvVar(name, def string) (v string) {
@@ -167,7 +167,7 @@ func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
 	flagset.DurationVar(&ccfg.IdleTimeout, "timeout", DefaultIdleTimeout, "amount of idle time before timeout")
 	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle", DefaultIdleConnectionsToInstance, "maximum number of idle connections to a particular instance")
 	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns", DefaultMaxConnectionsToInstance, "maximum number of concurrent connections to a particular instance")
-	flagset.StringVar(&ccfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region instance is located in")
+	flagset.StringVar(&ccfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region client is located in")
 }
 
 func GetClientConfig() (config *ClientConfig, args []string) {

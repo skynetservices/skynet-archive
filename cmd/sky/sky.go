@@ -14,7 +14,6 @@ var (
 	ServiceNameFlag *string = flagset.String("service", "", "service name")
 	HostFlag        *string = flagset.String("host", "", "host")
 	PortFlag        *string = flagset.String("port", "", "port")
-	RegionFlag      *string = flagset.String("region", "", "region")
 	RegisteredFlag  *string = flagset.String("registered", "", "registered")
 )
 
@@ -28,6 +27,7 @@ func main() {
 		DoozerConfig: &skynet.DoozerConfig{},
 		Log:          logger,
 	}
+
 	skynet.FlagsForClient(&config, flagset)
 
 	err := flagset.Parse(os.Args[1:])
@@ -41,7 +41,7 @@ func main() {
 		Service:    *ServiceNameFlag,
 		Version:    *VersionFlag,
 		Host:       *HostFlag,
-		Region:     *RegionFlag,
+		Region:     config.Region,
 		Port:       *PortFlag,
 	}
 
