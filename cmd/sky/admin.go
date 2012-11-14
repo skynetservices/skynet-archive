@@ -37,7 +37,7 @@ func Unregister(q *skynet.Query) {
 	}
 }
 
-func getDaemonServiceClientForHost(dc *skynet.DoozerConfig, host string) *client.ServiceClient {
+func getDaemonServiceClientForHost(dc *skynet.DoozerConfig, host string) client.ServiceClient {
 	config := &skynet.ClientConfig{
 		DoozerConfig: dc,
 	}
