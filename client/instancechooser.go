@@ -35,10 +35,19 @@ func defaultComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) 
 
 	// All things being equal let's sort on LastRequest
 	if i1Points == i2Points {
-		t1, _ := time.Parse("2006-01-02T15:04:05Z-0700", i1.Stats.LastRequest)
-		t2, _ := time.Parse("2006-01-02T15:04:05Z-0700", i2.Stats.LastRequest)
+		var t1, t2 int64 = 0, 0
 
-		if t1.Unix() < t2.Unix() {
+		t, err := time.Parse("2006-01-02T15:04:05Z-0700", i1.Stats.LastRequest)
+		if err == nil {
+			t1 = t.Unix()
+		}
+
+		t, err = time.Parse("2006-01-02T15:04:05Z-0700", i2.Stats.LastRequest)
+		if err == nil {
+			t2 = t.Unix()
+		}
+
+		if t1 < t2 {
 			i1Points = i1Points + REQUESTED_LAST_POINTS
 		} else {
 			i2Points = i2Points + REQUESTED_LAST_POINTS
