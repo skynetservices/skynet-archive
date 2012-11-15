@@ -3,21 +3,49 @@ package client
 import (
 	"container/heap"
 	"github.com/bketelsen/skynet"
+	"time"
 )
 
 type InstanceComparator func(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsLess bool)
 
-func basicComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
-	region := c.Config.Region
-	// if only one has the right region, it's definitely less
-	if region == i1.Config.Region && region != i2.Config.Region {
-		return true
+const (
+	SAME_REGION_POINTS    = 10
+	SAME_HOST_POINTS      = 12
+	REQUESTED_LAST_POINTS = 1
+)
+
+func getInstanceScore(c *Client, i *skynet.ServiceInfo) (points int) {
+	if i.Config.ServiceAddr.IPAddress == c.Config.Host {
+		points = points + SAME_HOST_POINTS
 	}
-	if region != i1.Config.Region && region == i2.Config.Region {
-		return false
+
+	if i.Config.Region == c.Config.Region {
+		points = points + SAME_REGION_POINTS
 	}
-	// otherwise use something arbitrary
-	return i1.Config.UUID < i2.Config.UUID
+
+	return
+}
+
+func defaultComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
+	var i1Points = getInstanceScore(c, i1)
+	var i2Points = getInstanceScore(c, i2)
+
+	// TODO: Score Clients (make sure to account for 0 in case of new instances)
+	// TODO: Score AverageResponseTime (make sure to account for 0 in case of new instances)
+
+	// All things being equal let's sort on LastRequest
+	if i1Points == i2Points {
+		t1, _ := time.Parse("2006-01-02T15:04:05Z-0700", i1.Stats.LastRequest)
+		t2, _ := time.Parse("2006-01-02T15:04:05Z-0700", i2.Stats.LastRequest)
+
+		if t1.Unix() < t2.Unix() {
+			i1Points = i1Points + REQUESTED_LAST_POINTS
+		} else {
+			i2Points = i2Points + REQUESTED_LAST_POINTS
+		}
+	}
+
+	return i1Points > i2Points
 }
 
 type InstanceChooser struct {
@@ -47,7 +75,7 @@ func NewInstanceChooser(c *Client) (ic *InstanceChooser) {
 			return c.Config.Prioritizer(i1, i2)
 		}
 	} else if c.Config.Region != skynet.DefaultRegion {
-		ic.comparator = basicComparator
+		ic.comparator = defaultComparator
 	}
 
 	go ic.mux()

@@ -103,7 +103,7 @@ func (c *Client) getServicePool(instance *skynet.ServiceInfo) (sp *servicePool) 
 
 	sp = &servicePool{
 		service: instance,
-		pool:    pools.NewResourcePool(getConnectionFactory(instance),
+		pool: pools.NewResourcePool(getConnectionFactory(instance),
 			c.Config.IdleConnectionsToInstance,
 			c.Config.MaxConnectionsToInstance),
 	}
