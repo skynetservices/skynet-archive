@@ -9,9 +9,10 @@ import (
 type InstanceComparator func(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsLess bool)
 
 const (
-	SAME_REGION_POINTS    = 10
-	SAME_HOST_POINTS      = 12
-	REQUESTED_LAST_POINTS = 1
+	SAME_REGION_POINTS         = 10
+	SAME_HOST_POINTS           = 2
+	REQUESTED_LAST_POINTS      = 1
+	CRITICAL_NUMBER_OF_CLIENTS = 10 //random number tbd
 )
 
 func getInstanceScore(c *Client, i *skynet.ServiceInfo) (points int) {
@@ -26,7 +27,45 @@ func getInstanceScore(c *Client, i *skynet.ServiceInfo) (points int) {
 	return
 }
 
+//should be called from defaultComparator
+//still work in progress, trying to figure out algorithm 
+//needs to be refractored, can not imagine adding response time check to this.
+func compare(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
+	var i1Points = getInstanceScore(c, i1)
+	var i2Points = getInstanceScore(c, i2)
+
+	if i1Points >= i2Points {
+		//i1 is closer to the client, make sure it is not overloaded
+		if i1.Stats.Clients > CRITICAL_NUMBER_OF_CLIENTS {
+			if i2.Stats.Clients <= CRITICAL_NUMBER_OF_CLIENTS {
+				//chose i2 instance
+				i1IsBetter = false
+			} else { //we are in trouble, can not use both ?? 
+				//TODO Figure out what to do - panic??
+				panic("Both instances reached critical number of clients")
+			}
+		}
+		//chose i1 instance
+		i1IsBetter = true
+	} else {
+		//we are here, it means that i2Points > i1Points, which means that i2 is closer to client
+		if i2.Stats.Clients > CRITICAL_NUMBER_OF_CLIENTS {
+			if i1.Stats.Clients <= CRITICAL_NUMBER_OF_CLIENTS {
+				//chose i1 instance
+				i1IsBetter = true
+			} else { //we are in trouble, can not use both ?? 
+				//TODO Figure out what to do - panic??
+				panic("Both instances reached critical number of clients")
+			}
+		}
+		//chose i2 instance  
+		i1IsBetter = false
+	}
+	return i1IsBetter
+}
+
 func defaultComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
+
 	var i1Points = getInstanceScore(c, i1)
 	var i2Points = getInstanceScore(c, i2)
 
