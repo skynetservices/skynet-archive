@@ -35,7 +35,28 @@ func myComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
 	var i1Points = getInstanceScore(c, i1)
 	var i2Points = getInstanceScore(c, i2)
 
-	if i1Points >= i2Points {
+	// All things being equal let's sort on LastRequest
+	if i1Points == i2Points {
+		var t1, t2 int64 = 0, 0
+
+		t, err := time.Parse("2006-01-02T15:04:05Z-0700", i1.Stats.LastRequest)
+		if err == nil {
+			t1 = t.Unix()
+		}
+
+		t, err = time.Parse("2006-01-02T15:04:05Z-0700", i2.Stats.LastRequest)
+		if err == nil {
+			t2 = t.Unix()
+		}
+
+		if t1 < t2 {
+			i1Points = i1Points + REQUESTED_LAST_POINTS
+		} else {
+			i2Points = i2Points + REQUESTED_LAST_POINTS
+		}
+	}
+
+	if i1Points > i2Points {
 		closer = i1
 		far = i2
 	} else {
@@ -43,7 +64,6 @@ func myComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
 		far = i1
 	}
 	i1IsBetter = compareServers(closer, far)
-	//	fmt.Printf("i1IsBetter %+v", i1IsBetter)
 	return i1IsBetter
 }
 
@@ -61,7 +81,6 @@ func compareServers(closer, far *skynet.ServiceInfo) (closerIsBetter bool) {
 		//chose closer instance
 		closerIsBetter = true
 	}
-	//	fmt.Printf("closerIsBetter %+v", closerIsBetter)
 	return closerIsBetter
 }
 
