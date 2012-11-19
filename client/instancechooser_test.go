@@ -76,3 +76,88 @@ func TestDefaultComparatorHostFirst(t *testing.T) {
 		t.Error("Failed to select instance with older LastRequest")
 	}
 }
+
+func TestMyComparatorRegionFirst(t *testing.T) {
+	c := stubClient()
+	c.Config.Region = "A"
+
+	s1 := stubServiceInfo()
+	s1.Config.Region = "A"
+	s1.Stats.Clients = 3
+	s1.Stats.AverageResponseTime = 5
+
+	s2 := stubServiceInfo()
+	s2.Config.Region = "B"
+	s2.Stats.Clients = 3
+	s2.Stats.AverageResponseTime = 5
+
+	// We should choose instances in the client's region over external
+	if !myComparator(c, s1, s2) {
+		t.Error("Failed to select instance in same region")
+	}
+}
+
+func TestMyComparatorCloserOverCriticalNumerOfClientsNotSelected(t *testing.T) {
+	c := stubClient()
+	c.Config.Region = "A"
+
+	s1 := stubServiceInfo()
+	s1.Config.Region = "A"
+	s1.Stats.Clients = 13
+	s1.Stats.AverageResponseTime = 5
+
+	s2 := stubServiceInfo()
+	s2.Config.Region = "B"
+	s2.Stats.Clients = 3
+	s2.Stats.AverageResponseTime = 5
+
+	// We should choose external  instances over the instance with number of clients
+	//exceeding critical number of clients in the client's region
+	if myComparator(c, s1, s2) {
+		t.Error("Failed to select instance with smaller number of clients")
+	}
+}
+
+func TestMyComparatorCloserOverCriticalResponseTimeNotSelected(t *testing.T) {
+	c := stubClient()
+	c.Config.Region = "A"
+
+	s1 := stubServiceInfo()
+	s1.Config.Region = "A"
+	s1.Stats.Clients = 3
+	s1.Stats.AverageResponseTime = 25
+
+	s2 := stubServiceInfo()
+	s2.Config.Region = "B"
+	s2.Stats.Clients = 3
+	s2.Stats.AverageResponseTime = 5
+
+	// We should choose external  instances over the instance with average response time
+	//exceeding critical response time in the client's region
+	if myComparator(c, s1, s2) {
+		t.Error("Failed to select instance with smaller average response time")
+	}
+}
+
+func TestMyComparatorCloserOverCriticalNumberOfClientsAndResponseTimeNotSelected(t *testing.T) {
+	c := stubClient()
+	c.Config.Region = "A"
+
+	s1 := stubServiceInfo()
+	s1.Config.Region = "A"
+	s1.Stats.Clients = 13
+	s1.Stats.AverageResponseTime = 25
+
+	s2 := stubServiceInfo()
+	s2.Config.Region = "B"
+	s2.Stats.Clients = 3
+	s2.Stats.AverageResponseTime = 5
+
+	// We should choose external  instances over the instance with average response time
+	//exceeding critical response time in the client's region
+	if myComparator(c, s1, s2) {
+		t.Error("Failed to select instance with smaller number of clients and average response time")
+	}
+}
+
+//TODO Add tests to handle the cases when both server instances reached critical conditions.
