@@ -2,7 +2,6 @@ package client
 
 import (
 	"container/heap"
-	"fmt"
 	"github.com/bketelsen/skynet"
 	"time"
 )
@@ -29,7 +28,25 @@ func getInstanceScore(c *Client, i *skynet.ServiceInfo) (points int) {
 	return
 }
 
-func myComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
+func compareServers(closer, far *skynet.ServiceInfo) (closerIsBetter bool) {
+	//at this point we know which instance of the server is closer to the Clients
+	//now we need to check the conditions of the server instances and take it into account. 
+	if closer.Stats.Clients > CRITICAL_NUMBER_OF_CLIENTS || closer.Stats.AverageResponseTime > CRITICAL_RESPONSE_TIME {
+		if far.Stats.Clients <= CRITICAL_NUMBER_OF_CLIENTS && far.Stats.AverageResponseTime <= CRITICAL_RESPONSE_TIME {
+			//chose far instance
+			closerIsBetter = false
+		} else { //we are in trouble, can not use both ?? 
+			//TODO Figure out what to do - panic??
+			panic("Both instances reached critical condition!")
+		}
+	} else {
+		//chose closer instance
+		closerIsBetter = true
+	}
+	return closerIsBetter
+}
+
+func defaultComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
 	var closer *skynet.ServiceInfo
 	var far *skynet.ServiceInfo
 	var i1Points = getInstanceScore(c, i1)
@@ -65,55 +82,6 @@ func myComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
 	}
 	i1IsBetter = compareServers(closer, far)
 	return i1IsBetter
-}
-
-func compareServers(closer, far *skynet.ServiceInfo) (closerIsBetter bool) {
-
-	if closer.Stats.Clients > CRITICAL_NUMBER_OF_CLIENTS || closer.Stats.AverageResponseTime > CRITICAL_RESPONSE_TIME {
-		if far.Stats.Clients <= CRITICAL_NUMBER_OF_CLIENTS && far.Stats.AverageResponseTime <= CRITICAL_RESPONSE_TIME {
-			//chose far instance
-			closerIsBetter = false
-		} else { //we are in trouble, can not use both ?? 
-			//TODO Figure out what to do - panic??
-			panic("Both instances reached critical condition!")
-		}
-	} else {
-		//chose closer instance
-		closerIsBetter = true
-	}
-	return closerIsBetter
-}
-
-func defaultComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
-
-	var i1Points = getInstanceScore(c, i1)
-	var i2Points = getInstanceScore(c, i2)
-
-	// TODO: Score Clients (make sure to account for 0 in case of new instances)
-	// TODO: Score AverageResponseTime (make sure to account for 0 in case of new instances)
-
-	// All things being equal let's sort on LastRequest
-	if i1Points == i2Points {
-		var t1, t2 int64 = 0, 0
-
-		t, err := time.Parse("2006-01-02T15:04:05Z-0700", i1.Stats.LastRequest)
-		if err == nil {
-			t1 = t.Unix()
-		}
-
-		t, err = time.Parse("2006-01-02T15:04:05Z-0700", i2.Stats.LastRequest)
-		if err == nil {
-			t2 = t.Unix()
-		}
-
-		if t1 < t2 {
-			i1Points = i1Points + REQUESTED_LAST_POINTS
-		} else {
-			i2Points = i2Points + REQUESTED_LAST_POINTS
-		}
-	}
-
-	return i1Points > i2Points
 }
 
 type InstanceChooser struct {

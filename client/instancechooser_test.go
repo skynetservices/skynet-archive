@@ -24,31 +24,6 @@ func stubClient() (c *Client) {
 	return
 }
 
-func TestDefaultComparatorRegionFirst(t *testing.T) {
-	c := stubClient()
-	c.Config.Region = "A"
-
-	s1 := stubServiceInfo()
-	s1.Config.Region = "A"
-
-	s2 := stubServiceInfo()
-	s2.Config.Region = "B"
-
-	// We should choose instances in the client's region over external
-	if !defaultComparator(c, s1, s2) || defaultComparator(c, s2, s1) {
-		t.Error("Failed to select instance in same region")
-	}
-
-	s2.Config.Region = "A"
-	s1.Stats.LastRequest = "2012-11-14T15:04:05Z-0700"
-	s2.Stats.LastRequest = "2012-11-14T15:04:10Z-0700"
-
-	// Tie breaker LastRequest
-	if !defaultComparator(c, s1, s2) || defaultComparator(c, s2, s1) {
-		t.Error("Failed to select instance with older LastRequest")
-	}
-}
-
 func TestDefaultComparatorHostFirst(t *testing.T) {
 	c := stubClient()
 	c.Config.Region = "A"
@@ -57,13 +32,17 @@ func TestDefaultComparatorHostFirst(t *testing.T) {
 	s1 := stubServiceInfo()
 	s1.Config.Region = "A"
 	s1.Config.ServiceAddr.IPAddress = "127.0.0.1"
+	s1.Stats.Clients = 3
+	s1.Stats.AverageResponseTime = 5
 
 	s2 := stubServiceInfo()
 	s2.Config.Region = "A"
 	s2.Config.ServiceAddr.IPAddress = "192.168.1.1"
+	s2.Stats.Clients = 3
+	s2.Stats.AverageResponseTime = 5
 
 	// We should choose instances on the client's host over region
-	if !defaultComparator(c, s1, s2) || defaultComparator(c, s2, s1) {
+	if !defaultComparator(c, s1, s2) {
 		t.Error("Failed to select instance on same host")
 	}
 
@@ -72,12 +51,12 @@ func TestDefaultComparatorHostFirst(t *testing.T) {
 	s2.Stats.LastRequest = "2012-11-14T15:04:10Z-0700"
 
 	// Tie breaker LastRequest
-	if !defaultComparator(c, s1, s2) || defaultComparator(c, s2, s1) {
+	if !defaultComparator(c, s1, s2) {
 		t.Error("Failed to select instance with older LastRequest")
 	}
 }
 
-func TestMyComparatorRegionFirst(t *testing.T) {
+func TestDefaultComparatorRegionFirst(t *testing.T) {
 	c := stubClient()
 	c.Config.Region = "A"
 
@@ -92,12 +71,21 @@ func TestMyComparatorRegionFirst(t *testing.T) {
 	s2.Stats.AverageResponseTime = 5
 
 	// We should choose instances in the client's region over external
-	if !myComparator(c, s1, s2) {
+	if !defaultComparator(c, s1, s2) {
 		t.Error("Failed to select instance in same region")
+	}
+
+	s2.Config.Region = "A"
+	s1.Stats.LastRequest = "2012-11-14T15:04:05Z-0700"
+	s2.Stats.LastRequest = "2012-11-14T15:04:10Z-0700"
+
+	// Tie breaker LastRequest
+	if !defaultComparator(c, s1, s2) {
+		t.Error("Failed to select instance with older LastRequest")
 	}
 }
 
-func TestMyComparatorCloserOverCriticalNumerOfClientsNotSelected(t *testing.T) {
+func TestDefaultComparatorCloserOverCriticalNumerOfClientsNotSelected(t *testing.T) {
 	c := stubClient()
 	c.Config.Region = "A"
 
@@ -113,12 +101,12 @@ func TestMyComparatorCloserOverCriticalNumerOfClientsNotSelected(t *testing.T) {
 
 	// We should choose external  instances over the instance with number of clients
 	//exceeding critical number of clients in the client's region
-	if myComparator(c, s1, s2) {
+	if defaultComparator(c, s1, s2) {
 		t.Error("Failed to select instance with smaller number of clients")
 	}
 }
 
-func TestMyComparatorCloserOverCriticalResponseTimeNotSelected(t *testing.T) {
+func TestDefaultComparatorCloserOverCriticalResponseTimeNotSelected(t *testing.T) {
 	c := stubClient()
 	c.Config.Region = "A"
 
@@ -134,12 +122,12 @@ func TestMyComparatorCloserOverCriticalResponseTimeNotSelected(t *testing.T) {
 
 	// We should choose external  instances over the instance with average response time
 	//exceeding critical response time in the client's region
-	if myComparator(c, s1, s2) {
+	if defaultComparator(c, s1, s2) {
 		t.Error("Failed to select instance with smaller average response time")
 	}
 }
 
-func TestMyComparatorCloserOverCriticalNumberOfClientsAndResponseTimeNotSelected(t *testing.T) {
+func TestDefaultComparatorCloserOverCriticalNumberOfClientsAndResponseTimeNotSelected(t *testing.T) {
 	c := stubClient()
 	c.Config.Region = "A"
 
@@ -155,7 +143,7 @@ func TestMyComparatorCloserOverCriticalNumberOfClientsAndResponseTimeNotSelected
 
 	// We should choose external  instances over the instance with average response time
 	//exceeding critical response time in the client's region
-	if myComparator(c, s1, s2) {
+	if defaultComparator(c, s1, s2) {
 		t.Error("Failed to select instance with smaller number of clients and average response time")
 	}
 }
