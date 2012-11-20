@@ -32,14 +32,14 @@ func TestDefaultComparatorHostFirst(t *testing.T) {
 	s1 := stubServiceInfo()
 	s1.Config.Region = "A"
 	s1.Config.ServiceAddr.IPAddress = "127.0.0.1"
-	s1.Stats.Clients = 3
-	s1.Stats.AverageResponseTime = 5
+	s1.Stats.Clients = CRITICAL_NUMBER_OF_CLIENTS - 1
+	s1.Stats.AverageResponseTime = CRITICAL_RESPONSE_TIME - CRITICAL_RESPONSE_TIME/10
 
 	s2 := stubServiceInfo()
 	s2.Config.Region = "A"
 	s2.Config.ServiceAddr.IPAddress = "192.168.1.1"
-	s2.Stats.Clients = 3
-	s2.Stats.AverageResponseTime = 5
+	s2.Stats.Clients = CRITICAL_NUMBER_OF_CLIENTS - 1
+	s2.Stats.AverageResponseTime = CRITICAL_RESPONSE_TIME - CRITICAL_RESPONSE_TIME/10
 
 	// We should choose instances on the client's host over region
 	if !defaultComparator(c, s1, s2) {
@@ -62,13 +62,13 @@ func TestDefaultComparatorRegionFirst(t *testing.T) {
 
 	s1 := stubServiceInfo()
 	s1.Config.Region = "A"
-	s1.Stats.Clients = 3
-	s1.Stats.AverageResponseTime = 5
+	s1.Stats.Clients = CRITICAL_NUMBER_OF_CLIENTS - 1
+	s1.Stats.AverageResponseTime = CRITICAL_RESPONSE_TIME - CRITICAL_RESPONSE_TIME/10
 
 	s2 := stubServiceInfo()
 	s2.Config.Region = "B"
-	s2.Stats.Clients = 3
-	s2.Stats.AverageResponseTime = 5
+	s2.Stats.Clients = CRITICAL_NUMBER_OF_CLIENTS - 1
+	s2.Stats.AverageResponseTime = CRITICAL_RESPONSE_TIME - CRITICAL_RESPONSE_TIME/10
 
 	// We should choose instances in the client's region over external
 	if !defaultComparator(c, s1, s2) {
@@ -91,13 +91,13 @@ func TestDefaultComparatorCloserOverCriticalNumerOfClientsNotSelected(t *testing
 
 	s1 := stubServiceInfo()
 	s1.Config.Region = "A"
-	s1.Stats.Clients = 13
-	s1.Stats.AverageResponseTime = 5
+	s1.Stats.Clients = CRITICAL_NUMBER_OF_CLIENTS + 1
+	s1.Stats.AverageResponseTime = CRITICAL_RESPONSE_TIME - CRITICAL_RESPONSE_TIME/10
 
 	s2 := stubServiceInfo()
 	s2.Config.Region = "B"
-	s2.Stats.Clients = 3
-	s2.Stats.AverageResponseTime = 5
+	s2.Stats.Clients = CRITICAL_NUMBER_OF_CLIENTS - 1
+	s2.Stats.AverageResponseTime = CRITICAL_RESPONSE_TIME - CRITICAL_RESPONSE_TIME/10
 
 	// We should choose external  instances over the instance with number of clients
 	//exceeding critical number of clients in the client's region
@@ -112,13 +112,13 @@ func TestDefaultComparatorCloserOverCriticalResponseTimeNotSelected(t *testing.T
 
 	s1 := stubServiceInfo()
 	s1.Config.Region = "A"
-	s1.Stats.Clients = 3
-	s1.Stats.AverageResponseTime = 25
+	s1.Stats.Clients = CRITICAL_NUMBER_OF_CLIENTS - 1
+	s1.Stats.AverageResponseTime = CRITICAL_RESPONSE_TIME + CRITICAL_RESPONSE_TIME/10
 
 	s2 := stubServiceInfo()
 	s2.Config.Region = "B"
-	s2.Stats.Clients = 3
-	s2.Stats.AverageResponseTime = 5
+	s2.Stats.Clients = CRITICAL_NUMBER_OF_CLIENTS - 1
+	s2.Stats.AverageResponseTime = CRITICAL_RESPONSE_TIME - CRITICAL_RESPONSE_TIME/10
 
 	// We should choose external  instances over the instance with average response time
 	//exceeding critical response time in the client's region
@@ -133,13 +133,13 @@ func TestDefaultComparatorCloserOverCriticalNumberOfClientsAndResponseTimeNotSel
 
 	s1 := stubServiceInfo()
 	s1.Config.Region = "A"
-	s1.Stats.Clients = 13
-	s1.Stats.AverageResponseTime = 25
+	s1.Stats.Clients = CRITICAL_NUMBER_OF_CLIENTS + 1
+	s1.Stats.AverageResponseTime = CRITICAL_RESPONSE_TIME + CRITICAL_RESPONSE_TIME/10
 
 	s2 := stubServiceInfo()
 	s2.Config.Region = "B"
-	s2.Stats.Clients = 3
-	s2.Stats.AverageResponseTime = 5
+	s2.Stats.Clients = CRITICAL_NUMBER_OF_CLIENTS - 1
+	s2.Stats.AverageResponseTime = CRITICAL_RESPONSE_TIME - CRITICAL_RESPONSE_TIME/10
 
 	// We should choose external  instances over the instance with average response time
 	//exceeding critical response time in the client's region
