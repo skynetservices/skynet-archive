@@ -11,5 +11,7 @@ examples/.vagrant
 examples/testing/fibonacci/fibservice/fibservice
 examples/testing/fibonacci/fibclient/fibclient
 examples/testing/vagranttests/vagranttests
+examples/testing/sleeper/sleepclient/sleepclient
+examples/testing/sleeper/sleepservice/sleepservice
 *~
 *.swp

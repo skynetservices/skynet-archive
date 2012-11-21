@@ -110,7 +110,7 @@ func (c *Client) getServicePool(instance *skynet.ServiceInfo) (sp *servicePool) 
 	return
 }
 
-func (c *Client) GetServiceFromQuery(q *skynet.Query) (s *ServiceClient) {
+func (c *Client) GetServiceFromQuery(q *skynet.Query) (s ServiceClient) {
 
 	s = newServiceClient(q, c)
 
@@ -119,7 +119,7 @@ func (c *Client) GetServiceFromQuery(q *skynet.Query) (s *ServiceClient) {
 
 // This will not fail if no services currently exist, this saves from chicken and egg issues with dependencies between services
 // TODO: We should probably determine a way of supplying secondary conditions, for example it's ok to go to a different data center only if there are no instances in our current datacenter
-func (c *Client) GetService(name string, version string, region string, host string) *ServiceClient {
+func (c *Client) GetService(name string, version string, region string, host string) ServiceClient {
 	registered := true
 	query := &skynet.Query{
 		DoozerConn: c.DoozerConn,
