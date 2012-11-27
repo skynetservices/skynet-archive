@@ -25,8 +25,8 @@ var doozer = flag.String("doozer",
 var totalRequests = expvar.NewInt("total-requests")
 var successfulRequests = expvar.NewInt("successful-requests")
 
-var testserviceClient client.ServiceClient
-var fibserviceClient client.ServiceClient
+var testserviceClient *client.ServiceClient
+var fibserviceClient *client.ServiceClient
 
 func main() {
 	flag.Parse()

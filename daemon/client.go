@@ -6,7 +6,7 @@ import (
 )
 
 type Client struct {
-	client.ServiceClient
+	*client.ServiceClient
 	requestInfo *skynet.RequestInfo
 }
 

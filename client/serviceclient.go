@@ -50,14 +50,7 @@ func (se serviceError) Error() string {
 	return se.msg
 }
 
-type ServiceClient interface {
-	SetTimeout(retry, giveup time.Duration)
-	GetTimeout() (retry, giveup time.Duration)
-	Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error)
-	SendOnce(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error)
-}
-
-type serviceClient struct {
+type ServiceClient struct {
 	client  *Client
 	Log     skynet.SemanticLogger `json:"-"`
 	cconfig *skynet.ClientConfig
@@ -77,8 +70,8 @@ type serviceClient struct {
 	giveupTimeout time.Duration
 }
 
-func newServiceClient(query *skynet.Query, c *Client) ServiceClient {
-	sc := &serviceClient{
+func newServiceClient(query *skynet.Query, c *Client) (sc *ServiceClient) {
+	sc = &ServiceClient{
 		client:        c,
 		Log:           c.Config.Log,
 		cconfig:       c.Config,
@@ -94,7 +87,7 @@ func newServiceClient(query *skynet.Query, c *Client) ServiceClient {
 	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query, false)
 
 	go sc.mux()
-	return sc
+	return
 }
 
 type instanceFileCollector struct {
@@ -117,7 +110,7 @@ type timeoutLengths struct {
 	retry, giveup time.Duration
 }
 
-func (c *serviceClient) addInstanceMux(instance *skynet.ServiceInfo) {
+func (c *ServiceClient) addInstanceMux(instance *skynet.ServiceInfo) {
 	m := skynet.ServiceDiscovered{instance}
 	key := getInstanceKey(m.Service)
 	_, known := c.instances[key]
@@ -130,7 +123,7 @@ func (c *serviceClient) addInstanceMux(instance *skynet.ServiceInfo) {
 	}
 }
 
-func (c *serviceClient) removeInstanceMux(instance *skynet.ServiceInfo) {
+func (c *ServiceClient) removeInstanceMux(instance *skynet.ServiceInfo) {
 	m := skynet.ServiceRemoved{instance}
 	key := m.Service.Config.ServiceAddr.String()
 	_, known := c.instances[key]
@@ -143,7 +136,7 @@ func (c *serviceClient) removeInstanceMux(instance *skynet.ServiceInfo) {
 	c.Log.Trace(fmt.Sprintf("%T: %+v", m, m))
 }
 
-func (c *serviceClient) mux() {
+func (c *ServiceClient) mux() {
 
 	for {
 		select {
@@ -180,14 +173,14 @@ ServiceClient.SetTimeout() sets the time before ServiceClient.Send() retries req
 the time before ServiceClient.Send() and ServiceClient.SendOnce() give up. Setting retry
 or giveup to 0 indicates no retry or time out.
 */
-func (c *serviceClient) SetTimeout(retry, giveup time.Duration) {
+func (c *ServiceClient) SetTimeout(retry, giveup time.Duration) {
 	c.muxChan <- timeoutLengths{
 		retry:  retry,
 		giveup: giveup,
 	}
 }
 
-func (c *serviceClient) GetTimeout() (retry, giveup time.Duration) {
+func (c *ServiceClient) GetTimeout() (retry, giveup time.Duration) {
 	tls := <-c.timeoutChan
 	retry, giveup = tls.retry, tls.giveup
 	return
@@ -198,7 +191,7 @@ ServiceClient.Send() will send a request to one of the available instances. In i
 it will send additional requests to other known instances. If no response is heard after
 the giveup time has passed, it will return an error.
 */
-func (c *serviceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
+func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
 	retry, giveup := c.GetTimeout()
 	return c.send(retry, giveup, ri, fn, in, out)
 }
@@ -207,12 +200,12 @@ func (c *serviceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, 
 ServiceClient.SendOnce() will send a request to one of the available instances. If no response is heard after
 the giveup time has passed, it will return an error.
 */
-func (c *serviceClient) SendOnce(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
+func (c *ServiceClient) SendOnce(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
 	_, giveup := c.GetTimeout()
 	return c.send(0, giveup, ri, fn, in, out)
 }
 
-func (c *serviceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
+func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
 	if ri == nil {
 		ri = &skynet.RequestInfo{
 			RequestID: skynet.UUID(),
@@ -285,7 +278,7 @@ type sendAttempt struct {
 	err    error
 }
 
-func (c *serviceClient) attemptSend(timeout chan bool,
+func (c *ServiceClient) attemptSend(timeout chan bool,
 	attempts chan sendAttempt, ri *skynet.RequestInfo,
 	fn string, in interface{}) {
 
@@ -351,7 +344,7 @@ func (c *serviceClient) attemptSend(timeout chan bool,
 }
 
 // ServiceClient.sendToInstance() tries to make an RPC request on a particular connection to an instance
-func (c *serviceClient) sendToInstance(sr ServiceResource,
+func (c *ServiceClient) sendToInstance(sr ServiceResource,
 	requestInfo *skynet.RequestInfo, funcName string, in interface{}) (
 	result []byte, serviceErr, err error) {
 	ts("sendToInstance", requestInfo)
