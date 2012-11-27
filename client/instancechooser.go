@@ -1,19 +1,19 @@
 package client
 
 import (
-	"container/heap"
 	"github.com/bketelsen/skynet"
+	"sort"
 	"time"
 )
 
 type InstanceComparator func(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsLess bool)
 
 const (
-	SAME_REGION_POINTS         = 10
-	SAME_HOST_POINTS           = 2
-	REQUESTED_LAST_POINTS      = 1
-	CRITICAL_NUMBER_OF_CLIENTS = 10 //random number tbd
-	CRITICAL_RESPONSE_TIME     = 20 //random number tbd
+	SAME_REGION_POINTS            = 10
+	SAME_HOST_POINTS              = 3
+	REQUESTED_LAST_POINTS         = 1
+	CRITICAL_CLIENTS_POINTS       = -15 //random number tbd
+	CRITICAL_RESPONSE_TIME_POINTS = -17 //random number tbd
 )
 
 func getInstanceScore(c *Client, i *skynet.ServiceInfo) (points int) {
@@ -25,30 +25,18 @@ func getInstanceScore(c *Client, i *skynet.ServiceInfo) (points int) {
 		points = points + SAME_REGION_POINTS
 	}
 
+	if i.Config.CriticalClientCount > 0 && i.Stats.Clients >= i.Config.CriticalClientCount {
+		points = points + CRITICAL_CLIENTS_POINTS
+	}
+
+	if i.Config.CriticalAverageResponseTime > 0 && i.Stats.AverageResponseTime >= i.Config.CriticalAverageResponseTime {
+		points = points + CRITICAL_RESPONSE_TIME_POINTS
+	}
+
 	return
 }
 
-func compareServers(closer, far *skynet.ServiceInfo) (closerIsBetter bool) {
-	//at this point we know which instance of the server is closer to the Clients
-	//now we need to check the conditions of the server instances and take it into account. 
-	if closer.Stats.Clients > CRITICAL_NUMBER_OF_CLIENTS || closer.Stats.AverageResponseTime > CRITICAL_RESPONSE_TIME {
-		if far.Stats.Clients <= CRITICAL_NUMBER_OF_CLIENTS && far.Stats.AverageResponseTime <= CRITICAL_RESPONSE_TIME {
-			//chose far instance
-			closerIsBetter = false
-		} else { //we are in trouble, can not use both ?? 
-			//TODO Figure out what to do - panic??
-			panic("Both instances reached critical condition!")
-		}
-	} else {
-		//chose closer instance
-		closerIsBetter = true
-	}
-	return closerIsBetter
-}
-
-func defaultComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
-	var closer *skynet.ServiceInfo
-	var far *skynet.ServiceInfo
+func defaultComparator(c *Client, i1, i2 *skynet.ServiceInfo) bool {
 	var i1Points = getInstanceScore(c, i1)
 	var i2Points = getInstanceScore(c, i2)
 
@@ -73,15 +61,7 @@ func defaultComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) 
 		}
 	}
 
-	if i1Points > i2Points {
-		closer = i1
-		far = i2
-	} else {
-		closer = i2
-		far = i1
-	}
-	i1IsBetter = compareServers(closer, far)
-	return i1IsBetter
+	return i1Points > i2Points
 }
 
 type InstanceChooser struct {
@@ -190,7 +170,7 @@ func (ic *InstanceChooser) choose() (instance *skynet.ServiceInfo) {
 	}
 
 	// this heap-sorts (in linear time) the instances according to ic.comparator
-	heap.Init((*InstanceHeap)(ic))
+	sort.Sort((*InstanceHeap)(ic))
 	instance = ic.instances[0]
 	return
 }
@@ -202,8 +182,7 @@ func (h *InstanceHeap) Len() int {
 }
 
 func (h *InstanceHeap) Less(i, j int) bool {
-	// the indices are reversed here on purpose. if i<j, it goes at the end of the list rather than the beginning.
-	return h.comparator(h.client, h.instances[j], h.instances[i])
+	return h.comparator(h.client, h.instances[i], h.instances[j])
 }
 
 func (h *InstanceHeap) Swap(i, j int) {

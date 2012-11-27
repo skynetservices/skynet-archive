@@ -108,16 +108,18 @@ type MongoConfig struct {
 }
 
 type ServiceConfig struct {
-	Log                  SemanticLogger `json:"-"`
-	UUID                 string
-	Name                 string
-	Version              string
-	Region               string
-	ServiceAddr          *BindAddr
-	AdminAddr            *BindAddr
-	DoozerConfig         *DoozerConfig `json:"-"`
-	DoozerUpdateInterval time.Duration `json:"-"`
-	MongoConfig          *MongoConfig  `json:"-"`
+	Log                         SemanticLogger `json:"-"`
+	UUID                        string
+	Name                        string
+	Version                     string
+	Region                      string
+	ServiceAddr                 *BindAddr
+	AdminAddr                   *BindAddr
+	DoozerConfig                *DoozerConfig `json:"-"`
+	DoozerUpdateInterval        time.Duration `json:"-"`
+	MongoConfig                 *MongoConfig  `json:"-"`
+	CriticalClientCount         int32
+	CriticalAverageResponseTime time.Duration
 }
 
 type ClientConfig struct {
