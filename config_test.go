@@ -1,11 +1,27 @@
 package skynet
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
 
+func clearEnv() {
+	os.Setenv("SKYNET_BIND_IP", "")
+	os.Setenv("SKYNET_MIN_PORT", "")
+	os.Setenv("SKYNET_MAX_PORT", "")
+	os.Setenv("SKYNET_DZHOST", "")
+	os.Setenv("SKYNET_DZNSHOST", "")
+	os.Setenv("SKYNET_DZDISCOVER", "")
+	os.Setenv("SKYNET_MGOSERVER", "")
+	os.Setenv("SKYNET_MGODB", "")
+	os.Setenv("SKYNET_REGION", "")
+	os.Setenv("SKYNET_VERSION", "")
+}
+
 func TestGetServiceConfigFromFlags(t *testing.T) {
+	clearEnv()
+
 	os.Args = []string{"test", "--l=localhost:1234", "--region=TestRegion",
 		"--doozer=localhost:8046", "--doozerboot=localhost:1232",
 		"--autodiscover=true",
@@ -39,6 +55,8 @@ func TestGetServiceConfigFromFlags(t *testing.T) {
 }
 
 func TestGetServiceConfigFromFlagsDefaults(t *testing.T) {
+	clearEnv()
+
 	os.Args = []string{"test"}
 
 	config, _ := GetServiceConfigFromFlags(os.Args[1:])
@@ -56,6 +74,7 @@ func TestGetServiceConfigFromFlagsDefaults(t *testing.T) {
 	}
 
 	if config.DoozerConfig.Uri != "127.0.0.1:8046" {
+		fmt.Println(config.DoozerConfig.Uri)
 		t.Error("DoozerUri not set to default value")
 	}
 
