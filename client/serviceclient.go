@@ -50,6 +50,13 @@ func (se serviceError) Error() string {
 	return se.msg
 }
 
+type ServiceClientInterface interface {
+	SetTimeout(retry, giveup time.Duration)
+	GetTimeout() (retry, giveup time.Duration)
+	Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error)
+	SendOnce(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error)
+}
+
 type ServiceClient struct {
 	client  *Client
 	Log     skynet.SemanticLogger `json:"-"`
