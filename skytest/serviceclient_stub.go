@@ -1,3 +1,10 @@
+package skytest
+
+import (
+	"github.com/bketelsen/skynet"
+	"time"
+)
+
 type ServiceClientStub struct {
 	SetTimeoutFunc func(retry, giveup time.Duration)
 	GetTimeoutFunc func() (retry, giveup time.Duration)
@@ -37,4 +44,3 @@ func (sc *ServiceClientStub) SendOnce(ri *skynet.RequestInfo, fn string, in inte
 
 	return
 }
-
