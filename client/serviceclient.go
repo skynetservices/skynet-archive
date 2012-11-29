@@ -91,7 +91,7 @@ func newServiceClient(query *skynet.Query, c *Client) (sc *ServiceClient) {
 		giveupTimeout: skynet.DefaultTimeoutDuration,
 	}
 	sc.listenID = skynet.UUID()
-	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query, false)
+	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query, true)
 
 	go sc.mux()
 	return
