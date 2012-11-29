@@ -113,6 +113,7 @@ Skylib is the core of skynet's internals and is how services/clients find each o
 * Group name: Skynet-dev
 * Group home page: http://groups.google.com/group/skynet-dev
 * Group email address skynet-dev@googlegroups.com
+* IRC: #skynet-dev on freenode
 
 ##Issues:
 Github Issues now the canonical source of issues for Skynet.
