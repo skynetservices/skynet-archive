@@ -86,7 +86,7 @@ The [wiki](skynet/wiki) has tons of documentation and tutorials on how to get st
 
 The *examples/* directory has example services & clients
 
-Also in the *examples*/ directory is a Vagrant setup with chef recipes to deploy a mock cluster using virtual machines so that you can see it in action. The wiki has a nice walkthrough on setting up and running a simulated cluster with Vagrant: [https://github.com/bketelsen/skynet/wiki/Vagrant-Example](wiki/Vagrant-Example)
+Also in the *examples*/ directory is a Vagrant setup with chef recipes to deploy a mock cluster using virtual machines so that you can see it in action. The wiki has a nice walkthrough on setting up and running a simulated cluster with Vagrant: [https://github.com/skynetservices/skynet/wiki/Vagrant-Example](wiki/Vagrant-Example)
 
 
 ## Work In Progress
