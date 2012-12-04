@@ -24,11 +24,11 @@ end
 
 execute "download-skynet" do
   command %Q{
-    go get github.com/kballard/go-shellquote && go get github.com/sbinet/liner && go get github.com/bketelsen/skynet
+    go get github.com/skynetservices/go-shellquote && go get github.com/skynetservices/liner && go get github.com/skynetservices/skynet
   }
 
   not_if do
-    File.exists?("/opt/local/gopath/src/github.com/bketelsen/skynet")
+    File.exists?("/opt/local/gopath/src/github.com/skynetservices/skynet")
   end
 end
 
@@ -52,7 +52,7 @@ execute "set-environment-variables" do
 end
 
 execute "update-skynet" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet'
+  cwd '/opt/local/gopath/src/github.com/skynetservices/skynet'
 
   branch = node[:skynet_branch] || "master"
 
@@ -73,7 +73,7 @@ execute "rebuild-sky" do
 end
 
 execute "install-sky" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/cmd/sky'
+  cwd '/opt/local/gopath/src/github.com/skynetservices/skynet/cmd/sky'
 
   command %Q{
     go install  

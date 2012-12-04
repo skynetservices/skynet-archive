@@ -30,7 +30,7 @@ execute "rebuild-example-service" do
 end
 
 execute "install-example-service" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/examples/service'
+  cwd '/opt/local/gopath/src/github.com/skynetservices/skynet/examples/service'
 
   command %Q{
     go install  

@@ -19,7 +19,7 @@
 
 execute "install-daemon-dependencies" do
   command %Q{
-    go get github.com/kballard/go-shellquote
+    go get github.com/skynetservices/go-shellquote
   }
 end
 
@@ -36,7 +36,7 @@ execute "rebuild-daemon" do
 end
 
 execute "install-daemon" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/cmd/skydaemon'
+  cwd '/opt/local/gopath/src/github.com/skynetservices/skynet/cmd/skydaemon'
 
   command %Q{
     go install  
