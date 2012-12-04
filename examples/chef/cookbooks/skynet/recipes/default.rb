@@ -24,7 +24,7 @@ end
 
 execute "download-skynet" do
   command %Q{
-    go get github.com/skynetservices/go-shellquote && go get github.com/skynetservices/liner && go get github.com/skynetservices/skynet
+    go get github.com/skynetservices/go-shellquote && go get github.com/skynetservices/liner && go get github.com/skynetservices/mgo && go get github.com/skynetservices/skynet
   }
 
   not_if do
