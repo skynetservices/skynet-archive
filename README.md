@@ -68,13 +68,13 @@ In the future you will be able to live search your logs, as well as see graph da
 
 ![picture](/skynetservices/skynet/raw/master/documentation/dashboard.png)
 
-[https://github.com/bketelsen/skynet/wiki/Dashboard](https://github.com/skynetservices/skynet/wiki/Dashboard)
+[https://github.com/skynetservices/skynet/wiki/Dashboard](https://github.com/skynetservices/skynet/wiki/Dashboard)
 
 ##Internals
 #####Query
 The sky command and the client connectivity logic is all backed by [Query](skynet/wiki/Query). A struct that can be used to search the cluster for instances of services, regions, hosts, service names, service versions that Skynet is currently aware of. It's exposed for any custom need you may have for searching the cluster.
 
-[https://github.com/bketelsen/skynet/wiki/Query](https://github.com/skynetservices/skynet/wiki/Query)
+[https://github.com/skynetservices/skynet/wiki/Query](https://github.com/skynetservices/skynet/wiki/Query)
 
 #####Instance Listener
 You can create an instance listener by passing it a Query object, and be notified anytime an instance matching your Query is added/removed/changed.
