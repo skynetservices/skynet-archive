@@ -1,62 +1,56 @@
+function build {
+  d=`pwd`
+
+  cd $1
+  go build && go test
+  cd $d
+}
+
 # Build / Test skylib
-go build && go test
+build .
 
 # Build Client
-cd client && go build && go test
-cd ..
+build client
 
 # Build Service
-cd service && go build && go test
-cd ..
+build service
 
 # Build Daemon
-cd daemon && go build && go test
-cd ..
+build daemon
 
 # Build Pools
-cd pools && go build && go test
-cd ..
+build pools
+
+# Test helpers
+build skytest
 
 # Build RPC
-cd rpc/bsonrpc && go build && go test
-cd ../../
+build rpc/bsonrpc
 
 # Build / Test sky
-cd cmd/sky && go build && go test
-cd ..
+build cmd/sky
 
 # Build / Test dashboard
-cd dashboard && go build && go test
-cd ..
+build cmd/dashboard
 
 # Build / Test skydaemon
-cd skydaemon && go build && go test
-cd ../../
+build cmd/skydaemon
 
 # Build / Test examples
-cd examples/client && go build && go test
-cd ../
+build examples/client
 
-cd service && go build && go test
-cd ../
+build examples/service
 
-cd tutorial/client && go build && go test
-cd ../
+build examples/tutorial/client
 
-cd service && go build && go test
-cd ../../
+build examples/tutorial/service
 
-cd testing/fibonacci/fibclient && go build && go test
-cd ../
+build examples/testing/fibonacci/fibclient
 
-cd fibservice && go build && go test
-cd ../../
+build examples/testing/fibonacci/fibservice
 
-cd sleeper/sleepclient && go build && go test
-cd ../
+build examples/testing/sleeper/sleepclient
 
-cd sleepservice && go build && go test
-cd ../../
+build examples/testing/sleeper/sleepservice
 
-cd vagranttests && go build && go test
-cd ../../../
+build examples/testing/vagranttests
