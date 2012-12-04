@@ -3,13 +3,13 @@
 ## Types
 
     ClientHandshake
-    (defined in github.com/bketelsen/skynet ClientHandshake type)
+    (defined in github.com/skynetservices/skynet ClientHandshake type)
     {
         
     }
 
     ServiceHandshake
-    (defined in github.com/bketelsen/skynet ServiceHandshake type)
+    (defined in github.com/skynetservices/skynet ServiceHandshake type)
     {
         Registered bool
         ClientID string
@@ -31,7 +31,7 @@
     }
 
     RequestInfo
-    (defined in github.com/bketelsen/skynet RequestInfo type)
+    (defined in github.com/skynetservices/skynet RequestInfo type)
     {
         // OriginAddress is the reported address of the originating client, typically from outside the service cluster.
         OriginAddress string
@@ -42,7 +42,7 @@
     }
 
     RequestIn
-    (defined in github.com/bketelsen/skynet ServiceRPCIn type)
+    (defined in github.com/skynetservices/skynet ServiceRPCIn type)
     {
         ClientID    string
         Method      string
@@ -51,7 +51,7 @@
     }
 
     RequestOut
-    (defined in github.com/bketelsen/skynet ServiceRPCOut type)
+    (defined in github.com/skynetservices/skynet ServiceRPCOut type)
     {
         Out       []byte
         ErrString string
