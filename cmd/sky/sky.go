@@ -12,7 +12,6 @@ var (
 	flagset                 = flag.NewFlagSet("sky", flag.ExitOnError)
 	VersionFlag     *string = flagset.String("version", "", "service version")
 	ServiceNameFlag *string = flagset.String("service", "", "service name")
-	HostFlag        *string = flagset.String("host", "", "host")
 	PortFlag        *string = flagset.String("port", "", "port")
 	RegisteredFlag  *string = flagset.String("registered", "", "registered")
 )
@@ -40,7 +39,7 @@ func main() {
 		DoozerConn: Doozer(config.DoozerConfig),
 		Service:    *ServiceNameFlag,
 		Version:    *VersionFlag,
-		Host:       *HostFlag,
+		Host:       config.Host,
 		Region:     config.Region,
 		Port:       *PortFlag,
 	}

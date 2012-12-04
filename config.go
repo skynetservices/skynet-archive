@@ -108,20 +108,23 @@ type MongoConfig struct {
 }
 
 type ServiceConfig struct {
-	Log                  SemanticLogger `json:"-"`
-	UUID                 string
-	Name                 string
-	Version              string
-	Region               string
-	ServiceAddr          *BindAddr
-	AdminAddr            *BindAddr
-	DoozerConfig         *DoozerConfig `json:"-"`
-	DoozerUpdateInterval time.Duration `json:"-"`
-	MongoConfig          *MongoConfig  `json:"-"`
+	Log                         SemanticLogger `json:"-"`
+	UUID                        string
+	Name                        string
+	Version                     string
+	Region                      string
+	ServiceAddr                 *BindAddr
+	AdminAddr                   *BindAddr
+	DoozerConfig                *DoozerConfig `json:"-"`
+	DoozerUpdateInterval        time.Duration `json:"-"`
+	MongoConfig                 *MongoConfig  `json:"-"`
+	CriticalClientCount         int32
+	CriticalAverageResponseTime time.Duration
 }
 
 type ClientConfig struct {
 	Region                    string
+	Host                      string
 	Log                       SemanticLogger `json:"-"`
 	DoozerConfig              *DoozerConfig  `json:"-"`
 	IdleConnectionsToInstance int
@@ -168,6 +171,7 @@ func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
 	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle", DefaultIdleConnectionsToInstance, "maximum number of idle connections to a particular instance")
 	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns", DefaultMaxConnectionsToInstance, "maximum number of concurrent connections to a particular instance")
 	flagset.StringVar(&ccfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region client is located in")
+	flagset.StringVar(&ccfg.Region, "host", GetDefaultEnvVar("SKYNET_HOST", DefaultRegion), "host client is located in")
 }
 
 func GetClientConfig() (config *ClientConfig, args []string) {
