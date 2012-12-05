@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/bketelsen/skynet"
+	"github.com/skynetservices/skynet"
 	"os"
 	"strconv"
 )

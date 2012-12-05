@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/client"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/client"
 	"os"
 )
 

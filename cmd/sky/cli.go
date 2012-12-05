@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/bketelsen/skynet"
-	"github.com/sbinet/liner"
+	"github.com/skynetservices/liner"
+	"github.com/skynetservices/skynet"
 	"strconv"
 	"strings"
 	"syscall"

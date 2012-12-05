@@ -1,7 +1,7 @@
 package skynet
 
 import (
-	"labix.org/v2/mgo"
+	"github.com/skynetservices/mgo"
 	"log"
 )
 
