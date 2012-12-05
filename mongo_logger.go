@@ -39,6 +39,11 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 		return
 	}
 
+	if ml.session == nil {
+		log.Printf("NOT LOGGING: Can't log to nil mongo session\n")
+		return
+	}
+
 	// Set various Payload fields
 	payload.setKnownFields()
 	payload.UUID = ml.uuid
