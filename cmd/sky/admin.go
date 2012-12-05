@@ -39,7 +39,8 @@ func Unregister(q *skynet.Query) {
 
 func getDaemonServiceClientForHost(dc *skynet.DoozerConfig, host string) *client.ServiceClient {
 	config := &skynet.ClientConfig{
-		DoozerConfig: dc,
+		DoozerConfig:             dc,
+		MaxConnectionsToInstance: 10,
 	}
 
 	c := client.NewClient(config)
@@ -61,6 +62,8 @@ var deployTemplate = template.Must(template.New("").Parse(
 
 // TODO: this should be smarter about which hosts it deploys to
 func Deploy(q *skynet.Query, path string, args ...string) {
+	config.MaxConnectionsToInstance = 10
+
 	cl := client.NewClient(&config)
 
 	fmt.Println("deploying " + path + " " + strings.Join(args, ""))

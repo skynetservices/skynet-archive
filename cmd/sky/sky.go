@@ -26,6 +26,7 @@ func main() {
 	flagsetArgs, additionalArgs := skynet.SplitFlagsetFromArgs(flagset, os.Args[1:])
 
 	config, args := skynet.GetClientConfigFromFlags(additionalArgs)
+	config.MaxConnectionsToInstance = 10
 	config.Log = logger
 
 	err := flagset.Parse(flagsetArgs)
