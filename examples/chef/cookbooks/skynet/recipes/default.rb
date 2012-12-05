@@ -27,6 +27,13 @@ execute "download-skynet" do
     go get github.com/skynetservices/go-shellquote && go get github.com/skynetservices/liner && go get github.com/skynetservices/mgo && go get github.com/skynetservices/skynet
   }
 
+  # TODO: need to pull down the repo via git so we can actually use the correct branch
+  # in cases of master failing the deploy will fail and we never switch to our branch
+  #
+  command %Q{
+    cd /opt/local/gopath/src/github.com/skynetservices && git clone https://github.com/skynetservices/skynet.git
+  }
+
   not_if do
     File.exists?("/opt/local/gopath/src/github.com/skynetservices/skynet")
   end
