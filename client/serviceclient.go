@@ -3,7 +3,7 @@ package client
 import (
 	"fmt"
 	"github.com/skynetservices/doozer"
-	"github.com/skynetservices/mgo"
+	"github.com/skynetservices/mgo/bson"
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/pools"
 	"time"
