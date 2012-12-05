@@ -14,6 +14,8 @@ var (
 	ServiceNameFlag *string = flagset.String("service", "", "service name")
 	PortFlag        *string = flagset.String("port", "", "port")
 	RegisteredFlag  *string = flagset.String("registered", "", "registered")
+	HostFlag        *string = flagset.String("host", "", "host")
+	RegionFlag      *string = flagset.String("region", "", "region")
 )
 
 var DC *skynet.DoozerConnection
@@ -21,15 +23,12 @@ var config skynet.ClientConfig
 
 func main() {
 	logger := skynet.NewConsoleSemanticLogger("Sky", os.Stdout)
+	flagsetArgs, additionalArgs := skynet.SplitFlagsetFromArgs(flagset, os.Args[1:])
 
-	config = skynet.ClientConfig{
-		DoozerConfig: &skynet.DoozerConfig{},
-		Log:          logger,
-	}
+	config, args := skynet.GetClientConfigFromFlags(additionalArgs)
+	config.Log = logger
 
-	skynet.FlagsForClient(&config, flagset)
-
-	err := flagset.Parse(os.Args[1:])
+	err := flagset.Parse(flagsetArgs)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -39,14 +38,14 @@ func main() {
 		DoozerConn: Doozer(config.DoozerConfig),
 		Service:    *ServiceNameFlag,
 		Version:    *VersionFlag,
-		Host:       config.Host,
-		Region:     config.Region,
+		Host:       *HostFlag,
+		Region:     *RegionFlag,
 		Port:       *PortFlag,
 	}
 
-	fmt.Println(flagset.Args())
+	fmt.Println(args[0])
 
-	switch flagset.Arg(0) {
+	switch args[0] {
 	case "help", "h":
 		CommandLineHelp()
 	case "services":
