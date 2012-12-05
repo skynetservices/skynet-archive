@@ -69,7 +69,6 @@ func main() {
 	case "restart":
 		Restart(query)
 	case "deploy":
-		args := flagset.Args()
 		fmt.Println(args)
 		if len(args) < 2 {
 			fmt.Println("Usage: deploy <service path> <args>")
