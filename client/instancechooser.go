@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/bketelsen/skynet"
+	"github.com/skynetservices/skynet"
 	"sort"
 	"time"
 )

@@ -3,7 +3,7 @@ package skynet
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/4ad/doozer"
+	"github.com/skynetservices/doozer"
 	"log"
 	"path"
 	"strings"

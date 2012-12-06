@@ -1,7 +1,7 @@
 package skytest
 
 import (
-	"github.com/bketelsen/skynet"
+	"github.com/skynetservices/skynet"
 	"time"
 )
 

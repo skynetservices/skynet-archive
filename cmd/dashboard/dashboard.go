@@ -5,8 +5,9 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"flag"
 	"fmt"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/client"
+	"github.com/skynetservices/mgo"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/client"
 	"html"
 	"html/template"
 	"net/http"
@@ -14,10 +15,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-)
-
-import (
-	"labix.org/v2/mgo"
 )
 
 var layoutTmpl *template.Template
@@ -138,7 +135,7 @@ func main() {
 	if err != nil {
 		log.Error(fmt.Sprintf("%+v", skynet.MongoError{
 			Addr: "Could not connect to mongo db for logging",
-			Err: err.Error(),
+			Err:  err.Error(),
 		}))
 	}
 	log = skynet.NewMultiSemanticLogger(mlogger, log)

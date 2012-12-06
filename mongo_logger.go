@@ -1,7 +1,7 @@
 package skynet
 
 import (
-	"labix.org/v2/mgo"
+	"github.com/skynetservices/mgo"
 	"log"
 )
 
@@ -36,6 +36,11 @@ func (ml *MongoSemanticLogger) Log(payload *LogPayload) {
 	}
 	if payload == nil {
 		log.Printf("NOT LOGGING: Can't log nil *LogPayload\n")
+		return
+	}
+
+	if ml.session == nil {
+		log.Printf("NOT LOGGING: Can't log to nil mongo session\n")
 		return
 	}
 

@@ -3,9 +3,9 @@ package client
 import (
 	"errors"
 	"fmt"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/pools"
-	"github.com/bketelsen/skynet/rpc/bsonrpc"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/pools"
+	"github.com/skynetservices/skynet/rpc/bsonrpc"
 	"net"
 	"net/rpc"
 	"os"
@@ -48,6 +48,7 @@ func NewClient(config *skynet.ClientConfig) *Client {
 	if config.Log == nil {
 		config.Log = skynet.NewConsoleSemanticLogger("skynet", os.Stderr)
 	}
+
 	if config.DoozerConfig == nil {
 		config.DoozerConfig = &skynet.DoozerConfig{Uri: "localhost:8046"}
 	}
@@ -103,7 +104,7 @@ func (c *Client) getServicePool(instance *skynet.ServiceInfo) (sp *servicePool) 
 
 	sp = &servicePool{
 		service: instance,
-		pool:    pools.NewResourcePool(getConnectionFactory(instance),
+		pool: pools.NewResourcePool(getConnectionFactory(instance),
 			c.Config.IdleConnectionsToInstance,
 			c.Config.MaxConnectionsToInstance),
 	}

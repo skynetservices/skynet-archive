@@ -35,7 +35,7 @@ when "debian", "ubuntu"
     uri "http://downloads-distro.mongodb.org/repo/debian-sysvinit"
     distribution "dist"
     components ["10gen"]
-    keyserver "keyserver.ubuntu.com"
+    keyserver "hkp://keyserver.ubuntu.com:80"
     key "7F0CEB10"
     action :add
     notifies :run, resources(:execute => "apt-get update"), :immediately

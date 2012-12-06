@@ -30,7 +30,7 @@ execute "rebuild-fibservice" do
 end
 
 execute "install-fibonacci-service" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/examples/testing/fibonacci/fibservice'
+  cwd '/opt/local/gopath/src/github.com/skynetservices/skynet/examples/testing/fibonacci/fibservice'
 
   command %Q{
     go install  

@@ -3,8 +3,8 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/rpc/bsonrpc"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/rpc/bsonrpc"
 	"net"
 	"net/rpc"
 	"os"

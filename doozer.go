@@ -3,7 +3,7 @@ package skynet
 import (
 	"bytes"
 	"fmt"
-	"github.com/4ad/doozer"
+	"github.com/skynetservices/doozer"
 	"os"
 	"path"
 	"sync"
@@ -218,11 +218,13 @@ func (d *DoozerConnection) monitorCluster() {
 				}
 			}
 		} else if buf.String() != "" {
-			//if d.doozerInstances[id] == nil || d.doozerInstances[id].Key != buf.String() {
-			d.instancesChan <- DoozerDiscovered{
-				DoozerServer: d.getDoozerServer(buf.String()),
+			ds := d.getDoozerServer(buf.String())
+
+			if ds != nil {
+				d.instancesChan <- DoozerDiscovered{
+					DoozerServer: ds,
+				}
 			}
-			//}
 		}
 	}
 }
@@ -275,8 +277,12 @@ func (d *DoozerConnection) getDoozerInstances() {
 		buf := bytes.NewBuffer(data)
 
 		if err == nil && buf.String() != "" {
-			d.instancesChan <- DoozerDiscovered{
-				DoozerServer: d.getDoozerServer(buf.String()),
+			ds := d.getDoozerServer(buf.String())
+
+			if ds != nil {
+				d.instancesChan <- DoozerDiscovered{
+					DoozerServer: d.getDoozerServer(buf.String()),
+				}
 			}
 		}
 	}

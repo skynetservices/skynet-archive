@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/bketelsen/skynet"
+	"github.com/skynetservices/skynet"
 	"os"
 	"strconv"
 )
@@ -14,22 +14,24 @@ var (
 	ServiceNameFlag *string = flagset.String("service", "", "service name")
 	PortFlag        *string = flagset.String("port", "", "port")
 	RegisteredFlag  *string = flagset.String("registered", "", "registered")
+	HostFlag        *string = flagset.String("host", "", "host")
+	RegionFlag      *string = flagset.String("region", "", "region")
 )
 
 var DC *skynet.DoozerConnection
-var config skynet.ClientConfig
+var config *skynet.ClientConfig
 
 func main() {
 	logger := skynet.NewConsoleSemanticLogger("Sky", os.Stdout)
+	flagsetArgs, additionalArgs := skynet.SplitFlagsetFromArgs(flagset, os.Args[1:])
 
-	config = skynet.ClientConfig{
-		DoozerConfig: &skynet.DoozerConfig{},
-		Log:          logger,
-	}
+	c, args := skynet.GetClientConfigFromFlags(additionalArgs)
+	c.MaxConnectionsToInstance = 10
+	c.Log = logger
 
-	skynet.FlagsForClient(&config, flagset)
+	config = c
 
-	err := flagset.Parse(os.Args[1:])
+	err := flagset.Parse(flagsetArgs)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -39,14 +41,14 @@ func main() {
 		DoozerConn: Doozer(config.DoozerConfig),
 		Service:    *ServiceNameFlag,
 		Version:    *VersionFlag,
-		Host:       config.Host,
-		Region:     config.Region,
+		Host:       *HostFlag,
+		Region:     *RegionFlag,
 		Port:       *PortFlag,
 	}
 
-	fmt.Println(flagset.Args())
+	fmt.Println(args[0])
 
-	switch flagset.Arg(0) {
+	switch args[0] {
 	case "help", "h":
 		CommandLineHelp()
 	case "services":
@@ -70,7 +72,6 @@ func main() {
 	case "restart":
 		Restart(query)
 	case "deploy":
-		args := flagset.Args()
 		fmt.Println(args)
 		if len(args) < 2 {
 			fmt.Println("Usage: deploy <service path> <args>")
