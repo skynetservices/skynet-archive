@@ -48,6 +48,7 @@ func NewClient(config *skynet.ClientConfig) *Client {
 	if config.Log == nil {
 		config.Log = skynet.NewConsoleSemanticLogger("skynet", os.Stderr)
 	}
+
 	if config.DoozerConfig == nil {
 		config.DoozerConfig = &skynet.DoozerConfig{Uri: "localhost:8046"}
 	}

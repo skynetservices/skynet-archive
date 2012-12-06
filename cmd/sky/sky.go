@@ -19,15 +19,17 @@ var (
 )
 
 var DC *skynet.DoozerConnection
-var config skynet.ClientConfig
+var config *skynet.ClientConfig
 
 func main() {
 	logger := skynet.NewConsoleSemanticLogger("Sky", os.Stdout)
 	flagsetArgs, additionalArgs := skynet.SplitFlagsetFromArgs(flagset, os.Args[1:])
 
-	config, args := skynet.GetClientConfigFromFlags(additionalArgs)
-	config.MaxConnectionsToInstance = 10
-	config.Log = logger
+	c, args := skynet.GetClientConfigFromFlags(additionalArgs)
+	c.MaxConnectionsToInstance = 10
+	c.Log = logger
+
+	config = c
 
 	err := flagset.Parse(flagsetArgs)
 	if err != nil {
