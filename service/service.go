@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cactus/go-statsd-client/statsd"
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/rpc/bsonrpc"
 	"net"
@@ -64,10 +65,14 @@ type Service struct {
 	clientInfo  map[string]ClientInfo
 
 	shuttingDown bool
+
+	statsdClient *statsd.Client
 }
 
 func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	// This will set defaults
+	var err error
+
 	initializeConfig(c)
 
 	s = &Service{
@@ -99,6 +104,15 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 
 	s.RPCServ.RegisterName(s.Config.Name, rpcForwarder)
 
+	if c.StatsCfg != nil {
+
+		s.statsdClient, err = statsd.Dial(c.StatsCfg.Addr, c.StatsCfg.Dir)
+		// handle any errors
+		if err != nil {
+			//log error in some log
+			s.Log.Trace(fmt.Sprintf("%+v", err))
+		}
+	}
 	return
 }
 
@@ -404,6 +418,11 @@ func (s *Service) Shutdown() {
 		return
 	}
 
+	if s.statsdClient != nil {
+		//going to shut down close connection to statsd
+		s.statsdClient.Close()
+	}
+
 	s.shuttingDown = true
 
 	s.Unregister()
@@ -461,6 +480,11 @@ func initializeConfig(c *skynet.ServiceConfig) {
 
 	if c.DoozerUpdateInterval == 0 {
 		c.DoozerUpdateInterval = 5 * time.Second
+	}
+
+	if c.StatsCfg == nil {
+		c.Log.Trace(fmt.Sprint("Configuration parameters for StatsD are not specified."))
+		c.Log.Trace(fmt.Sprint("Metrics will not be collected"))
 	}
 }
 

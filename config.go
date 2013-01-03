@@ -122,6 +122,24 @@ type ServiceConfig struct {
 	CriticalAverageResponseTime time.Duration
 }
 
+type StatsdConfig struct {
+	Addr string
+	Dir  string
+}
+
+type ServiceConfig struct {
+	Log                  SemanticLogger `json:"-"`
+	UUID                 string
+	Name                 string
+	Version              string
+	Region               string
+	ServiceAddr          *BindAddr
+	AdminAddr            *BindAddr
+	DoozerConfig         *DoozerConfig `json:"-"`
+	DoozerUpdateInterval time.Duration `json:"-"`
+	StatsCfg             *StatsdConfig
+}
+
 type ClientConfig struct {
 	Region                    string
 	Host                      string
@@ -132,6 +150,7 @@ type ClientConfig struct {
 	IdleTimeout               time.Duration
 	Prioritizer               func(i1, it *ServiceInfo) (i1IsBetter bool) `json:"-"`
 	MongoConfig               *MongoConfig                                `json:"-"`
+	StatsCfg                  *StatsdConfig
 }
 
 func GetDefaultEnvVar(name, def string) (v string) {
@@ -153,6 +172,7 @@ func FlagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
 		GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true",
 		"auto discover new doozer instances")
 }
+
 func FlagsForMongo(ccfg *MongoConfig, flagset *flag.FlagSet) {
 	flagset.StringVar(&ccfg.MongoHosts, "mgoserver", GetDefaultEnvVar("SKYNET_MGOSERVER", "localhost"), "comma-separated list of urls of mongodb servers")
 	flagset.StringVar(&ccfg.MongoDb, "mgodb", GetDefaultEnvVar("SKYNET_MGODB", ""), "mongodb database")
@@ -162,6 +182,11 @@ func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
 	if ccfg.DoozerConfig == nil {
 		ccfg.DoozerConfig = &DoozerConfig{}
 	}
+
+	if ccfg.StatsCfg == nil {
+		ccfg.StatsCfg = &StatsdConfig{}
+	}
+
 	FlagsForDoozer(ccfg.DoozerConfig, flagset)
 	if ccfg.MongoConfig == nil {
 		ccfg.MongoConfig = &MongoConfig{}
@@ -170,8 +195,10 @@ func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
 	flagset.DurationVar(&ccfg.IdleTimeout, "timeout", DefaultIdleTimeout, "amount of idle time before timeout")
 	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle", DefaultIdleConnectionsToInstance, "maximum number of idle connections to a particular instance")
 	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns", DefaultMaxConnectionsToInstance, "maximum number of concurrent connections to a particular instance")
-	flagset.StringVar(&ccfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region client is located in")
 	flagset.StringVar(&ccfg.Region, "host", GetDefaultEnvVar("SKYNET_HOST", DefaultRegion), "host client is located in")
+	flagset.StringVar(&ccfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region instance is located in")
+	flagset.StringVar(&ccfg.StatsCfg.Addr, "statsd_address", GetDefaultEnvVar("SKYNET_STADDR", DefaultStatsdAddr), "Ip address and port for StatsD")
+	flagset.StringVar(&ccfg.StatsCfg.Dir, "dir", GetDefaultEnvVar("SKYNET_STDIR", DefaultStatsdDir), "Directory for metrics in Graphite")
 }
 
 func GetClientConfig() (config *ClientConfig, args []string) {
@@ -203,6 +230,10 @@ func FlagsForService(scfg *ServiceConfig, flagset *flag.FlagSet) {
 	if scfg.DoozerConfig == nil {
 		scfg.DoozerConfig = &DoozerConfig{}
 	}
+	if scfg.StatsCfg == nil {
+		scfg.StatsCfg = &StatsdConfig{}
+	}
+
 	FlagsForDoozer(scfg.DoozerConfig, flagset)
 	if scfg.MongoConfig == nil {
 		scfg.MongoConfig = &MongoConfig{}
@@ -212,6 +243,9 @@ func FlagsForService(scfg *ServiceConfig, flagset *flag.FlagSet) {
 	flagset.StringVar(&scfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region service is located in")
 	flagset.StringVar(&scfg.Version, "version", DefaultVersion, "version of service")
 	flagset.DurationVar(&scfg.DoozerUpdateInterval, "dzupdate", DefaultDoozerUpdateInterval, "ns to wait before sending the next status update")
+	flagset.StringVar(&scfg.StatsCfg.Addr, "statsd_address", GetDefaultEnvVar("SKYNET_STADDR", DefaultStatsdAddr), "Ip address and port for StatsD")
+	flagset.StringVar(&scfg.StatsCfg.Dir, "dir", GetDefaultEnvVar("SKYNET_STDIR", DefaultStatsdDir), "Directory for metrics in Graphite")
+
 }
 
 func GetServiceConfig() (config *ServiceConfig, args []string) {
