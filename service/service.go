@@ -28,6 +28,12 @@ type ServiceDelegate interface {
 	Unregistered(s *Service)
 }
 
+//we are defining StatsdClient interface. This way we can use stubbed type in testing.
+type StatsdClient interface {
+	Timing(stat string, value int64, rate float32) error
+	Close() error
+}
+
 type ClientInfo struct {
 	Address net.Addr
 }
@@ -66,7 +72,7 @@ type Service struct {
 
 	shuttingDown bool
 
-	statsdClient *statsd.Client
+	statsdClient StatsdClient
 }
 
 func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
