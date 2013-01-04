@@ -3,9 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/daemon"
-	"github.com/bketelsen/skynet/service"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/daemon"
+	"github.com/skynetservices/skynet/service"
 	"sync"
 )
 

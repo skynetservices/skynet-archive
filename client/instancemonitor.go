@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/bketelsen/skynet"
+	"github.com/skynetservices/skynet"
 	"path"
 	"strings"
 )

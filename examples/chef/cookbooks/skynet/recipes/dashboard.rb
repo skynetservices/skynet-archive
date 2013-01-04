@@ -30,7 +30,7 @@ execute "rebuild-dashboard" do
 end
 
 execute "install-dashboard" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/cmd/dashboard'
+  cwd '/opt/local/gopath/src/github.com/skynetservices/skynet/cmd/dashboard'
 
   command %Q{
     go install  

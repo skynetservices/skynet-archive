@@ -2,10 +2,10 @@ package client
 
 import (
 	"fmt"
-	"github.com/4ad/doozer"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/pools"
-	"labix.org/v2/mgo/bson"
+	"github.com/skynetservices/doozer"
+	"github.com/skynetservices/mgo/bson"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/pools"
 	"time"
 )
 
@@ -50,6 +50,13 @@ func (se serviceError) Error() string {
 	return se.msg
 }
 
+type ServiceClientInterface interface {
+	SetTimeout(retry, giveup time.Duration)
+	GetTimeout() (retry, giveup time.Duration)
+	Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error)
+	SendOnce(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error)
+}
+
 type ServiceClient struct {
 	client  *Client
 	Log     skynet.SemanticLogger `json:"-"`
@@ -84,7 +91,7 @@ func newServiceClient(query *skynet.Query, c *Client) (sc *ServiceClient) {
 		giveupTimeout: skynet.DefaultTimeoutDuration,
 	}
 	sc.listenID = skynet.UUID()
-	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query, false)
+	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query, true)
 
 	go sc.mux()
 	return

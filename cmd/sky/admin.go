@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/client"
-	"github.com/bketelsen/skynet/daemon"
-	"github.com/kballard/go-shellquote"
+	"github.com/skynetservices/go-shellquote"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/client"
+	"github.com/skynetservices/skynet/daemon"
 	"os"
 	"strings"
 	"text/template"
@@ -39,7 +39,8 @@ func Unregister(q *skynet.Query) {
 
 func getDaemonServiceClientForHost(dc *skynet.DoozerConfig, host string) *client.ServiceClient {
 	config := &skynet.ClientConfig{
-		DoozerConfig: dc,
+		DoozerConfig:             dc,
+		MaxConnectionsToInstance: 10,
 	}
 
 	c := client.NewClient(config)
@@ -61,7 +62,7 @@ var deployTemplate = template.Must(template.New("").Parse(
 
 // TODO: this should be smarter about which hosts it deploys to
 func Deploy(q *skynet.Query, path string, args ...string) {
-	cl := client.NewClient(&config)
+	cl := client.NewClient(config)
 
 	fmt.Println("deploying " + path + " " + strings.Join(args, ""))
 
@@ -89,7 +90,7 @@ var stopTemplate = template.Must(template.New("").Parse(
 {{end}}`))
 
 func Stop(q *skynet.Query) {
-	cl := client.NewClient(&config)
+	cl := client.NewClient(config)
 
 	for _, instance := range filterDaemon(q.FindInstances()) {
 		cdaemon := daemon.GetDaemonForService(cl, instance)
@@ -116,7 +117,7 @@ var restartTemplate = template.Must(template.New("").Parse(
 {{end}}`))
 
 func Restart(q *skynet.Query) {
-	cl := client.NewClient(&config)
+	cl := client.NewClient(config)
 
 	for _, instance := range filterDaemon(q.FindInstances()) {
 		cdaemon := daemon.GetDaemonForService(cl, instance)

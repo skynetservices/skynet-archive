@@ -3,8 +3,8 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/bketelsen/skynet"
-	"labix.org/v2/mgo/bson"
+	"github.com/skynetservices/mgo/bson"
+	"github.com/skynetservices/skynet"
 	"reflect"
 	"sync/atomic"
 	"time"
@@ -169,6 +169,16 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	returns := m.Call(params)
 
 	duration := time.Now().UnixNano() - startTime
+
+	if srpc.service.statsdClient != nil {
+		//send duration(reponse time) to statsD/Graphite
+		err = srpc.service.statsdClient.Timing("duration", duration, 1.0)
+		// handle any errors
+		if err != nil {
+			//log this error
+			srpc.service.Log.Trace(fmt.Sprintf("%+v", err))
+		}
+	}
 
 	// Update stats
 	atomic.AddInt64(&srpc.service.Stats.RequestsServed, 1)

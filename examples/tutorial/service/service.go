@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/service"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/service"
 )
 
 type TutorialService struct {

@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"errors"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/daemon"
-	"github.com/bketelsen/skynet/service"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/daemon"
+	"github.com/skynetservices/skynet/service"
 	"io"
 	//"log"
 	"os"
@@ -21,13 +21,15 @@ import (
 // to remotely spawn new services on the host.
 func main() {
 	config, args := skynet.GetServiceConfig()
+
 	config.Name = "SkynetDaemon"
 	config.Version = "1"
+
 	// skydaemon does not listen to admin RPC requests
 	config.AdminAddr = nil
 
 	var err error
-	mlogger, err := skynet.NewMongoSemanticLogger("localhost", "skynet",
+	mlogger, err := skynet.NewMongoSemanticLogger(config.MongoConfig.MongoHosts, "skynet",
 		"log", config.UUID)
 	clogger := skynet.NewConsoleSemanticLogger("skydaemon", os.Stdout)
 	config.Log = skynet.NewMultiSemanticLogger(mlogger, clogger)

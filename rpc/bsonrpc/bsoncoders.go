@@ -3,8 +3,8 @@ package bsonrpc
 import (
 	"errors"
 	"fmt"
+	"github.com/skynetservices/mgo/bson"
 	"io"
-	"labix.org/v2/mgo/bson"
 )
 
 type Encoder struct {

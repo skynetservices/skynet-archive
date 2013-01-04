@@ -3,9 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/bketelsen/skynet"
-	"github.com/bketelsen/skynet/client"
-	"github.com/kballard/go-shellquote"
+	"github.com/skynetservices/go-shellquote"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/client"
 	"go/build"
 	"os"
 	"os/exec"
@@ -68,10 +68,10 @@ func NewSubService(daemon *SkynetDaemon, servicePath, args, uuid string) (ss *Su
 	}
 
 	_, binName := path.Split(ss.ServicePath)
-        bindir := os.Getenv("GOBIN")
-        if bindir == "" {
-            bindir = pkg.BinDir
-        }
+	bindir := os.Getenv("GOBIN")
+	if bindir == "" {
+		bindir = pkg.BinDir
+	}
 	binPath := filepath.Join(bindir, binName)
 
 	ss.binPath = binPath

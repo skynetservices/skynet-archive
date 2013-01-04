@@ -1,23 +1,67 @@
 package client
 
 import (
-	"container/heap"
-	"github.com/bketelsen/skynet"
+	"github.com/skynetservices/skynet"
+	"sort"
+	"time"
 )
 
 type InstanceComparator func(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsLess bool)
 
-func basicComparator(c *Client, i1, i2 *skynet.ServiceInfo) (i1IsBetter bool) {
-	region := c.Config.Region
-	// if only one has the right region, it's definitely less
-	if region == i1.Config.Region && region != i2.Config.Region {
-		return true
+const (
+	SAME_REGION_POINTS            = 10
+	SAME_HOST_POINTS              = 3
+	REQUESTED_LAST_POINTS         = 1
+	CRITICAL_CLIENTS_POINTS       = -15 //random number tbd
+	CRITICAL_RESPONSE_TIME_POINTS = -17 //random number tbd
+)
+
+func getInstanceScore(c *Client, i *skynet.ServiceInfo) (points int) {
+	if i.Config.ServiceAddr.IPAddress == c.Config.Host {
+		points = points + SAME_HOST_POINTS
 	}
-	if region != i1.Config.Region && region == i2.Config.Region {
-		return false
+
+	if i.Config.Region == c.Config.Region {
+		points = points + SAME_REGION_POINTS
 	}
-	// otherwise use something arbitrary
-	return i1.Config.UUID < i2.Config.UUID
+
+	if i.Config.CriticalClientCount > 0 && i.Stats.Clients >= i.Config.CriticalClientCount {
+		points = points + CRITICAL_CLIENTS_POINTS
+	}
+
+	if i.Config.CriticalAverageResponseTime > 0 && i.Stats.AverageResponseTime >= i.Config.CriticalAverageResponseTime {
+		points = points + CRITICAL_RESPONSE_TIME_POINTS
+	}
+
+	return
+}
+
+func defaultComparator(c *Client, i1, i2 *skynet.ServiceInfo) bool {
+	var i1Points = getInstanceScore(c, i1)
+	var i2Points = getInstanceScore(c, i2)
+
+	// All things being equal let's sort on LastRequest
+	if i1Points == i2Points {
+		var t1, t2 int64 = 0, 0
+
+		t, err := time.Parse("2006-01-02T15:04:05Z-0700", i1.Stats.LastRequest)
+		if err == nil {
+			t1 = t.Unix()
+		}
+
+		t, err = time.Parse("2006-01-02T15:04:05Z-0700", i2.Stats.LastRequest)
+		if err == nil {
+			t2 = t.Unix()
+		}
+
+		if t1 < t2 {
+			i1Points = i1Points + REQUESTED_LAST_POINTS
+		} else {
+			i2Points = i2Points + REQUESTED_LAST_POINTS
+		}
+	}
+
+	return i1Points > i2Points
 }
 
 type InstanceChooser struct {
@@ -47,7 +91,7 @@ func NewInstanceChooser(c *Client) (ic *InstanceChooser) {
 			return c.Config.Prioritizer(i1, i2)
 		}
 	} else if c.Config.Region != skynet.DefaultRegion {
-		ic.comparator = basicComparator
+		ic.comparator = defaultComparator
 	}
 
 	go ic.mux()
@@ -126,7 +170,7 @@ func (ic *InstanceChooser) choose() (instance *skynet.ServiceInfo) {
 	}
 
 	// this heap-sorts (in linear time) the instances according to ic.comparator
-	heap.Init((*InstanceHeap)(ic))
+	sort.Sort((*InstanceHeap)(ic))
 	instance = ic.instances[0]
 	return
 }
@@ -138,8 +182,7 @@ func (h *InstanceHeap) Len() int {
 }
 
 func (h *InstanceHeap) Less(i, j int) bool {
-	// the indices are reversed here on purpose. if i<j, it goes at the end of the list rather than the beginning.
-	return h.comparator(h.client, h.instances[j], h.instances[i])
+	return h.comparator(h.client, h.instances[i], h.instances[j])
 }
 
 func (h *InstanceHeap) Swap(i, j int) {

@@ -1,4 +1,4 @@
-![logo](/bketelsen/skynet/raw/master/documentation/SkyNetLogo.png)
+![logo](/skynetservices/skynet/raw/master/documentation/SkyNetLogo.png)
 
 ##Introduction
 Skynet is a communication protocol for building massively distributed apps in Go.
@@ -26,7 +26,7 @@ This means that starting a new service automatically advertises that service's a
 
 Processes are monitored, and restarted when they die, and are removed from the cluster configuration management system so that clients do not create new connections. Currently connected clients will notice these removals and adjust their internal pool of connections as services are added/removed/die.
 
-[https://github.com/bketelsen/skynet/wiki/Daemon](https://github.com/bketelsen/skynet/wiki/Daemon)
+[https://github.com/skynetservices/skynet/wiki/Daemon](https://github.com/skynetservices/skynet/wiki/Daemon)
 
 ## Doozer
 Skynet makes heavy usage of [Doozer](skynet/wiki/Setting-up-a-Doozer-cluster). You'll need at least 1 Doozer instance to run Skynet, but we recommend a cluster of multiple Doozer nodes to ensure high availability. With only 1 instance you leave yourself with a single point of failure.
@@ -35,7 +35,7 @@ Skynet makes heavy usage of [Doozer](skynet/wiki/Setting-up-a-Doozer-cluster). Y
 [Services](skynet/wiki/Services) are the heart of your Skynet clusters, they will accept requests via bson rpc requests, although this is abstracted away, you won't have to deal with the protocol, you will just pass objects. Keep in mind that a Service may also be a client. In the case of a Composite style application, a request could be made to one service that makes requests either synchronously or asynchronously to additional Skynet services.
 
 #####Sweet! How do I create a service?
-Check out the service documentation page on the wiki: [https://github.com/bketelsen/skynet/wiki/Services](https://github.com/bketelsen/skynet/wiki/Services)
+Check out the service documentation page on the wiki: [https://github.com/skynetservices/skynet/wiki/Services](https://github.com/skynetservices/skynet/wiki/Services)
 
 Examples can be found in the *examples/* directory.
 
@@ -44,12 +44,12 @@ Examples can be found in the *examples/* directory.
 
 Clients contain a pool of connections to a given service, up to a specified size to load balance requests across. Instances are removed from Skynet when they crash, the pools are smart enough to remove any connections to any instances that are no longer available and replace them with connections to valid instances to maintain the pool.
 
-To use the Go client in your own program to call Skynet services, see [Creating a simple client](https://github.com/bketelsen/skynet/wiki/Client-Tutorial)
+To use the Go client in your own program to call Skynet services, see [Creating a simple client](https://github.com/skynetservices/skynet/wiki/Client-Tutorial)
 The Go client is part of this project. Clients in other languages are also available:
 * [Ruby Skynet Client](http://github.com/ClarityServices/ruby_skynet)
 * [PHP Skynet Client](http://github.com/mikespook/php_skynet)
 
-To build a Client in your favorite language see the [Skynet Protocol Guide](https://github.com/bketelsen/skynet/blob/master/protocol.md)
+To build a Client in your favorite language see the [Skynet Protocol Guide](https://github.com/skynetservices/skynet/blob/master/protocol.md)
 
 ##Management
 
@@ -59,34 +59,34 @@ The "[sky](skynet/wiki/Sky)" command is a management gateway into the Skynet clu
 ####Interactive Shell
 Another option is to use the interactive shell "<b>sky cli</b>". Which will open a shell you can interact with. Setting filters will allow any future commands to only apply to resources that meet those conditions. It supports history, and tab completion of commands, as well as services, hosts, regions, versions Skynet is already aware of.
 
-[https://github.com/bketelsen/skynet/wiki/Sky](https://github.com/bketelsen/skynet/wiki/Sky)
+[https://github.com/skynetservices/skynet/wiki/Sky](https://github.com/skynetservices/skynet/wiki/Sky)
 
 ####Dashboard
 The [dashboard](skynet/wiki/Dashboard) is a live updating web ui. Where you can see the current topology of your network, what regions/hosts/instances are up, average response times, last request, number of connections, if they are registered or not.
 
 In the future you will be able to live search your logs, as well as see graph data surrounding the health of your cluster.
 
-![picture](/bketelsen/skynet/raw/master/documentation/dashboard.png)
+![picture](/skynetservices/skynet/raw/master/documentation/dashboard.png)
 
-[https://github.com/bketelsen/skynet/wiki/Dashboard](https://github.com/bketelsen/skynet/wiki/Dashboard)
+[https://github.com/skynetservices/skynet/wiki/Dashboard](https://github.com/skynetservices/skynet/wiki/Dashboard)
 
 ##Internals
 #####Query
 The sky command and the client connectivity logic is all backed by [Query](skynet/wiki/Query). A struct that can be used to search the cluster for instances of services, regions, hosts, service names, service versions that Skynet is currently aware of. It's exposed for any custom need you may have for searching the cluster.
 
-[https://github.com/bketelsen/skynet/wiki/Query](https://github.com/bketelsen/skynet/wiki/Query)
+[https://github.com/skynetservices/skynet/wiki/Query](https://github.com/skynetservices/skynet/wiki/Query)
 
 #####Instance Listener
 You can create an instance listener by passing it a Query object, and be notified anytime an instance matching your Query is added/removed/changed.
 
-[https://github.com/bketelsen/skynet/wiki/Instance-Monitor-&-Instance-Listener](https://github.com/bketelsen/skynet/wiki/Instance-Monitor-&-Instance-Listener)
+[https://github.com/skynetservices/skynet/wiki/Instance-Monitor-&-Instance-Listener](https://github.com/skynetservices/skynet/wiki/Instance-Monitor-&-Instance-Listener)
 
 ## Getting Started
 The [wiki](skynet/wiki) has tons of documentation and tutorials on how to get started.
 
 The *examples/* directory has example services & clients
 
-Also in the *examples*/ directory is a Vagrant setup with chef recipes to deploy a mock cluster using virtual machines so that you can see it in action. The wiki has a nice walkthrough on setting up and running a simulated cluster with Vagrant: [https://github.com/bketelsen/skynet/wiki/Vagrant-Example](wiki/Vagrant-Example)
+Also in the *examples*/ directory is a Vagrant setup with chef recipes to deploy a mock cluster using virtual machines so that you can see it in action. The wiki has a nice walkthrough on setting up and running a simulated cluster with Vagrant: [https://github.com/skynetservices/skynet/wiki/Vagrant-Example](wiki/Vagrant-Example)
 
 
 ## Work In Progress
@@ -113,6 +113,7 @@ Skylib is the core of skynet's internals and is how services/clients find each o
 * Group name: Skynet-dev
 * Group home page: http://groups.google.com/group/skynet-dev
 * Group email address skynet-dev@googlegroups.com
+* IRC: #skynet-dev on freenode
 
 ##Issues:
 Github Issues now the canonical source of issues for Skynet.

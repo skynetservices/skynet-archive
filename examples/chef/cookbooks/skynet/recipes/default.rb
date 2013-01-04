@@ -23,12 +23,14 @@ directory "/opt/local" do
 end
 
 execute "download-skynet" do
+  # need to pull down the repo via git so we can actually use the correct branch
+  # in cases of master failing the deploy will fail and we never switch to our branch
   command %Q{
-    go get github.com/kballard/go-shellquote && go get github.com/sbinet/liner && go get github.com/bketelsen/skynet
+    go get github.com/skynetservices/go-shellquote && go get github.com/skynetservices/liner && go get github.com/skynetservices/mgo && cd /opt/local/gopath/src/github.com/skynetservices && git clone https://github.com/skynetservices/skynet.git
   }
 
   not_if do
-    File.exists?("/opt/local/gopath/src/github.com/bketelsen/skynet")
+    File.exists?("/opt/local/gopath/src/github.com/skynetservices/skynet")
   end
 end
 
@@ -52,7 +54,7 @@ execute "set-environment-variables" do
 end
 
 execute "update-skynet" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet'
+  cwd '/opt/local/gopath/src/github.com/skynetservices/skynet'
 
   branch = node[:skynet_branch] || "master"
 
@@ -60,6 +62,7 @@ execute "update-skynet" do
     git fetch && git checkout #{branch} && git pull origin #{branch}
   }
 end
+
 execute "rebuild-sky" do
   cwd '/opt/local/gopath/bin'
 
@@ -73,7 +76,7 @@ execute "rebuild-sky" do
 end
 
 execute "install-sky" do
-  cwd '/opt/local/gopath/src/github.com/bketelsen/skynet/cmd/sky'
+  cwd '/opt/local/gopath/src/github.com/skynetservices/skynet/cmd/sky'
 
   command %Q{
     go install  

@@ -102,26 +102,43 @@ func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
 	return
 }
 
+type MongoConfig struct {
+	MongoHosts string // comma-separated hosts
+	MongoDb    string
+}
+
+type StatsdConfig struct {
+	Addr string
+	Dir  string
+}
+
 type ServiceConfig struct {
-	Log                  SemanticLogger `json:"-"`
-	UUID                 string
-	Name                 string
-	Version              string
-	Region               string
-	ServiceAddr          *BindAddr
-	AdminAddr            *BindAddr
-	DoozerConfig         *DoozerConfig `json:"-"`
-	DoozerUpdateInterval time.Duration `json:"-"`
+	Log                         SemanticLogger `json:"-"`
+	UUID                        string
+	Name                        string
+	Version                     string
+	Region                      string
+	ServiceAddr                 *BindAddr
+	AdminAddr                   *BindAddr
+	DoozerConfig                *DoozerConfig `json:"-"`
+	DoozerUpdateInterval        time.Duration `json:"-"`
+	MongoConfig                 *MongoConfig  `json:"-"`
+	CriticalClientCount         int32
+	CriticalAverageResponseTime time.Duration
+	StatsCfg                    *StatsdConfig
 }
 
 type ClientConfig struct {
 	Region                    string
+	Host                      string
 	Log                       SemanticLogger `json:"-"`
 	DoozerConfig              *DoozerConfig  `json:"-"`
 	IdleConnectionsToInstance int
 	MaxConnectionsToInstance  int
 	IdleTimeout               time.Duration
 	Prioritizer               func(i1, it *ServiceInfo) (i1IsBetter bool) `json:"-"`
+	MongoConfig               *MongoConfig                                `json:"-"`
+	StatsCfg                  *StatsdConfig
 }
 
 func GetDefaultEnvVar(name, def string) (v string) {
@@ -144,15 +161,32 @@ func FlagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
 		"auto discover new doozer instances")
 }
 
+func FlagsForMongo(ccfg *MongoConfig, flagset *flag.FlagSet) {
+	flagset.StringVar(&ccfg.MongoHosts, "mgoserver", GetDefaultEnvVar("SKYNET_MGOSERVER", "localhost"), "comma-separated list of urls of mongodb servers")
+	flagset.StringVar(&ccfg.MongoDb, "mgodb", GetDefaultEnvVar("SKYNET_MGODB", ""), "mongodb database")
+}
+
 func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
 	if ccfg.DoozerConfig == nil {
 		ccfg.DoozerConfig = &DoozerConfig{}
 	}
+
+	if ccfg.StatsCfg == nil {
+		ccfg.StatsCfg = &StatsdConfig{}
+	}
+
 	FlagsForDoozer(ccfg.DoozerConfig, flagset)
+	if ccfg.MongoConfig == nil {
+		ccfg.MongoConfig = &MongoConfig{}
+	}
+	FlagsForMongo(ccfg.MongoConfig, flagset)
 	flagset.DurationVar(&ccfg.IdleTimeout, "timeout", DefaultIdleTimeout, "amount of idle time before timeout")
 	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle", DefaultIdleConnectionsToInstance, "maximum number of idle connections to a particular instance")
 	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns", DefaultMaxConnectionsToInstance, "maximum number of concurrent connections to a particular instance")
+	flagset.StringVar(&ccfg.Region, "host", GetDefaultEnvVar("SKYNET_HOST", DefaultRegion), "host client is located in")
 	flagset.StringVar(&ccfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region instance is located in")
+	flagset.StringVar(&ccfg.StatsCfg.Addr, "statsd_address", GetDefaultEnvVar("SKYNET_STADDR", DefaultStatsdAddr), "Ip address and port for StatsD")
+	flagset.StringVar(&ccfg.StatsCfg.Dir, "dir", GetDefaultEnvVar("SKYNET_STDIR", DefaultStatsdDir), "Directory for metrics in Graphite")
 }
 
 func GetClientConfig() (config *ClientConfig, args []string) {
@@ -184,26 +218,29 @@ func FlagsForService(scfg *ServiceConfig, flagset *flag.FlagSet) {
 	if scfg.DoozerConfig == nil {
 		scfg.DoozerConfig = &DoozerConfig{}
 	}
+	if scfg.StatsCfg == nil {
+		scfg.StatsCfg = &StatsdConfig{}
+	}
+
 	FlagsForDoozer(scfg.DoozerConfig, flagset)
+	if scfg.MongoConfig == nil {
+		scfg.MongoConfig = &MongoConfig{}
+	}
+	FlagsForMongo(scfg.MongoConfig, flagset)
 	flagset.StringVar(&scfg.UUID, "uuid", UUID(), "UUID for this service")
 	flagset.StringVar(&scfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region service is located in")
 	flagset.StringVar(&scfg.Version, "version", DefaultVersion, "version of service")
 	flagset.DurationVar(&scfg.DoozerUpdateInterval, "dzupdate", DefaultDoozerUpdateInterval, "ns to wait before sending the next status update")
+	flagset.StringVar(&scfg.StatsCfg.Addr, "statsd_address", GetDefaultEnvVar("SKYNET_STADDR", DefaultStatsdAddr), "Ip address and port for StatsD")
+	flagset.StringVar(&scfg.StatsCfg.Dir, "dir", GetDefaultEnvVar("SKYNET_STDIR", DefaultStatsdDir), "Directory for metrics in Graphite")
+
 }
 
 func GetServiceConfig() (config *ServiceConfig, args []string) {
 	return GetServiceConfigFromFlags(os.Args[1:])
 }
 
-func GetServiceConfigFromFlags(argv []string) (config *ServiceConfig, args []string) {
-
-	config = &ServiceConfig{
-		DoozerConfig: &DoozerConfig{},
-	}
-
-	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
-
-	FlagsForService(config, flagset)
+func ParseServiceFlags(scfg *ServiceConfig, flagset *flag.FlagSet, argv []string) (config *ServiceConfig, args []string) {
 
 	rpcAddr := flagset.String("l", GetDefaultBindAddr(), "host:port to listen on for RPC")
 	adminAddr := flagset.String("admin", GetDefaultBindAddr(), "host:port to listen on for admin")
@@ -225,8 +262,55 @@ func GetServiceConfigFromFlags(argv []string) (config *ServiceConfig, args []str
 		panic(err)
 	}
 
-	config.ServiceAddr = rpcBA
-	config.AdminAddr = adminBA
+	scfg.ServiceAddr = rpcBA
+	scfg.AdminAddr = adminBA
+
+	return scfg, args
+}
+
+func GetServiceConfigFromFlags(argv []string) (config *ServiceConfig, args []string) {
+
+	config = &ServiceConfig{
+		DoozerConfig: &DoozerConfig{},
+	}
+
+	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
+
+	FlagsForService(config, flagset)
+
+	return ParseServiceFlags(config, flagset, argv)
+}
+
+func getFlagName(f string) (name string) {
+	if f[0] == '-' {
+		minusCount := 1
+
+		if f[1] == '-' {
+			minusCount++
+		}
+
+		f = f[minusCount:]
+
+		for i := 0; i < len(f); i++ {
+			if f[i] == '=' || f[i] == ' ' {
+				break
+			}
+
+			name += string(f[i])
+		}
+	}
+
+	return
+}
+
+func SplitFlagsetFromArgs(flagset *flag.FlagSet, args []string) (flagsetArgs []string, additionalArgs []string) {
+	for _, f := range args {
+		if flagset.Lookup(getFlagName(f)) != nil {
+			flagsetArgs = append(flagsetArgs, f)
+		} else {
+			additionalArgs = append(additionalArgs, f)
+		}
+	}
 
 	return
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/bketelsen/skynet"
+	"github.com/skynetservices/skynet"
 	"os"
 	"strconv"
 )
@@ -12,25 +12,26 @@ var (
 	flagset                 = flag.NewFlagSet("sky", flag.ExitOnError)
 	VersionFlag     *string = flagset.String("version", "", "service version")
 	ServiceNameFlag *string = flagset.String("service", "", "service name")
-	HostFlag        *string = flagset.String("host", "", "host")
 	PortFlag        *string = flagset.String("port", "", "port")
-	RegionFlag      *string = flagset.String("region", "", "region")
 	RegisteredFlag  *string = flagset.String("registered", "", "registered")
+	HostFlag        *string = flagset.String("host", "", "host")
+	RegionFlag      *string = flagset.String("region", "", "region")
 )
 
 var DC *skynet.DoozerConnection
-var config skynet.ClientConfig
+var config *skynet.ClientConfig
 
 func main() {
 	logger := skynet.NewConsoleSemanticLogger("Sky", os.Stdout)
+	flagsetArgs, additionalArgs := skynet.SplitFlagsetFromArgs(flagset, os.Args[1:])
 
-	config = skynet.ClientConfig{
-		DoozerConfig: &skynet.DoozerConfig{},
-		Log:          logger,
-	}
-	skynet.FlagsForClient(&config, flagset)
+	c, args := skynet.GetClientConfigFromFlags(additionalArgs)
+	c.MaxConnectionsToInstance = 10
+	c.Log = logger
 
-	err := flagset.Parse(os.Args[1:])
+	config = c
+
+	err := flagset.Parse(flagsetArgs)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -45,9 +46,9 @@ func main() {
 		Port:       *PortFlag,
 	}
 
-	fmt.Println(flagset.Args())
+	fmt.Println(args[0])
 
-	switch flagset.Arg(0) {
+	switch args[0] {
 	case "help", "h":
 		CommandLineHelp()
 	case "services":
@@ -71,7 +72,6 @@ func main() {
 	case "restart":
 		Restart(query)
 	case "deploy":
-		args := flagset.Args()
 		fmt.Println(args)
 		if len(args) < 2 {
 			fmt.Println("Usage: deploy <service path> <args>")
