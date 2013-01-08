@@ -46,6 +46,12 @@ func main() {
 		Port:       *PortFlag,
 	}
 
+	// Runs when no command line arguments were given
+	if len(args) == 0 {
+		CommandLineHelp()
+		return
+	}
+
 	fmt.Println(args[0])
 
 	switch args[0] {
