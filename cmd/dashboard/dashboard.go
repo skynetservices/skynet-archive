@@ -20,14 +20,14 @@ import (
 
 var (
 	layoutTmpl *template.Template
-	indexTmpl *template.Template
+	indexTmpl  *template.Template
 	searchTmpl *template.Template
 
 	log skynet.SemanticLogger
 
 	session *mgo.Session
 
-	addr = flag.String("addr", ":8080", "dashboard listener address")
+	addr   = flag.String("addr", ":8080", "dashboard listener address")
 	doozer = flag.String("doozer",
 		skynet.GetDefaultEnvVar("SKYNET_DZHOST", skynet.DefaultDoozerdAddr),
 		"initial doozer instance to connect to")
@@ -37,9 +37,9 @@ var (
 	autodiscover = flag.Bool("autodiscover",
 		skynet.GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true",
 		"auto discover new doozer instances")
-	debug = flag.Bool("d", false, "print debug info")
+	debug      = flag.Bool("d", false, "print debug info")
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-	webroot = flag.String("webroot", ".",
+	webroot    = flag.String("webroot", ".",
 		"root of templates and javascript libraries")
 	mgoserver = flag.String("mgoserver",
 		skynet.GetDefaultEnvVar("SKYNET_MGOSERVER", ""),
@@ -47,7 +47,7 @@ var (
 	mgodb = flag.String("mgodb",
 		skynet.GetDefaultEnvVar("SKYNET_MGODB", ""),
 		"mongodb database")
-	
+
 	DC *skynet.DoozerConnection
 )
 
@@ -122,7 +122,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	tmplData := map[string][]string{
 		"LogPayloadFieldNames": fieldNames,
-		"DBsAndCollections": sdata,
+		"DBsAndCollections":    sdata,
 	}
 
 	buf := new(bytes.Buffer)
