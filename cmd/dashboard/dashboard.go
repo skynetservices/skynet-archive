@@ -12,6 +12,7 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -112,8 +113,20 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Add LogPayload field names to interface as checkboxes
+	fieldNames := []string{}
+	t := reflect.TypeOf(skynet.LogPayload{})
+	for i := 0; i < t.NumField(); i++ {
+		fieldNames = append(fieldNames, t.Field(i).Name)
+	}
+
+	tmplData := map[string][]string{
+		"LogPayloadFieldNames": fieldNames,
+		"DBsAndCollections": sdata,
+	}
+
 	buf := new(bytes.Buffer)
-	searchTmpl.Execute(buf, sdata)
+	searchTmpl.Execute(buf, tmplData)
 	layoutTmpl.Execute(w, template.HTML(buf.String()))
 }
 
@@ -170,8 +183,7 @@ func main() {
 func Doozer() *skynet.DoozerConnection {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("Failed to connect to Doozer")
-			os.Exit(1)
+			log.Fatal("Failed to connect to Doozer")
 		}
 	}()
 
