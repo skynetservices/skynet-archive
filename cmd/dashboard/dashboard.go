@@ -17,19 +17,44 @@ import (
 	"time"
 )
 
-var layoutTmpl *template.Template
-var indexTmpl *template.Template
-var searchTmpl *template.Template
+var (
+	layoutTmpl *template.Template
+	indexTmpl *template.Template
+	searchTmpl *template.Template
 
-var log skynet.SemanticLogger
+	log skynet.SemanticLogger
+
+	session *mgo.Session
+
+	addr = flag.String("addr", ":8080", "dashboard listener address")
+	doozer = flag.String("doozer",
+		skynet.GetDefaultEnvVar("SKYNET_DZHOST", skynet.DefaultDoozerdAddr),
+		"initial doozer instance to connect to")
+	doozerboot = flag.String("doozerboot",
+		skynet.GetDefaultEnvVar("SKYNET_DZNSHOST", ""),
+		"initial doozer instance to connect to")
+	autodiscover = flag.Bool("autodiscover",
+		skynet.GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true",
+		"auto discover new doozer instances")
+	debug = flag.Bool("d", false, "print debug info")
+	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+	webroot = flag.String("webroot", ".",
+		"root of templates and javascript libraries")
+	mgoserver = flag.String("mgoserver",
+		skynet.GetDefaultEnvVar("SKYNET_MGOSERVER", ""),
+		"comma-separated list of urls of mongodb servers")
+	mgodb = flag.String("mgodb",
+		skynet.GetDefaultEnvVar("SKYNET_MGODB", ""),
+		"mongodb database")
+	
+	DC *skynet.DoozerConnection
+)
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	buf := new(bytes.Buffer)
 	indexTmpl.Execute(buf, r.URL.Path)
 	layoutTmpl.Execute(w, template.HTML(buf.String()))
 }
-
-var session *mgo.Session
 
 func searchHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
@@ -91,31 +116,6 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	searchTmpl.Execute(buf, sdata)
 	layoutTmpl.Execute(w, template.HTML(buf.String()))
 }
-
-var addr = flag.String("addr", ":8080", "dashboard listener address")
-
-var doozer = flag.String("doozer",
-	skynet.GetDefaultEnvVar("SKYNET_DZHOST", skynet.DefaultDoozerdAddr),
-	"initial doozer instance to connect to")
-var doozerboot = flag.String("doozerboot",
-	skynet.GetDefaultEnvVar("SKYNET_DZNSHOST", ""),
-	"initial doozer instance to connect to")
-var autodiscover = flag.Bool("autodiscover",
-	skynet.GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true",
-	"auto discover new doozer instances")
-
-var debug = flag.Bool("d", false, "print debug info")
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-var webroot = flag.String("webroot", ".",
-	"root of templates and javascript libraries")
-var mgoserver = flag.String("mgoserver",
-	skynet.GetDefaultEnvVar("SKYNET_MGOSERVER", ""),
-	"comma-separated list of urls of mongodb servers")
-var mgodb = flag.String("mgodb",
-	skynet.GetDefaultEnvVar("SKYNET_MGODB", ""),
-	"mongodb database")
-
-var DC *skynet.DoozerConnection
 
 func main() {
 	var err error
