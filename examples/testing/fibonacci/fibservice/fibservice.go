@@ -37,10 +37,12 @@ func NewFibonacci() (f *Fibonacci) {
 	return
 }
 
-func (f *Fibonacci) Registered(s *service.Service)   {}
-func (f *Fibonacci) Unregistered(s *service.Service) {}
-func (f *Fibonacci) Started(s *service.Service)      {}
-func (f *Fibonacci) Stopped(s *service.Service)      {}
+func (f *Fibonacci) Registered(s *service.Service)                            {}
+func (f *Fibonacci) Unregistered(s *service.Service)                          {}
+func (f *Fibonacci) Started(s *service.Service)                               {}
+func (f *Fibonacci) Stopped(s *service.Service)                               {}
+func (f *Fibonacci) MethodCalled(method string)                               {}
+func (f *Fibonacci) MethodCompleted(method string, duration int64, err error) {}
 
 func (f *Fibonacci) Index(ri *skynet.RequestInfo, req fibonacci.Request,
 	resp *fibonacci.Response) (err error) {

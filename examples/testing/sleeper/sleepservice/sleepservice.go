@@ -19,10 +19,12 @@ func NewSleeper() (f *Sleeper) {
 	return
 }
 
-func (f *Sleeper) Registered(s *service.Service)   {}
-func (f *Sleeper) Unregistered(s *service.Service) {}
-func (f *Sleeper) Started(s *service.Service)      {}
-func (f *Sleeper) Stopped(s *service.Service)      {}
+func (f *Sleeper) Registered(s *service.Service)                            {}
+func (f *Sleeper) Unregistered(s *service.Service)                          {}
+func (f *Sleeper) Started(s *service.Service)                               {}
+func (f *Sleeper) Stopped(s *service.Service)                               {}
+func (f *Sleeper) MethodCalled(method string)                               {}
+func (f *Sleeper) MethodCompleted(method string, duration int64, err error) {}
 
 func (f *Sleeper) Sleep(ri *skynet.RequestInfo, req sleeper.Request,
 	resp *sleeper.Response) (err error) {

@@ -13,10 +13,12 @@ type M map[string]interface{}
 type EchoRPC struct {
 }
 
-func (e EchoRPC) Started(s *Service)      {}
-func (e EchoRPC) Stopped(s *Service)      {}
-func (e EchoRPC) Registered(s *Service)   {}
-func (e EchoRPC) Unregistered(s *Service) {}
+func (e EchoRPC) Started(s *Service)                                       {}
+func (e EchoRPC) Stopped(s *Service)                                       {}
+func (e EchoRPC) Registered(s *Service)                                    {}
+func (e EchoRPC) Unregistered(s *Service)                                  {}
+func (e EchoRPC) MethodCalled(method string)                               {}
+func (e EchoRPC) MethodCompleted(method string, duration int64, err error) {}
 
 func (e EchoRPC) Foo(rinfo *skynet.RequestInfo, in M, out *M) (err error) {
 	*out = M{
@@ -31,14 +33,14 @@ func TestServiceRPCBasic(t *testing.T) {
 
 	config := &skynet.ServiceConfig{}
 	service := CreateService(EchoRPC{}, config)
-	service.clientInfo = make(map[string]ClientInfo, 1)
+	service.ClientInfo = make(map[string]ClientInfo, 1)
 
 	addr = &net.TCPAddr{
 		IP:   net.ParseIP("127.0.0.1"),
 		Port: 123,
 	}
 
-	service.clientInfo["123"] = ClientInfo{
+	service.ClientInfo["123"] = ClientInfo{
 		Address: addr,
 	}
 

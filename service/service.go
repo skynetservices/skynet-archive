@@ -25,6 +25,8 @@ type ServiceDelegate interface {
 	Stopped(s *Service)
 	Registered(s *Service)
 	Unregistered(s *Service)
+	MethodCalled(method string)
+	MethodCompleted(method string, duration int64, err error)
 }
 
 type ClientInfo struct {
@@ -61,7 +63,7 @@ type Service struct {
 	updateTicker *time.Ticker
 
 	clientMutex sync.Mutex
-	clientInfo  map[string]ClientInfo
+	ClientInfo  map[string]ClientInfo
 
 	shuttingDown bool
 }
@@ -78,7 +80,7 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		registeredChan: make(chan bool),
 		doozerChan:     make(chan interface{}),
 		updateTicker:   time.NewTicker(c.DoozerUpdateInterval),
-		clientInfo:     make(map[string]ClientInfo),
+		ClientInfo:     make(map[string]ClientInfo),
 		shuttingDown:   false,
 	}
 
@@ -137,7 +139,7 @@ loop:
 			clientID := skynet.UUID()
 
 			s.clientMutex.Lock()
-			s.clientInfo[clientID] = ClientInfo{
+			s.ClientInfo[clientID] = ClientInfo{
 				Address: conn.RemoteAddr(),
 			}
 			s.clientMutex.Unlock()
@@ -254,7 +256,7 @@ func (s *Service) getClientInfo(clientID string) (ci ClientInfo, ok bool) {
 	s.clientMutex.Lock()
 	defer s.clientMutex.Unlock()
 
-	ci, ok = s.clientInfo[clientID]
+	ci, ok = s.ClientInfo[clientID]
 	return
 }
 
