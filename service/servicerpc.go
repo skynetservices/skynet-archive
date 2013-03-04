@@ -109,6 +109,8 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	srpc.service.activeRequests.Add(1)
 	defer srpc.service.activeRequests.Done()
 
+	srpc.service.Delegate.MethodCalled(in.Method)
+
 	clientInfo, ok := srpc.service.getClientInfo(in.ClientID)
 	if !ok {
 		err = errors.New("did not provide the ClientID")
@@ -192,10 +194,12 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	}
 
 	erri := returns[0].Interface()
+	var rerr error
 	if erri != nil {
 		rerr, _ := erri.(error)
 		out.ErrString = rerr.Error()
 	}
+	srpc.service.Delegate.MethodCompleted(in.Method, duration, rerr)
 
 	return
 }

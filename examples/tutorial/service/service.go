@@ -8,11 +8,12 @@ import (
 type TutorialService struct {
 }
 
-func (s *TutorialService) Registered(service *service.Service)   {}
-func (s *TutorialService) Unregistered(service *service.Service) {}
-func (s *TutorialService) Started(service *service.Service)      {}
-func (s *TutorialService) Stopped(service *service.Service) {
-}
+func (s *TutorialService) Registered(service *service.Service)                      {}
+func (s *TutorialService) Unregistered(service *service.Service)                    {}
+func (s *TutorialService) Started(service *service.Service)                         {}
+func (s *TutorialService) Stopped(service *service.Service)                         {}
+func (s *TutorialService) MethodCalled(method string)                               {}
+func (s *TutorialService) MethodCompleted(method string, duration int64, err error) {}
 
 type TutorialRequest struct {
 	Value int
