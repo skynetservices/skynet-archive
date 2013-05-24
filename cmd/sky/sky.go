@@ -187,6 +187,10 @@ func PrintTopology(q *skynet.Query) {
 
 	// Build topology hash first
 	for _, instance := range results {
+		// Prevent runtime nil pointer dereference
+		if instance.Config == nil {
+			continue
+		}
 		if topology[instance.Config.Region] == nil {
 			topology[instance.Config.Region] = make(map[string]map[string]map[string][]*skynet.ServiceInfo)
 		}
