@@ -16,7 +16,7 @@ var query *skynet.Query
  */
 
 var SupportedCliCommands = []string{
-	"deploy",
+	"start",
 	"exit",
 	"filters",
 	"help",
@@ -122,13 +122,13 @@ func InteractiveShell() {
 		validCommand := true
 
 		switch parts[0] {
-		case "deploy":
+		case "start":
 			if len(parts) >= 2 {
-				if confirm(term, "Service will be deployed to "+strconv.Itoa(len(query.FindHosts()))+" hosts") {
-					Deploy(query, parts[1], parts[2:]...)
+				if confirm(term, "Service will be started on "+strconv.Itoa(len(query.FindHosts()))+" hosts") {
+					Start(query, parts[1], parts[2:]...)
 				}
 			} else {
-				fmt.Println("Usage: deploy <service path> <args>")
+				fmt.Println("Usage: start <service> <args>")
 			}
 		case "exit":
 			term.Close()
@@ -286,7 +286,7 @@ func filterDaemon(instances []*skynet.ServiceInfo) []*skynet.ServiceInfo {
 func InteractiveShellHelp() {
 	fmt.Print(`
   Commands:
-  deploy: Deploy new instances to cluster, will deploy to all hosts matching current filters (deploy <service path> <args>)
+  start: Start new instances in cluster, will start on all hosts matching current filters (start <service> <args>)
   hosts: List all hosts available that meet the specified criteria
   instances: List all instances available that meet the specified criteria
   regions: List all regions available that meet the specified criteria

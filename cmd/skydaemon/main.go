@@ -7,14 +7,13 @@ import (
 	"github.com/skynetservices/skynet/daemon"
 	"github.com/skynetservices/skynet/service"
 	"io"
-	//"log"
 	"os"
 	"strings"
 )
 
 // Daemon will run and maintain skynet services.
 //
-// Daemon will initially deploy those specified in the file given in
+// Daemon will initially start those specified in the file given in
 // the "-config" option
 //
 // Daemon will run the "SkynetDeployment" service, which can be used
@@ -93,7 +92,7 @@ func deployConfig(s *SkynetDaemon, cfg string) (err error) {
 		}
 		servicePath := line[:split]
 		args := strings.TrimSpace(line[split:])
-		s.Deploy(&skynet.RequestInfo{}, daemon.DeployRequest{ServicePath: servicePath, Args: args}, &daemon.DeployResponse{})
+		s.Start(&skynet.RequestInfo{}, daemon.StartRequest{ServicePath: servicePath, Args: args}, &daemon.StartResponse{})
 	}
 	return
 }

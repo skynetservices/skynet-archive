@@ -28,8 +28,8 @@ func GetDaemonForHost(cl *client.Client, host string) (c Client) {
 	return
 }
 
-func (c Client) Deploy(in DeployRequest) (out DeployResponse, err error) {
-	err = c.Send(c.requestInfo, "Deploy", in, &out)
+func (c Client) Start(in StartRequest) (out StartResponse, err error) {
+	err = c.Send(c.requestInfo, "Start", in, &out)
 	return
 }
 

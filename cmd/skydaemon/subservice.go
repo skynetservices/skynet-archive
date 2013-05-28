@@ -1,15 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"github.com/skynetservices/go-shellquote"
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/client"
-	"go/build"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"sync"
 	"time"
@@ -56,25 +53,11 @@ func NewSubService(daemon *SkynetDaemon, servicePath, args, uuid string) (ss *Su
 
 	ss.argv = append([]string{"-uuid", uuid}, ss.argv...)
 
-	// verify that it exists on the local system
-	// TODO: go get package?
-	pkg, err := build.Import(ss.ServicePath, "", 0)
-	if err != nil {
-		return
-	}
-
-	if pkg.Name != "main" {
-		return nil, errors.New("This package is not a binary")
-	}
-
-	_, binName := path.Split(ss.ServicePath)
-	bindir := os.Getenv("GOBIN")
+	bindir := os.Getenv("SKYNET_SERVICE_DIR")
 	if bindir == "" {
-		bindir = pkg.BinDir
+		bindir = "/usr/bin"
 	}
-	binPath := filepath.Join(bindir, binName)
-
-	ss.binPath = binPath
+	ss.binPath = filepath.Join(bindir, servicePath)
 
 	return
 }

@@ -29,10 +29,10 @@ func (sd *SkynetDaemon) Stopped(s *service.Service) {
 func (sd *SkynetDaemon) MethodCalled(method string)                               {}
 func (sd *SkynetDaemon) MethodCompleted(method string, duration int64, err error) {}
 
-func (s *SkynetDaemon) Deploy(requestInfo *skynet.RequestInfo, in daemon.DeployRequest, out *daemon.DeployResponse) (err error) {
+func (s *SkynetDaemon) Start(requestInfo *skynet.RequestInfo, in daemon.StartRequest, out *daemon.StartResponse) (err error) {
 	out.UUID = skynet.UUID()
 
-	s.Log.Trace(fmt.Sprintf("%+v", SubserviceDeployment{
+	s.Log.Trace(fmt.Sprintf("%+v", SubserviceStart{
 		ServicePath: in.ServicePath,
 		Args:        in.Args,
 	}))
@@ -67,7 +67,7 @@ func (s *SkynetDaemon) getSubService(uuid string) (ss *SubService) {
 func (s *SkynetDaemon) ListSubServices(requestInfo *skynet.RequestInfo, in daemon.ListSubServicesRequest, out *daemon.ListSubServicesResponse) (err error) {
 	out.Services = make(map[string]daemon.SubServiceInfo)
 	if len(s.Services) == 0 {
-		err = errors.New("No services deployed")
+		err = errors.New("No services started")
 		return
 	}
 	for uuid, ss := range s.Services {
@@ -137,7 +137,7 @@ func (s *SkynetDaemon) RestartAllSubServices(requestInfo *skynet.RequestInfo, in
 	s.serviceLock.Unlock()
 
 	if len(uuids) == 0 {
-		err = errors.New("No services deployed")
+		err = errors.New("No services started")
 		return
 	}
 

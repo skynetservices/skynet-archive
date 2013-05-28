@@ -56,31 +56,31 @@ func getDaemonServiceClientForHost(dc *skynet.DoozerConfig, host string) *client
 	return s
 }
 
-var deployTemplate = template.Must(template.New("").Parse(
-	`Deployed service with UUID {{.UUID}}.
+var startTemplate = template.Must(template.New("").Parse(
+	`Started service with UUID {{.UUID}}.
 `))
 
-// TODO: this should be smarter about which hosts it deploys to
-func Deploy(q *skynet.Query, path string, args ...string) {
+// TODO: this should be smarter about which hosts it starts on
+func Start(q *skynet.Query, path string, args ...string) {
 	cl := client.NewClient(config)
 
-	fmt.Println("deploying " + path + " " + strings.Join(args, ""))
+	fmt.Println("starting " + path + " " + strings.Join(args, ""))
 
 	for _, host := range q.FindHosts() {
 		cdaemon := daemon.GetDaemonForHost(cl, host)
 
-		in := daemon.DeployRequest{
+		in := daemon.StartRequest{
 			ServicePath: path,
 			Args:        shellquote.Join(args...),
 		}
-		out, err := cdaemon.Deploy(in)
+		out, err := cdaemon.Start(in)
 
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		deployTemplate.Execute(os.Stdout, out)
+		startTemplate.Execute(os.Stdout, out)
 	}
 }
 

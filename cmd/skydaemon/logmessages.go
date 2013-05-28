@@ -4,11 +4,11 @@ import (
 	"fmt"
 )
 
-type SubserviceDeployment struct {
+type SubserviceStart struct {
 	ServicePath string
 	Args        string
 }
 
-func (sd SubserviceDeployment) String() string {
-	return fmt.Sprintf("Deployed %s %s", sd.ServicePath, sd.Args)
+func (sd SubserviceStart) String() string {
+	return fmt.Sprintf("Started %s %s", sd.ServicePath, sd.Args)
 }

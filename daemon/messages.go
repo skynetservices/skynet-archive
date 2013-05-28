@@ -1,11 +1,11 @@
 package daemon
 
-type DeployRequest struct {
+type StartRequest struct {
 	ServicePath string
 	Args        string
 }
 
-type DeployResponse struct {
+type StartResponse struct {
 	UUID string
 }
 

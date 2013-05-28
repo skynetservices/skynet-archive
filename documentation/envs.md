@@ -22,3 +22,6 @@ SKYNET_MAX_PORT=9999
 
 SKYNET_REGION=unknown
 	The service's self-reported region.
+
+SKYNET_SERVICE_DIR=/usr/bin
+  The directory where services are deployed to and the daemon will start them from

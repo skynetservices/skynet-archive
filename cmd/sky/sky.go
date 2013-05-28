@@ -77,14 +77,14 @@ func main() {
 		Stop(query)
 	case "restart":
 		Restart(query)
-	case "deploy":
+	case "start":
 		fmt.Println(args)
 		if len(args) < 2 {
-			fmt.Println("Usage: deploy <service path> <args>")
+			fmt.Println("Usage: start <service> <args>")
 			return
 		}
 
-		Deploy(query, args[1], args[2:]...)
+		Start(query, args[1], args[2:]...)
 
 	case "cli":
 		InteractiveShell()
@@ -272,9 +272,9 @@ Commands:
 		-region - limit results to instances in the specified region
 		-host - limit results to instances on the specified host
 		-port - limit results to the specified port
-	deploy: deploy new instances to cluster (deploy <service path> <args>)
-		-region - deploy only to the specified region
-		-host - deploy to the specified host
+	start: start new instances in cluster (start <service> <args>)
+		-region - start only in the specified region
+		-host - start on the specified host
 	stop: Stop all instances available that meet the specified criteria
 		-service - limit command to instances of the specified service
 		-version - limit command to instances of the specified version of service
