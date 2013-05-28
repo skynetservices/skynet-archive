@@ -1,8 +1,12 @@
 <fieldset>
   <div id="search-container" class="right">
 
+    {{range $i, $v := .LogPayloadFieldNames}}
+    <input type="checkbox" name="{{$v}}" value="" />{{$v}}<br />
+    {{end}}
+
     <select id="database-collection">
-    {{range $i, $v := .}} 
+    {{range $i, $v := .DBsAndCollections}}
     <option>{{$v}}</option>
     {{end}}
     </select>
