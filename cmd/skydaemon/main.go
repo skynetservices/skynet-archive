@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/daemon"
+	"github.com/skynetservices/skynet/log"
 	"github.com/skynetservices/skynet/service"
 	"io"
 	"os"
@@ -27,8 +28,8 @@ func main() {
 	// skydaemon does not listen to admin RPC requests
 	config.AdminAddr = nil
 
-	clogger := skynet.NewConsoleSemanticLogger("skydaemon", os.Stdout)
-	config.Log = skynet.NewMultiSemanticLogger(clogger)
+	clogger := log.NewConsoleSemanticLogger("skydaemon", os.Stdout)
+	config.Log = log.NewMultiSemanticLogger(clogger)
 
 	deployment := &SkynetDaemon{
 		Log:      config.Log,

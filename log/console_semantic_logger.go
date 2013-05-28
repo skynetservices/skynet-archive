@@ -1,4 +1,4 @@
-package skynet
+package log
 
 import (
 	"fmt"

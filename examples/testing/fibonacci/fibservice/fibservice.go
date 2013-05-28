@@ -6,8 +6,8 @@ import (
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/client"
 	"github.com/skynetservices/skynet/examples/testing/fibonacci"
+	"github.com/skynetservices/skynet/log"
 	"github.com/skynetservices/skynet/service"
-	"log"
 	"os"
 	"sync"
 )
@@ -118,8 +118,8 @@ func main() {
 		config.Region = "Jersey"
 	}
 
-	clogger := skynet.NewConsoleSemanticLogger("fibservice", os.Stdout)
-	config.Log = skynet.NewMultiSemanticLogger(clogger)
+	clogger := log.NewConsoleSemanticLogger("fibservice", os.Stdout)
+	config.Log = log.NewMultiSemanticLogger(clogger)
 	service := service.CreateService(f, config)
 
 	// handle panic so that we remove ourselves from the pool in case
@@ -127,7 +127,7 @@ func main() {
 	defer func() {
 		service.Shutdown()
 		if err := recover(); err != nil {
-			log.Println("Unrecovered error occured: ", err)
+			fmt.Println("Unrecovered error occured: ", err)
 		}
 	}()
 

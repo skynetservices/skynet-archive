@@ -8,15 +8,16 @@
 package main
 
 import (
+	"fmt"
 	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/log"
 	"github.com/skynetservices/skynet/service"
-	"log"
 	"os"
 	"strings"
 )
 
 type TestService struct {
-	Log skynet.SemanticLogger
+	Log log.SemanticLogger
 }
 
 func (s *TestService) Registered(service *service.Service)   {}
@@ -56,8 +57,8 @@ func main() {
 		config.Region = "Clearwater"
 	}
 
-	clogger := skynet.NewConsoleSemanticLogger("TestService", os.Stdout)
-	testService.Log = skynet.NewMultiSemanticLogger(clogger)
+	clogger := log.NewConsoleSemanticLogger("TestService", os.Stdout)
+	testService.Log = log.NewMultiSemanticLogger(clogger)
 	config.Log = testService.Log
 	service := service.CreateService(testService, config)
 
@@ -66,7 +67,7 @@ func main() {
 	defer func() {
 		service.Shutdown()
 		if err := recover(); err != nil {
-			log.Println("Unrecovered error occured: ", err)
+			fmt.Println("Unrecovered error occured: ", err)
 		}
 	}()
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/skynetservices/doozer"
+	"github.com/skynetservices/skynet/log"
 	"os"
 	"path"
 	"sync"
@@ -36,7 +37,7 @@ type doozerconn interface {
 type DoozerConnection struct {
 	Config     *DoozerConfig
 	connection doozerconn
-	Log        SemanticLogger
+	Log        log.SemanticLogger
 
 	connectionMutex sync.Mutex
 
@@ -51,7 +52,7 @@ type DoozerConnection struct {
 }
 
 func NewDoozerConnection(uri, boot string, discover bool,
-	logger SemanticLogger) *DoozerConnection {
+	logger log.SemanticLogger) *DoozerConnection {
 	return NewDoozerConnectionFromConfig(DoozerConfig{
 		Uri:          uri,
 		BootUri:      boot,
@@ -60,9 +61,9 @@ func NewDoozerConnection(uri, boot string, discover bool,
 }
 
 func NewDoozerConnectionFromConfig(config DoozerConfig,
-	logger SemanticLogger) (d *DoozerConnection) {
+	logger log.SemanticLogger) (d *DoozerConnection) {
 	if logger == nil {
-		logger = NewConsoleSemanticLogger("doozer", os.Stderr)
+		logger = log.NewConsoleSemanticLogger("doozer", os.Stderr)
 	}
 
 	d = &DoozerConnection{

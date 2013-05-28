@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/client"
+	"github.com/skynetservices/skynet/log"
 	"os"
 )
 
@@ -12,7 +13,7 @@ func main() {
 
 	var err error
 
-	config.Log = skynet.NewConsoleSemanticLogger("TestServiceClient", os.Stderr)
+	config.Log = log.NewConsoleSemanticLogger("TestServiceClient", os.Stderr)
 
 	client := client.NewClient(config)
 

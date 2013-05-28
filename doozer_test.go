@@ -1,12 +1,13 @@
 package skynet
 
 import (
+	"github.com/skynetservices/skynet/log"
 	"os"
 	"testing"
 )
 
 func TestNewDoozerConnection(t *testing.T) {
-	logger := NewConsoleSemanticLogger("test_logger", os.Stdout)
+	logger := log.NewConsoleSemanticLogger("test_logger", os.Stdout)
 
 	doozer := NewDoozerConnection("localhost:1234", "localhost:4321", true, logger)
 
@@ -36,7 +37,7 @@ func TestNewDoozerConnectionDefaultLogger(t *testing.T) {
 }
 
 func TestNewDoozerConnectionFromConfig(t *testing.T) {
-	logger := NewConsoleSemanticLogger("test_logger2", os.Stdout)
+	logger := log.NewConsoleSemanticLogger("test_logger2", os.Stdout)
 
 	config := DoozerConfig{
 		Uri:          "localhost:1234",

@@ -1,4 +1,4 @@
-package skynet
+package log
 
 type MultiSemanticLogger []SemanticLogger
 

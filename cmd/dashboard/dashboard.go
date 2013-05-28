@@ -6,6 +6,7 @@ import (
 	"flag"
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/client"
+	"github.com/skynetservices/skynet/log"
 	"html/template"
 	"net/http"
 	"os"
@@ -15,7 +16,7 @@ import (
 var layoutTmpl *template.Template
 var indexTmpl *template.Template
 
-var log skynet.SemanticLogger
+var logger log.SemanticLogger
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	buf := new(bytes.Buffer)
@@ -47,8 +48,8 @@ func main() {
 
 	flag.Parse()
 
-	clog := skynet.NewConsoleSemanticLogger("dashboard", os.Stderr)
-	log = skynet.NewMultiSemanticLogger(clog)
+	clog := log.NewConsoleSemanticLogger("dashboard", os.Stderr)
+	logger = log.NewMultiSemanticLogger(clog)
 
 	DC = Doozer()
 
@@ -69,14 +70,14 @@ func main() {
 
 	err = http.ListenAndServe(*addr, nil)
 	if err != nil {
-		log.Fatal("ListenAndServe: " + err.Error())
+		logger.Fatal("ListenAndServe: " + err.Error())
 	}
 }
 
 func Doozer() *skynet.DoozerConnection {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("Failed to connect to Doozer")
+			logger.Error("Failed to connect to Doozer")
 			os.Exit(1)
 		}
 	}()

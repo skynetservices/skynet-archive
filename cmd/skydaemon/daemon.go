@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/daemon"
+	"github.com/skynetservices/skynet/log"
 	"github.com/skynetservices/skynet/service"
 	"sync"
 )
 
 // SkynetDaemon is a service for administering other services
 type SkynetDaemon struct {
-	Log         skynet.SemanticLogger
+	Log         log.SemanticLogger
 	Services    map[string]*SubService
 	serviceLock sync.Mutex
 	Service     *service.Service

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/log"
 	"github.com/skynetservices/skynet/pools"
 	"github.com/skynetservices/skynet/rpc/bsonrpc"
 	"net"
@@ -37,7 +38,7 @@ type Client struct {
 	DoozerConn *skynet.DoozerConnection
 
 	Config *skynet.ClientConfig
-	Log    skynet.SemanticLogger `json:"-"`
+	Log    log.SemanticLogger `json:"-"`
 
 	servicePools    map[string]*servicePool
 	instanceMonitor *InstanceMonitor
@@ -46,7 +47,7 @@ type Client struct {
 func NewClient(config *skynet.ClientConfig) *Client {
 	// Sanity checks (nil pointers are baaad)
 	if config.Log == nil {
-		config.Log = skynet.NewConsoleSemanticLogger("skynet", os.Stderr)
+		config.Log = log.NewConsoleSemanticLogger("skynet", os.Stderr)
 	}
 
 	if config.DoozerConfig == nil {

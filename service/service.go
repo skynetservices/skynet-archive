@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/log"
 	"github.com/skynetservices/skynet/rpc/bsonrpc"
 	"net"
 	"net/rpc"
@@ -42,7 +43,7 @@ type Service struct {
 	// for waiting for all shutdown operations
 	doneGroup *sync.WaitGroup
 
-	Log skynet.SemanticLogger
+	Log log.SemanticLogger
 
 	RPCServ *rpc.Server
 	Admin   *ServiceAdmin
@@ -336,7 +337,7 @@ func (s *Service) cleanupDoozerEntriesForAddr(addr *skynet.BindAddr) {
 
 func (s *Service) UpdateDoozerServiceInfo() {
 
-	// We're going to create a copy of our ServiceInfo so that we can nil out the Stats, which will match the omitempty and won't marshal 
+	// We're going to create a copy of our ServiceInfo so that we can nil out the Stats, which will match the omitempty and won't marshal
 	// this is cheap as it's a single bool, and 2 pointers.
 	si := s.ServiceInfo
 	si.Stats = nil
@@ -424,7 +425,7 @@ func (s *Service) Shutdown() {
 
 func initializeConfig(c *skynet.ServiceConfig) {
 	if c.Log == nil {
-		c.Log = skynet.NewConsoleSemanticLogger("skynet", os.Stderr)
+		c.Log = log.NewConsoleSemanticLogger("skynet", os.Stderr)
 	}
 
 	if c.Name == "" {

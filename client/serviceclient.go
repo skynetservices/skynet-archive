@@ -5,6 +5,7 @@ import (
 	"github.com/skynetservices/doozer"
 	"github.com/skynetservices/mgo/bson"
 	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/log"
 	"github.com/skynetservices/skynet/pools"
 	"time"
 )
@@ -59,7 +60,7 @@ type ServiceClientInterface interface {
 
 type ServiceClient struct {
 	client  *Client
-	Log     skynet.SemanticLogger `json:"-"`
+	Log     log.SemanticLogger `json:"-"`
 	cconfig *skynet.ClientConfig
 	query   *skynet.Query
 	// a list of the known instances

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/log"
 	"os"
 	"strconv"
 )
@@ -22,7 +23,7 @@ var DC *skynet.DoozerConnection
 var config *skynet.ClientConfig
 
 func main() {
-	logger := skynet.NewConsoleSemanticLogger("Sky", os.Stdout)
+	logger := log.NewConsoleSemanticLogger("Sky", os.Stdout)
 	flagsetArgs, additionalArgs := skynet.SplitFlagsetFromArgs(flagset, os.Args[1:])
 
 	c, args := skynet.GetClientConfigFromFlags(additionalArgs)
