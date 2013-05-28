@@ -47,12 +47,23 @@ jQuery(document).ready(function ($) {
       },
 
       uptime: function(){
-        var startTime = this.get("stats")['StartTime'];
+        var stats = this.get("stats");
+        var startTime = ""
+
+        if(stats !== undefined){ 
+          startTime = this.get("stats")['StartTime'];
+        }
+
         return startTime == "" ? "" : startTime;
       },
 
       averageResponseTime: function(){
-        var responseTime = this.get("stats")['AverageResponseTime'];
+        var responseTime = ""
+        var stats = this.get("stats");
+
+        if(stats !== undefined){ 
+          responseTime = this.get("stats")['AverageResponseTime'];
+        }
 
         if(responseTime == ""){
           return ""

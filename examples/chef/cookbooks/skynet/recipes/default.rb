@@ -26,7 +26,7 @@ execute "download-skynet" do
   # need to pull down the repo via git so we can actually use the correct branch
   # in cases of master failing the deploy will fail and we never switch to our branch
   command %Q{
-    go get github.com/skynetservices/go-shellquote && go get github.com/skynetservices/liner && go get github.com/skynetservices/mgo && cd /opt/local/gopath/src/github.com/skynetservices && git clone https://github.com/skynetservices/skynet.git
+    go get github.com/skynetservices/go-shellquote && go get github.com/skynetservices/liner && cd /opt/local/gopath/src/github.com/skynetservices && git clone https://github.com/skynetservices/skynet.git
   }
 
   not_if do
@@ -42,12 +42,9 @@ execute "set-environment-variables" do
   ENV['SKYNET_BIND_IP'] = node[:skynet_bind_ip]
   ENV['SKYNET_MIN_PORT'] = node[:skynet_min_port]
   ENV['SKYNET_MAX_PORT'] = node[:skynet_max_port]
-  ENV['SKYNET_MGOSERVER'] = node[:skynet_mgoserver]
-  ENV['SKYNET_MGODB'] = node[:skynet_mgoserver]
-
 
   command %Q{
-    echo "export SKYNET_REGION=#{node[:skynet_region]}\nexport SKYNET_DZHOST=#{node[:skynet_dzhost]}\nexport SKYNET_DZNSHOST=#{node[:skynet_dznshost]}\nexport SKYNET_DZDISCOVER=#{node[:skynet_dzdizcover]}\nexport SKYNET_BIND_IP=#{node[:skynet_bind_ip]}\nexport SKYNET_MIN_PORT=#{node[:skynet_min_port]}\nexport SKYNET_MAX_PORT=#{node[:skynet_max_port]}\nexport SKYNET_MGOSERVER=#{node[:skynet_mgoserver]}\nexport SKYNET_MGODB=#{node[:skynet_mgodb]}" > /etc/profile.d/skynet_env.sh
+    echo "export SKYNET_REGION=#{node[:skynet_region]}\nexport SKYNET_DZHOST=#{node[:skynet_dzhost]}\nexport SKYNET_DZNSHOST=#{node[:skynet_dznshost]}\nexport SKYNET_DZDISCOVER=#{node[:skynet_dzdizcover]}\nexport SKYNET_BIND_IP=#{node[:skynet_bind_ip]}\nexport SKYNET_MIN_PORT=#{node[:skynet_min_port]}\nexport SKYNET_MAX_PORT=#{node[:skynet_max_port]}" > /etc/profile.d/skynet_env.sh
   }
 
   not_if "ls /etc/profile.d/skynet_env.sh"

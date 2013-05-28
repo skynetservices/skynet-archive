@@ -28,14 +28,8 @@ func main() {
 	// skydaemon does not listen to admin RPC requests
 	config.AdminAddr = nil
 
-	var err error
-	mlogger, err := skynet.NewMongoSemanticLogger(config.MongoConfig.MongoHosts, "skynet",
-		"log", config.UUID)
 	clogger := skynet.NewConsoleSemanticLogger("skydaemon", os.Stdout)
-	config.Log = skynet.NewMultiSemanticLogger(mlogger, clogger)
-	if err != nil {
-		config.Log.Trace("Could not connect to mongo db for logging")
-	}
+	config.Log = skynet.NewMultiSemanticLogger(clogger)
 
 	deployment := &SkynetDaemon{
 		Log:      config.Log,

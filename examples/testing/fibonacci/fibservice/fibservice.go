@@ -118,14 +118,8 @@ func main() {
 		config.Region = "Jersey"
 	}
 
-	var err error
-	mlogger, err := skynet.NewMongoSemanticLogger("localhost", "skynet",
-		"log", config.UUID)
 	clogger := skynet.NewConsoleSemanticLogger("fibservice", os.Stdout)
-	config.Log = skynet.NewMultiSemanticLogger(mlogger, clogger)
-	if err != nil {
-		config.Log.Error("Could not connect to mongo db for logging")
-	}
+	config.Log = skynet.NewMultiSemanticLogger(clogger)
 	service := service.CreateService(f, config)
 
 	// handle panic so that we remove ourselves from the pool in case

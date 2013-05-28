@@ -22,9 +22,3 @@ SKYNET_MAX_PORT=9999
 
 SKYNET_REGION=unknown
 	The service's self-reported region.
-
-SKYNET_MGOSERVER=localhost:27017
-  The address of mongodb for logging
-
-SKYNET_MGODB=log
-  The name of the logging mongo database

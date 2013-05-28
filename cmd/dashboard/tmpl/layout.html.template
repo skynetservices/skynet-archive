@@ -35,13 +35,6 @@
     <div class="twelve columns nav">
       <ul id="main-nav" class="nav-bar">
         <li><a href="/">Dashboard</a></li>
-        <li class="has-flyout">
-          <a href="#">Logs</a>
-          <a href="#" class="flyout-toggle"><span> </span></a>
-          <ul class="flyout">
-            <li><a href="/logs/search">Search</a></li>
-          </ul>
-        </li>
       </ul>
     </div>
     <div class="twelve columns">
