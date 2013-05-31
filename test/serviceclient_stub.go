@@ -1,4 +1,4 @@
-package skytest
+package test
 
 import (
 	"github.com/skynetservices/skynet"

@@ -22,7 +22,7 @@ build daemon
 build pools
 
 # Test helpers
-build skytest
+build test
 
 # Build RPC
 build rpc/bsonrpc
@@ -44,13 +44,3 @@ build examples/service
 build examples/tutorial/client
 
 build examples/tutorial/service
-
-build examples/testing/fibonacci/fibclient
-
-build examples/testing/fibonacci/fibservice
-
-build examples/testing/sleeper/sleepclient
-
-build examples/testing/sleeper/sleepservice
-
-build examples/testing/vagranttests
