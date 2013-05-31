@@ -7,6 +7,7 @@ import (
 	"github.com/skynetservices/skynet/daemon"
 	"github.com/skynetservices/skynet/log"
 	"github.com/skynetservices/skynet/service"
+	"github.com/skynetservices/skynet/stats"
 	"sync"
 )
 
@@ -16,6 +17,7 @@ type SkynetDaemon struct {
 	Services    map[string]*SubService
 	serviceLock sync.Mutex
 	Service     *service.Service
+	HostStats   stats.Host
 }
 
 func (sd *SkynetDaemon) Registered(s *service.Service)   {}
@@ -56,6 +58,11 @@ func (s *SkynetDaemon) Start(requestInfo *skynet.RequestInfo, in daemon.StartReq
 	}
 
 	return
+}
+
+func (s *SkynetDaemon) UpdateHostStats(ss *service.Service) {
+	s.HostStats.Update()
+	ss.ServiceInfo.Stats.Metrics = s.HostStats
 }
 
 func (s *SkynetDaemon) getSubService(uuid string) (ss *SubService) {

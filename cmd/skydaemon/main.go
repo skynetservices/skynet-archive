@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 )
 
 // Daemon will run and maintain skynet services.
@@ -41,12 +42,13 @@ func main() {
 	deployment.Service = s
 
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
-	/*defer func() {
+	defer func() {
 		s.Shutdown()
 		if err := recover(); err != nil {
-			log.Println("Unrecovered error occured: ", err)
+			e := err.(error)
+			s.Log.Fatal("Unrecovered error occured: " + e.Error())
 		}
-	}()*/
+	}()
 
 	if len(args) == 1 {
 		err := deployConfig(deployment, args[0])
@@ -54,6 +56,14 @@ func main() {
 			config.Log.Error(err.Error())
 		}
 	}
+
+	// Collect Host metrics
+	statTicker := time.Tick((5 * time.Second))
+	go func() {
+		for _ = range statTicker {
+			deployment.UpdateHostStats(s)
+		}
+	}()
 
 	// If we pass false here service will not be Registered
 	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready

@@ -28,6 +28,7 @@ type ServiceStatistics struct {
 	// TotalDuration is the total time taken by all requests made to
 	// this service.
 	TotalDuration time.Duration `json:"-"`
+	Metrics       interface{}   `json:",omitempty"`
 }
 
 // ServiceInfo is the publicly reported information about a particular

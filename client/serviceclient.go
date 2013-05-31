@@ -10,39 +10,6 @@ import (
 	"time"
 )
 
-const DEBUG = false
-
-func dbg(items ...interface{}) {
-	if DEBUG {
-		fmt.Println(items...)
-	}
-}
-
-func dbgf(format string, items ...interface{}) {
-	if DEBUG {
-		fmt.Printf(format, items...)
-	}
-}
-
-func dbgerr(name string, err error) {
-	if err != nil {
-		dbgf("(%s) %v\n", name, err)
-	}
-}
-
-const TRACE = false
-
-func ts(name string, items ...interface{}) {
-	if TRACE {
-		fmt.Printf("+%s %v\n", name, items)
-	}
-}
-func te(name string, items ...interface{}) {
-	if TRACE {
-		fmt.Printf("-%s %v\n", name, items)
-	}
-}
-
 type serviceError struct {
 	msg string
 }
@@ -290,9 +257,6 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 	attempts chan sendAttempt, ri *skynet.RequestInfo,
 	fn string, in interface{}) {
 
-	ts("attemptSend")
-	defer te("attemptSend")
-
 	// first find an available instance
 	var instance *skynet.ServiceInfo
 	var r pools.Resource
@@ -301,18 +265,13 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 		var ok bool
 		instance, ok = c.chooser.Choose(timeout)
 		if !ok {
-			dbg("timed out")
 			// must have timed out
 			return
 		}
-		dbg("chose", getInstanceKey(instance))
 		sp := c.instances[getInstanceKey(instance)]
 
 		// then, get a connection to that instance
-		dbg("acquiring connection")
 		r, err = sp.pool.Acquire()
-		dbgerr("sp.pool.Acquire", err)
-		dbg("acquired connection")
 		defer sp.pool.Release(r)
 		if err != nil {
 			if r != nil {
@@ -336,7 +295,6 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 	sr := r.(ServiceResource)
 
 	result, serviceErr, err := c.sendToInstance(sr, ri, fn, in)
-	dbgerr("c.sendToInstance", err)
 	if err != nil {
 		// some communication error happened, shut down this connection and remove it from the pool
 		sr.Close()
@@ -355,11 +313,8 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 func (c *ServiceClient) sendToInstance(sr ServiceResource,
 	requestInfo *skynet.RequestInfo, funcName string, in interface{}) (
 	result []byte, serviceErr, err error) {
-	ts("sendToInstance", requestInfo)
-	defer te("sendToInstance", requestInfo)
 
 	sr.service.FetchStats(c.client.doozer())
-	dbgf("stats: %+v\n", sr.service.Stats)
 
 	sin := skynet.ServiceRPCIn{
 		RequestInfo: requestInfo,
@@ -378,7 +333,6 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource,
 	err = sr.rpcClient.Call(sr.service.Config.Name+".Forward", sin, &sout)
 	if err != nil {
 		sr.Close()
-		dbg("(sr.rpcClient.Call)", err)
 
 		// Log failure
 		c.Log.Error("Error calling sr.rpcClient.Call: " + err.Error())
