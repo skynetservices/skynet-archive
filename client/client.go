@@ -99,9 +99,6 @@ func (c *Client) getServicePool(instance *skynet.ServiceInfo) (sp *servicePool) 
 		return
 	}
 
-	dbgf("making service pool, size = %d, %d\n",
-		c.Config.IdleConnectionsToInstance, c.Config.MaxConnectionsToInstance)
-
 	sp = &servicePool{
 		service: instance,
 		pool: pools.NewResourcePool(getConnectionFactory(instance),
