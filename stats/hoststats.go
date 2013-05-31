@@ -1,10 +1,10 @@
-package metrics
+package stats
 
 import (
 	"github.com/jondot/gosigar"
 )
 
-type HostStats struct {
+type Host struct {
 	Uptime      sigar.Uptime
 	LoadAverage sigar.LoadAverage
 	Mem         sigar.Mem
@@ -12,10 +12,10 @@ type HostStats struct {
 	Cpu         sigar.Cpu
 }
 
-func (hs *HostStats) Update() {
-	hs.Uptime.Get()
-	hs.LoadAverage.Get()
-	hs.Mem.Get()
-	hs.Swap.Get()
-	hs.Cpu.Get()
+func (h *Host) Update() {
+	h.Uptime.Get()
+	h.LoadAverage.Get()
+	h.Mem.Get()
+	h.Swap.Get()
+	h.Cpu.Get()
 }

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/daemon"
-	"github.com/skynetservices/skynet/metrics"
 	"github.com/skynetservices/skynet/service"
+	"github.com/skynetservices/skynet/stats"
 	"sync"
 )
 
@@ -16,7 +16,7 @@ type SkynetDaemon struct {
 	Services    map[string]*SubService
 	serviceLock sync.Mutex
 	Service     *service.Service
-	HostStats   metrics.HostStats
+	HostStats   stats.Host
 }
 
 func (sd *SkynetDaemon) Registered(s *service.Service)   {}
