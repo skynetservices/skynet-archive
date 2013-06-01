@@ -64,7 +64,7 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
 	rpcForwarder := NewServiceRPC(s)
-	s.RPCServ.RegisterName("foo", rpcForwarder)
+	s.RPCServ.RegisterName(s.Config.Name, rpcForwarder)
 
 	return
 }

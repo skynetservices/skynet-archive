@@ -56,9 +56,7 @@ func main() {
 	// If we pass false here service will not be Registered we could
 	// do other work/tasks by implementing the Started method and
 	// calling Register() when we're ready
-	fmt.Println("test")
 	waiter := service.Start(true)
-	fmt.Println("test2")
 
 	// waiting on the sync.WaitGroup returned by service.Start() will
 	// wait for the service to finish running.
