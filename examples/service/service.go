@@ -1,30 +1,18 @@
-//Copyright (c) 2012 Brian Ketelsen
-
-//Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package main
 
 import (
 	"fmt"
 	"github.com/skynetservices/skynet"
-	"github.com/skynetservices/skynet/log"
-	"github.com/skynetservices/skynet/service"
-	"os"
+	"github.com/skynetservices/skynet/service2"
 	"strings"
 )
 
-type TestService struct {
-	Log log.SemanticLogger
-}
+type TestService struct{}
 
 func (s *TestService) Registered(service *service.Service)   {}
 func (s *TestService) Unregistered(service *service.Service) {}
 func (s *TestService) Started(service *service.Service)      {}
 func (s *TestService) Stopped(service *service.Service) {
-	s.Log.Trace("Stopped")
 }
 
 func NewTestService() *TestService {
@@ -54,9 +42,6 @@ func main() {
 		config.Region = "Clearwater"
 	}
 
-	clogger := log.NewConsoleSemanticLogger("TestService", os.Stdout)
-	testService.Log = log.NewMultiSemanticLogger(clogger)
-	config.Log = testService.Log
 	service := service.CreateService(testService, config)
 
 	// handle panic so that we remove ourselves from the pool in case
@@ -71,7 +56,9 @@ func main() {
 	// If we pass false here service will not be Registered we could
 	// do other work/tasks by implementing the Started method and
 	// calling Register() when we're ready
+	fmt.Println("test")
 	waiter := service.Start(true)
+	fmt.Println("test2")
 
 	// waiting on the sync.WaitGroup returned by service.Start() will
 	// wait for the service to finish running.
