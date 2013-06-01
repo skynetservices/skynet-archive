@@ -4,16 +4,12 @@ import (
 	"fmt"
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/client"
-	"github.com/skynetservices/skynet/log"
-	"os"
 )
 
 func main() {
 	config, _ := skynet.GetClientConfig()
 
 	var err error
-
-	config.Log = log.NewConsoleSemanticLogger("TestServiceClient", os.Stderr)
 
 	client := client.NewClient(config)
 

@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/skynetservices/skynet"
-	"github.com/skynetservices/skynet/log"
 	"os"
 	"strconv"
 )
@@ -23,12 +22,10 @@ var DC *skynet.DoozerConnection
 var config *skynet.ClientConfig
 
 func main() {
-	logger := log.NewConsoleSemanticLogger("Sky", os.Stdout)
 	flagsetArgs, additionalArgs := skynet.SplitFlagsetFromArgs(flagset, os.Args[1:])
 
 	c, args := skynet.GetClientConfigFromFlags(additionalArgs)
 	c.MaxConnectionsToInstance = 10
-	c.Log = logger
 
 	config = c
 
@@ -112,7 +109,7 @@ func Connect(dcfg *skynet.DoozerConfig) *skynet.DoozerConnection {
 	}()
 
 	// TODO: This needs to come from command line, or environment variable
-	conn := skynet.NewDoozerConnection(dcfg.Uri, "", false, nil) // nil as the last param will default to a Stdout logger
+	conn := skynet.NewDoozerConnection(dcfg.Uri, "", false)
 	conn.Connect()
 
 	return conn

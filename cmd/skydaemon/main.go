@@ -29,11 +29,7 @@ func main() {
 	// skydaemon does not listen to admin RPC requests
 	config.AdminAddr = nil
 
-	clogger := log.NewConsoleSemanticLogger("skydaemon", os.Stdout)
-	config.Log = log.NewMultiSemanticLogger(clogger)
-
 	deployment := &SkynetDaemon{
-		Log:      config.Log,
 		Services: map[string]*SubService{},
 	}
 
@@ -46,14 +42,14 @@ func main() {
 		s.Shutdown()
 		if err := recover(); err != nil {
 			e := err.(error)
-			s.Log.Fatal("Unrecovered error occured: " + e.Error())
+			log.Fatal("Unrecovered error occured: " + e.Error())
 		}
 	}()
 
 	if len(args) == 1 {
 		err := deployConfig(deployment, args[0])
 		if err != nil {
-			config.Log.Error(err.Error())
+			log.Println(log.ERROR, err.Error())
 		}
 	}
 

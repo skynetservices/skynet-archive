@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/skynetservices/doozer"
 	"github.com/skynetservices/skynet/log"
-	"os"
 	"path"
 	"sync"
 )
@@ -37,7 +36,6 @@ type doozerconn interface {
 type DoozerConnection struct {
 	Config     *DoozerConfig
 	connection doozerconn
-	Log        log.SemanticLogger
 
 	connectionMutex sync.Mutex
 
@@ -51,24 +49,17 @@ type DoozerConnection struct {
 	muxing bool
 }
 
-func NewDoozerConnection(uri, boot string, discover bool,
-	logger log.SemanticLogger) *DoozerConnection {
+func NewDoozerConnection(uri, boot string, discover bool) *DoozerConnection {
 	return NewDoozerConnectionFromConfig(DoozerConfig{
 		Uri:          uri,
 		BootUri:      boot,
 		AutoDiscover: discover,
-	}, logger)
+	})
 }
 
-func NewDoozerConnectionFromConfig(config DoozerConfig,
-	logger log.SemanticLogger) (d *DoozerConnection) {
-	if logger == nil {
-		logger = log.NewConsoleSemanticLogger("doozer", os.Stderr)
-	}
-
+func NewDoozerConnectionFromConfig(config DoozerConfig) (d *DoozerConnection) {
 	d = &DoozerConnection{
 		Config:          &config,
-		Log:             logger,
 		instancesChan:   make(chan interface{}, 1),
 		connChan:        make(chan doozerconn),
 		dialChan:        make(chan dialInstance),
@@ -90,11 +81,11 @@ func (d *DoozerConnection) mux() {
 			switch m := m.(type) {
 			case DoozerDiscovered:
 				// Log event
-				d.Log.Debug(fmt.Sprintf("DoozerDiscovered: %+v", m))
+				log.Printf(log.DEBUG, "DoozerDiscovered: %+v", m)
 				d.doozerInstances[m.DoozerServer.Key] = m.DoozerServer
 			case DoozerRemoved:
 				// Log event
-				d.Log.Debug(fmt.Sprintf("DoozerRemoved: %+v", m))
+				log.Printf(log.DEBUG, "DoozerRemoved: %+v", m)
 
 				delete(d.doozerInstances, m.DoozerServer.Key)
 			}
@@ -164,7 +155,7 @@ func (d *DoozerConnection) dialMux(server string, boot string) error {
 	//d.Log.Println("Connected to Doozer Instance: " + server)
 	connected := DoozerConnected{Addr: server}
 	// Log connection
-	d.Log.Trace(fmt.Sprintf("%T: %+v", connected, connected))
+	log.Printf(log.TRACE, "%T: %+v", connected, connected)
 
 	return nil
 }
@@ -175,16 +166,16 @@ func (d *DoozerConnection) recoverFromError(err interface{}) {
 		connection := DoozerLostConnection{DoozerConfig: d.Config}
 		msg := "Lost connection to Doozer: Reconnecting... "
 		msg += fmt.Sprintf("%T: %+v", connection, connection)
-		d.Log.Debug(msg)
+		log.Println(log.DEBUG, msg)
 
 		dialErr := d.dialAnInstance()
 		if dialErr != nil {
-			d.Log.Fatal("Couldn't reconnect to doozer")
+			log.Fatal("Couldn't reconnect to doozer")
 		}
 
 	} else {
 		// Don't know how to handle, go ahead and panic
-		d.Log.Fatal(fmt.Sprintf("Unknown doozer error: %+v", err))
+		log.Fatal(fmt.Sprintf("Unknown doozer error: %+v", err))
 	}
 }
 
@@ -205,7 +196,7 @@ func (d *DoozerConnection) monitorCluster() {
 		// blocking wait call returns on a change
 		ev, err := d.Wait("/ctl/cal/*", rev+1)
 		if err != nil {
-			d.Log.Fatal("Error near d.Wait: " + err.Error())
+			log.Fatal("Error near d.Wait: " + err.Error())
 		}
 
 		buf := bytes.NewBuffer(ev.Body)
@@ -247,7 +238,7 @@ func (d *DoozerConnection) getDoozerServer(key string) *DoozerServer {
 
 func (d *DoozerConnection) Connect() {
 	if d.Config == nil || (d.Config.Uri == "" && d.Config.BootUri == "") {
-		d.Log.Fatal("You must supply a doozer server and/or boot uri")
+		log.Fatal("You must supply a doozer server and/or boot uri")
 	}
 	if !d.muxing {
 		d.muxing = true
@@ -258,7 +249,7 @@ func (d *DoozerConnection) Connect() {
 	if err != nil {
 		msg := "Failed to connect to any of the supplied "
 		msg += "Doozer Servers: " + err.Error()
-		d.Log.Fatal(msg)
+		log.Fatal(msg)
 	}
 
 	// Let's watch doozers internal config to check for new servers
@@ -301,7 +292,7 @@ func (d *DoozerConnection) GetCurrentRevision() (rev int64) {
 	revision, err := d.Connection().Rev()
 
 	if err != nil {
-		d.Log.Fatal("Error near d.Connection().Rev(): " + err.Error())
+		log.Fatal("Error near d.Connection().Rev(): " + err.Error())
 	}
 
 	return revision

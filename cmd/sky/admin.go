@@ -6,6 +6,7 @@ import (
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/client"
 	"github.com/skynetservices/skynet/daemon"
+	"github.com/skynetservices/skynet/log"
 	"os"
 	"strings"
 	"text/template"
@@ -19,7 +20,7 @@ func Register(q *skynet.Query) {
 		}
 		_, err := cladmin.Register(skynet.RegisterRequest{})
 		if err != nil {
-			config.Log.Error(err.Error())
+			log.Println(log.ERROR, err.Error())
 		}
 	}
 }
@@ -32,7 +33,7 @@ func Unregister(q *skynet.Query) {
 		}
 		_, err := cladmin.Unregister(skynet.UnregisterRequest{})
 		if err != nil {
-			config.Log.Error(err.Error())
+			log.Println(log.ERROR, err.Error())
 		}
 	}
 }
@@ -150,7 +151,7 @@ func AdminStop(q *skynet.Query) {
 			WaitForClients: true,
 		})
 		if err != nil {
-			config.Log.Error(err.Error())
+			log.Println(log.ERROR, err.Error())
 		}
 	}
 }

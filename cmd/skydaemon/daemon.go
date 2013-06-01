@@ -13,7 +13,6 @@ import (
 
 // SkynetDaemon is a service for administering other services
 type SkynetDaemon struct {
-	Log         log.SemanticLogger
 	Services    map[string]*SubService
 	serviceLock sync.Mutex
 	Service     *service.Service
@@ -32,10 +31,10 @@ func (sd *SkynetDaemon) Stopped(s *service.Service) {
 func (s *SkynetDaemon) Start(requestInfo *skynet.RequestInfo, in daemon.StartRequest, out *daemon.StartResponse) (err error) {
 	out.UUID = skynet.UUID()
 
-	s.Log.Trace(fmt.Sprintf("%+v", SubserviceStart{
+	log.Printf(log.TRACE, "%+v", SubserviceStart{
 		ServicePath: in.ServicePath,
 		Args:        in.Args,
-	}))
+	})
 
 	ss, err := NewSubService(s, in.ServicePath, in.Args, out.UUID)
 	if err != nil {

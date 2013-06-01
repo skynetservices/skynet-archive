@@ -2,14 +2,12 @@ package client
 
 import (
 	"errors"
-	"fmt"
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/log"
 	"github.com/skynetservices/skynet/pools"
 	"github.com/skynetservices/skynet/rpc/bsonrpc"
 	"net"
 	"net/rpc"
-	"os"
 	"sync"
 )
 
@@ -38,7 +36,6 @@ type Client struct {
 	DoozerConn *skynet.DoozerConnection
 
 	Config *skynet.ClientConfig
-	Log    log.SemanticLogger `json:"-"`
 
 	servicePools    map[string]*servicePool
 	instanceMonitor *InstanceMonitor
@@ -46,28 +43,22 @@ type Client struct {
 
 func NewClient(config *skynet.ClientConfig) *Client {
 	// Sanity checks (nil pointers are baaad)
-	if config.Log == nil {
-		config.Log = log.NewConsoleSemanticLogger("skynet", os.Stderr)
-	}
-
 	if config.DoozerConfig == nil {
 		config.DoozerConfig = &skynet.DoozerConfig{Uri: "localhost:8046"}
 	}
 
 	if config.MaxConnectionsToInstance == 0 {
-		config.Log.Fatal("Must allow at least one instance connection")
+		log.Fatal("Must allow at least one instance connection")
 	}
 
-	doozerConn := skynet.NewDoozerConnectionFromConfig(*config.DoozerConfig,
-		config.Log)
+	doozerConn := skynet.NewDoozerConnectionFromConfig(*config.DoozerConfig)
 	client := &Client{
 		Config:       config,
 		DoozerConn:   doozerConn,
-		Log:          config.Log,
 		servicePools: map[string]*servicePool{},
 	}
 
-	client.Log.Trace(fmt.Sprintf("Created client '%+v'", client))
+	log.Printf(log.TRACE, "Created client '%+v'", client)
 
 	client.DoozerConn.Connect()
 
@@ -78,8 +69,7 @@ func NewClient(config *skynet.ClientConfig) *Client {
 
 func (c *Client) doozer() *skynet.DoozerConnection {
 	if c.DoozerConn == nil {
-		c.DoozerConn = skynet.NewDoozerConnectionFromConfig(
-			*c.Config.DoozerConfig, c.Config.Log)
+		c.DoozerConn = skynet.NewDoozerConnectionFromConfig(*c.Config.DoozerConfig)
 
 		c.DoozerConn.Connect()
 	}

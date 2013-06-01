@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/skynetservices/mgo/bson"
 	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/log"
 	"reflect"
 	"sync/atomic"
 	"time"
@@ -95,7 +96,7 @@ func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 		continue
 
 	problem:
-		fmt.Printf("Bad RPC method for %T: %q %v\n", s.Delegate, m.Name, f)
+		log.Printf(log.WARN, "Bad RPC method for %T: %q %v\n", s.Delegate, m.Name, f)
 	}
 
 	return
@@ -125,9 +126,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		RequestInfo: in.RequestInfo,
 	}
 
-	if srpc.service.Log != nil {
-		srpc.service.Log.Trace(fmt.Sprintf("%+v", mc))
-	}
+	log.Printf(log.TRACE, "%+v", mc)
 
 	m, ok := srpc.methods[in.Method]
 	if !ok {
@@ -152,7 +151,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	case reflect.Map:
 		outValue = reflect.MakeMap(outType)
 	default:
-		panic("illegal out param type")
+		log.Panic("illegal out param type")
 	}
 
 	srpc.service.Stats.LastRequest = time.Now().Format("2006-01-02T15:04:05Z-0700")
@@ -182,9 +181,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		Duration:    duration,
 	}
 
-	if srpc.service.Log != nil {
-		srpc.service.Log.Trace(fmt.Sprintf("%+v", mcp))
-	}
+	log.Printf(log.TRACE, "%+v", mcp)
 
 	out.Out, err = bson.Marshal(outValue.Interface())
 	if err != nil {

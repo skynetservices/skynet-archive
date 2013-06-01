@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/skynetservices/mgo/bson"
 	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/log"
 	"reflect"
 	"sync/atomic"
 	"time"
@@ -95,7 +96,7 @@ func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 		continue
 
 	problem:
-		fmt.Printf("Bad RPC method for %T: %q %v\n", s.Delegate, m.Name, f)
+		log.Printf(log.WARN, "Bad RPC method for %T: %q %v\n", s.Delegate, m.Name, f)
 	}
 
 	return
@@ -125,7 +126,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		RequestInfo: in.RequestInfo,
 	}
 
-	fmt.Printf("%+v", mc)
+	log.Printf(log.INFO, "%+v", mc)
 
 	m, ok := srpc.methods[in.Method]
 	if !ok {
@@ -180,7 +181,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		Duration:    duration,
 	}
 
-	fmt.Printf("%+v", mcp)
+	log.Printf(log.INFO, "%+v", mcp)
 
 	out.Out, err = bson.Marshal(outValue.Interface())
 	if err != nil {

@@ -16,8 +16,6 @@ import (
 var layoutTmpl *template.Template
 var indexTmpl *template.Template
 
-var logger log.SemanticLogger
-
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	buf := new(bytes.Buffer)
 	indexTmpl.Execute(buf, r.URL.Path)
@@ -48,9 +46,6 @@ func main() {
 
 	flag.Parse()
 
-	clog := log.NewConsoleSemanticLogger("dashboard", os.Stderr)
-	logger = log.NewMultiSemanticLogger(clog)
-
 	DC = Doozer()
 
 	http.HandleFunc("/", indexHandler)
@@ -70,20 +65,19 @@ func main() {
 
 	err = http.ListenAndServe(*addr, nil)
 	if err != nil {
-		logger.Fatal("ListenAndServe: " + err.Error())
+		log.Fatal("ListenAndServe: " + err.Error())
 	}
 }
 
 func Doozer() *skynet.DoozerConnection {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Error("Failed to connect to Doozer")
+			log.Panic("Failed to connect to Doozer")
 			os.Exit(1)
 		}
 	}()
 
-	// nil as the last param will default to a Stdout logger
-	conn := skynet.NewDoozerConnection(*doozer, *doozerboot, true, nil)
+	conn := skynet.NewDoozerConnection(*doozer, *doozerboot, true)
 	conn.Connect()
 
 	return conn

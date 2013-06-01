@@ -11,7 +11,6 @@ package skynet
 import (
 	"flag"
 	"fmt"
-	"github.com/skynetservices/skynet/log"
 	"net"
 	"os"
 	"strconv"
@@ -104,7 +103,6 @@ func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
 }
 
 type ServiceConfig struct {
-	Log                         log.SemanticLogger `json:"-" bson:"-"`
 	UUID                        string
 	Name                        string
 	Version                     string
@@ -120,8 +118,7 @@ type ServiceConfig struct {
 type ClientConfig struct {
 	Host                      string
 	Region                    string
-	Log                       log.SemanticLogger `json:"-" bson:"-"`
-	DoozerConfig              *DoozerConfig      `json:"-" bson:"-"`
+	DoozerConfig              *DoozerConfig `json:"-" bson:"-"`
 	IdleConnectionsToInstance int
 	MaxConnectionsToInstance  int
 	IdleTimeout               time.Duration

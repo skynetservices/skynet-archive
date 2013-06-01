@@ -27,7 +27,6 @@ type ServiceClientInterface interface {
 
 type ServiceClient struct {
 	client  *Client
-	Log     log.SemanticLogger `json:"-"`
 	cconfig *skynet.ClientConfig
 	query   *skynet.Query
 	// a list of the known instances
@@ -48,7 +47,6 @@ type ServiceClient struct {
 func newServiceClient(query *skynet.Query, c *Client) (sc *ServiceClient) {
 	sc = &ServiceClient{
 		client:        c,
-		Log:           c.Config.Log,
 		cconfig:       c.Config,
 		query:         query,
 		instances:     make(map[string]*servicePool),
@@ -94,7 +92,7 @@ func (c *ServiceClient) addInstanceMux(instance *skynet.ServiceInfo) {
 		c.instances[key] = c.client.getServicePool(m.Service)
 		c.chooser.Add(m.Service)
 		// Log event
-		c.Log.Debug(fmt.Sprintf("%T: %+v", m, m))
+		log.Printf(log.DEBUG, "%T: %+v", m, m)
 	}
 }
 
@@ -108,7 +106,7 @@ func (c *ServiceClient) removeInstanceMux(instance *skynet.ServiceInfo) {
 	c.chooser.Remove(m.Service)
 	delete(c.instances, m.Service.Config.ServiceAddr.String())
 	// Log event
-	c.Log.Trace(fmt.Sprintf("%T: %+v", m, m))
+	log.Printf(log.TRACE, "%T: %+v", m, m)
 }
 
 func (c *ServiceClient) mux() {
@@ -281,12 +279,12 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 			c.chooser.Remove(instance)
 			// Log failure
 			failed := FailedConnection{err}
-			c.Log.Error(fmt.Sprintf("%T: %+v", failed, failed))
+			log.Printf(log.ERROR, "%T: %+v", failed, failed)
 		}
 	}
 
 	if err != nil {
-		c.Log.Error(fmt.Sprintf("Error: %v", err))
+		log.Printf(log.ERROR, "Error: %v", err)
 
 		attempts <- sendAttempt{err: err}
 		return
@@ -335,7 +333,7 @@ func (c *ServiceClient) sendToInstance(sr ServiceResource,
 		sr.Close()
 
 		// Log failure
-		c.Log.Error("Error calling sr.rpcClient.Call: " + err.Error())
+		log.Println(log.ERROR, "Error calling sr.rpcClient.Call: "+err.Error())
 	}
 
 	if sout.ErrString != "" {
