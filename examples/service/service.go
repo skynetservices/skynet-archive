@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/log"
 	"github.com/skynetservices/skynet/service2"
 	"strings"
 )
@@ -26,6 +26,8 @@ func (s *TestService) Upcase(requestInfo *skynet.RequestInfo, in map[string]inte
 }
 
 func main() {
+	log.SetLogLevel(log.DEBUG)
+
 	testService := NewTestService()
 
 	config, _ := skynet.GetServiceConfig()
@@ -49,7 +51,7 @@ func main() {
 	defer func() {
 		service.Shutdown()
 		if err := recover(); err != nil {
-			fmt.Println("Unrecovered error occured: ", err)
+			log.Panic("Unrecovered error occured: ", err)
 		}
 	}()
 

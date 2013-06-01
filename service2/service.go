@@ -1,8 +1,8 @@
 package service
 
 import (
-	"fmt"
 	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/log"
 	"github.com/skynetservices/skynet/rpc/bsonrpc"
 	"net"
 	"net/rpc"
@@ -81,7 +81,7 @@ func (s *Service) register() {
 	}
 
 	s.Registered = true
-	fmt.Printf("%+v\n", ServiceRegistered{s.Config})
+	log.Printf(log.INFO, "%+v\n", ServiceRegistered{s.Config})
 	s.Delegate.Registered(s) // Call user defined callback
 }
 
@@ -96,7 +96,7 @@ func (s *Service) unregister() {
 		return
 	}
 	s.Registered = false
-	fmt.Printf("%+v", ServiceUnregistered{s.Config})
+	log.Printf(log.INFO, "%+v\n", ServiceUnregistered{s.Config})
 	s.Delegate.Unregistered(s) // Call user defined callback
 }
 
@@ -172,7 +172,7 @@ func (s *Service) listen(addr *skynet.BindAddr, bindWait *sync.WaitGroup) {
 		panic(err)
 	}
 
-	fmt.Printf("%+v", ServiceListening{
+	log.Printf(log.INFO, "%+v\n", ServiceListening{
 		Addr:          addr,
 		ServiceConfig: s.Config,
 	})
@@ -213,7 +213,7 @@ loop:
 			encoder := bsonrpc.NewEncoder(conn)
 			err := encoder.Encode(sh)
 			if err != nil {
-				fmt.Println(err.Error())
+				log.Println(log.ERROR, err.Error())
 
 				atomic.AddInt32(&s.Stats.Clients, -1)
 				break
@@ -229,7 +229,7 @@ loop:
 			decoder := bsonrpc.NewDecoder(conn)
 			err = decoder.Decode(&ch)
 			if err != nil {
-				fmt.Println("Error calling bsonrpc.NewDecoder: " + err.Error())
+				log.Println(log.ERROR, "Error calling bsonrpc.NewDecoder: "+err.Error())
 				atomic.AddInt32(&s.Stats.Clients, -1)
 				break
 			}
@@ -267,7 +267,7 @@ func watchSignals(c chan os.Signal, s *Service) {
 			// Trap signals for clean shutdown
 			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT,
 				syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
-				fmt.Printf("%+v", KillSignal{sig.(syscall.Signal)})
+				log.Printf(log.INFO, "%+v", KillSignal{sig.(syscall.Signal)})
 				s.Shutdown()
 			}
 		}

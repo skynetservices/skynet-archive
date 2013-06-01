@@ -28,7 +28,7 @@ const (
 
 func init() {
 	// Default the logger, implementors can override the Output if they'd like to change it
-	logger = log.New(os.Stdout, "skynet", log.LstdFlags)
+	logger = log.New(os.Stdout, "skynet: ", log.LstdFlags)
 }
 
 func Fatal(v ...interface{}) {
