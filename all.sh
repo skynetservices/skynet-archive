@@ -30,9 +30,6 @@ build rpc/bsonrpc
 # Build / Test sky
 build cmd/sky
 
-# Build / Test dashboard
-build cmd/dashboard
-
 # Build / Test skydaemon
 build cmd/skydaemon
 
