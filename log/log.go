@@ -5,6 +5,11 @@ import (
 	"os"
 )
 
+/* TODO:
+- Should prefix lines with log level
+- Should possibly add Debug, Debugf type helper methods
+*/
+
 var logger *log.Logger
 
 type LogLevel int8
