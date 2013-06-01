@@ -13,12 +13,10 @@ type M map[string]interface{}
 type EchoRPC struct {
 }
 
-func (e EchoRPC) Started(s *Service)                                       {}
-func (e EchoRPC) Stopped(s *Service)                                       {}
-func (e EchoRPC) Registered(s *Service)                                    {}
-func (e EchoRPC) Unregistered(s *Service)                                  {}
-func (e EchoRPC) MethodCalled(method string)                               {}
-func (e EchoRPC) MethodCompleted(method string, duration int64, err error) {}
+func (e EchoRPC) Started(s *Service)      {}
+func (e EchoRPC) Stopped(s *Service)      {}
+func (e EchoRPC) Registered(s *Service)   {}
+func (e EchoRPC) Unregistered(s *Service) {}
 
 func (e EchoRPC) Foo(rinfo *skynet.RequestInfo, in M, out *M) (err error) {
 	*out = M{

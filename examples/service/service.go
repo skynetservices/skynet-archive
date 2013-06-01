@@ -27,9 +27,6 @@ func (s *TestService) Stopped(service *service.Service) {
 	s.Log.Trace("Stopped")
 }
 
-func (s *TestService) MethodCalled(method string)                               {}
-func (s *TestService) MethodCompleted(method string, duration int64, err error) {}
-
 func NewTestService() *TestService {
 	r := &TestService{}
 	return r

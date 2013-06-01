@@ -26,8 +26,6 @@ type ServiceDelegate interface {
 	Stopped(s *Service)
 	Registered(s *Service)
 	Unregistered(s *Service)
-	MethodCalled(method string)
-	MethodCompleted(method string, duration int64, err error)
 }
 
 type ClientInfo struct {

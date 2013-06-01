@@ -29,9 +29,6 @@ func (sd *SkynetDaemon) Stopped(s *service.Service) {
 	sd.StopAllSubServices(&skynet.RequestInfo{}, daemon.StopAllSubServicesRequest{}, &daemon.StopAllSubServicesResponse{})
 }
 
-func (sd *SkynetDaemon) MethodCalled(method string)                               {}
-func (sd *SkynetDaemon) MethodCompleted(method string, duration int64, err error) {}
-
 func (s *SkynetDaemon) Start(requestInfo *skynet.RequestInfo, in daemon.StartRequest, out *daemon.StartResponse) (err error) {
 	out.UUID = skynet.UUID()
 
