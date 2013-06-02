@@ -3,8 +3,10 @@ package main
 import (
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/log"
-	"github.com/skynetservices/skynet/service2"
+	"github.com/skynetservices/skynet/service"
+	"github.com/skynetservices/zkmanager"
 	"strings"
+	"time"
 )
 
 type TestService struct{}
@@ -27,6 +29,7 @@ func (s *TestService) Upcase(requestInfo *skynet.RequestInfo, in map[string]inte
 
 func main() {
 	log.SetLogLevel(log.DEBUG)
+	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager("kratos:2181", 1*time.Second))
 
 	testService := NewTestService()
 

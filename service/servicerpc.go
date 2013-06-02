@@ -126,7 +126,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		RequestInfo: in.RequestInfo,
 	}
 
-	log.Printf(log.TRACE, "%+v", mc)
+	log.Printf(log.INFO, "%+v", mc)
 
 	m, ok := srpc.methods[in.Method]
 	if !ok {
@@ -151,7 +151,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	case reflect.Map:
 		outValue = reflect.MakeMap(outType)
 	default:
-		log.Panic("illegal out param type")
+		panic("illegal out param type")
 	}
 
 	srpc.service.Stats.LastRequest = time.Now().Format("2006-01-02T15:04:05Z-0700")
@@ -181,7 +181,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		Duration:    duration,
 	}
 
-	log.Printf(log.TRACE, "%+v", mcp)
+	log.Printf(log.INFO, "%+v", mcp)
 
 	out.Out, err = bson.Marshal(outValue.Interface())
 	if err != nil {
