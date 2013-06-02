@@ -23,10 +23,7 @@ func clearEnv() {
 func TestGetServiceConfigFromFlags(t *testing.T) {
 	clearEnv()
 
-	os.Args = []string{"test", "--l=localhost:1234", "--region=TestRegion",
-		"--doozer=localhost:8046", "--doozerboot=localhost:1232",
-		"--autodiscover=true",
-	}
+	os.Args = []string{"test", "--l=localhost:1234", "--region=TestRegion"}
 
 	config, _ := GetServiceConfigFromFlags(os.Args[1:])
 
@@ -40,18 +37,6 @@ func TestGetServiceConfigFromFlags(t *testing.T) {
 
 	if config.Region != "TestRegion" {
 		t.Error("Region not set through flag")
-	}
-
-	if config.DoozerConfig.Uri != "localhost:8046" {
-		t.Error("DoozerUri not set through flag")
-	}
-
-	if config.DoozerConfig.BootUri != "localhost:1232" {
-		t.Error("DoozerBootUri not set through flag")
-	}
-
-	if config.DoozerConfig.AutoDiscover != true {
-		t.Error("DoozerAutoDiscover not set through flag")
 	}
 }
 
@@ -72,19 +57,6 @@ func TestGetServiceConfigFromFlagsDefaults(t *testing.T) {
 
 	if config.Region != "unknown" {
 		t.Error("Region not set to default value")
-	}
-
-	if config.DoozerConfig.Uri != "127.0.0.1:8046" {
-		fmt.Println(config.DoozerConfig.Uri)
-		t.Error("DoozerUri not set to default value")
-	}
-
-	if config.DoozerConfig.BootUri != "127.0.0.1:8046" {
-		t.Error("DoozerBootUri not set to default value")
-	}
-
-	if config.DoozerConfig.AutoDiscover != true {
-		t.Error("DoozerAutoDiscover not set to default value")
 	}
 }
 

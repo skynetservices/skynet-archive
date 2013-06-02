@@ -2,15 +2,6 @@ ENV VARS
 
 Here is a list of environmental variables that are inspected by skylib.
 
-SKYNET_DZHOST=localhost:8046
-	Where skylib will look for a doozer instance. This list is colon-separated; multiple doozerd instance can be specified.
-
-SKYNET_DZNSHOST=localhost:8046
-	The host of a DZNS instance.
-
-SKYNET_DZDISCOVER=true
-	Automatically discover new doozerd instances to connect to.
-
 SKYNET_BIND_IP=127.0.0.1
   IP Address for skynet services to bind to
 

@@ -18,12 +18,7 @@ const (
 
 // skynet
 const (
-	// DefaultDoozerdAddr is where a skynet service or client will look for doozerd.
-	DefaultDoozerdAddr = "127.0.0.1:8046"
-	// DefaultIdleTimeout is how long a connection can remain inactive in the pool before being closed.
 	DefaultIdleTimeout = 0
-	// DefaultDoozerUpdateInterval is the minimum wait before sending new information to doozerd.
-	DefaultDoozerUpdateInterval = 5 * time.Second
 	// DefaultRegion is the region specified for a service.
 	DefaultRegion = "unknown"
 	// DefaultVersion is the version specified for a service.
