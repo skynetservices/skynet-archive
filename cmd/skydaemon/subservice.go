@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/skynetservices/go-shellquote"
-	"github.com/skynetservices/skynet"
-	"github.com/skynetservices/skynet/client"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -83,8 +81,6 @@ func (ss *SubService) Stop() bool {
 	ss.rerunChan <- false
 	ss.runSignal.Wait()
 
-	ss.sendRPCStop()
-
 	return true
 }
 
@@ -112,9 +108,7 @@ func (ss *SubService) Start() (success bool, err error) {
 }
 
 func (ss *SubService) Restart() {
-	// Because we don't call stop here,
-	// rerunner will spawn a new instance when the old one has stopped
-	ss.sendRPCStop()
+	// TODO:
 }
 
 func (ss *SubService) startProcess() (proc *os.Process, err error) {
@@ -170,22 +164,4 @@ func (ss *SubService) rerunner() {
 	}
 
 	ss.runSignal.Done()
-}
-
-func (ss *SubService) sendRPCStop() {
-	q := skynet.Query{
-		UUID: ss.UUID,
-	}
-
-	instances := q.FindInstances()
-	for _, instance := range instances {
-		cladmin := client.Admin{
-			Instance: instance,
-		}
-
-		cladmin.Stop(skynet.StopRequest{
-			WaitForClients: true,
-		})
-	}
-
 }
