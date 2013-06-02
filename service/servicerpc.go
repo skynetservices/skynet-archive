@@ -7,7 +7,6 @@ import (
 	"github.com/skynetservices/skynet"
 	"github.com/skynetservices/skynet/log"
 	"reflect"
-	"sync/atomic"
 	"time"
 )
 
@@ -154,8 +153,6 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		panic("illegal out param type")
 	}
 
-	srpc.service.Stats.LastRequest = time.Now().Format("2006-01-02T15:04:05Z-0700")
-
 	startTime := time.Now().UnixNano()
 
 	params := []reflect.Value{
@@ -168,12 +165,6 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	returns := m.Call(params)
 
 	duration := time.Now().UnixNano() - startTime
-
-	// Update stats
-	atomic.AddInt64(&srpc.service.Stats.RequestsServed, 1)
-	atomic.AddInt64((*int64)(&srpc.service.Stats.TotalDuration), int64(duration)) // ns
-
-	srpc.service.Stats.AverageResponseTime = srpc.service.Stats.TotalDuration / time.Duration(srpc.service.Stats.RequestsServed)
 
 	mcp := MethodCompletion{
 		MethodName:  in.Method,

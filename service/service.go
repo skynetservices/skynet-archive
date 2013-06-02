@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"reflect"
 	"sync"
-	"sync/atomic"
 	"syscall"
 )
 
@@ -210,8 +209,6 @@ loop:
 	for {
 		select {
 		case conn := <-s.connectionChan:
-			atomic.AddInt32(&s.Stats.Clients, 1)
-
 			clientID := skynet.UUID()
 
 			s.clientMutex.Lock()
@@ -229,13 +226,10 @@ loop:
 			err := encoder.Encode(sh)
 			if err != nil {
 				log.Println(log.ERROR, err.Error())
-
-				atomic.AddInt32(&s.Stats.Clients, -1)
 				break
 			}
 			if !s.Registered {
 				conn.Close()
-				atomic.AddInt32(&s.Stats.Clients, -1)
 				break
 			}
 
@@ -245,16 +239,12 @@ loop:
 			err = decoder.Decode(&ch)
 			if err != nil {
 				log.Println(log.ERROR, "Error calling bsonrpc.NewDecoder: "+err.Error())
-				atomic.AddInt32(&s.Stats.Clients, -1)
 				break
 			}
 
 			// here do stuff with the client handshake
-
 			go func() {
 				s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
-
-				atomic.AddInt32(&s.Stats.Clients, -1)
 			}()
 		case register := <-s.registeredChan:
 			if register {
