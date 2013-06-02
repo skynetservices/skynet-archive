@@ -16,10 +16,8 @@ Skynet probably won’t die unless your data center gets hit by a comet.  We rec
 [Skynet Services](https://github.com/skynetservices/skynet/wiki/Services) are where the work gets done.  These are the processes that service the requests, process the API calls, get the external data, log the requests, authenticate the users, etc.
 
 
-Before you can run skynet you'll need to have at least one [doozerd](https://github.com/skynetservices/skynet/wiki/Setting-up-a-Doozer-cluster) process running.
-
 ##How?
-Each process in SkyNet receives its configuration from a centralized configuration repository (currently [Doozer](https://github.com/skynetservices/skynet/wiki/Setting-up-a-Doozer-cluster) - possibly pluggable in the future).
+Each process in SkyNet receives its configuration from a centralized configuration repository.
 
 
 Configuration changes are pushed to each process when new skynet services are started.
@@ -28,9 +26,6 @@ This means that starting a new service automatically advertises that service's a
 Processes are monitored, and restarted when they die, and are removed from the cluster configuration management system so that clients do not create new connections. Currently connected clients will notice these removals and adjust their internal pool of connections as services are added/removed/die.
 
 [https://github.com/skynetservices/skynet/wiki/Daemon](https://github.com/skynetservices/skynet/wiki/Daemon)
-
-## Doozer
-Skynet makes heavy usage of [Doozer](https://github.com/skynetservices/skynet/wiki/Setting-up-a-Doozer-cluster). You'll need at least 1 Doozer instance to run Skynet, but we recommend a cluster of multiple Doozer nodes to ensure high availability. With only 1 instance you leave yourself with a single point of failure.
 
 ##Services
 [Services](https://github.com/skynetservices/skynet/wiki/Services) are the heart of your Skynet clusters, they will accept requests via bson rpc requests, although this is abstracted away, you won't have to deal with the protocol, you will just pass objects. Keep in mind that a Service may also be a client. In the case of a Composite style application, a request could be made to one service that makes requests either synchronously or asynchronously to additional Skynet services.

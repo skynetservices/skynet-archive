@@ -109,7 +109,6 @@ type ServiceConfig struct {
 	Region                      string
 	ServiceAddr                 *BindAddr
 	AdminAddr                   *BindAddr
-	DoozerConfig                *DoozerConfig `json:"-" bson:"-"`
 	DoozerUpdateInterval        time.Duration `json:"-" bson:"-"`
 	CriticalClientCount         int32
 	CriticalAverageResponseTime time.Duration
@@ -118,7 +117,6 @@ type ServiceConfig struct {
 type ClientConfig struct {
 	Host                      string
 	Region                    string
-	DoozerConfig              *DoozerConfig `json:"-" bson:"-"`
 	IdleConnectionsToInstance int
 	MaxConnectionsToInstance  int
 	IdleTimeout               time.Duration
@@ -133,24 +131,7 @@ func GetDefaultEnvVar(name, def string) (v string) {
 	return
 }
 
-func FlagsForDoozer(dcfg *DoozerConfig, flagset *flag.FlagSet) {
-	flagset.StringVar(&dcfg.Uri, "doozer",
-		GetDefaultEnvVar("SKYNET_DZHOST", DefaultDoozerdAddr),
-		"initial doozer instance to connect to")
-	flagset.StringVar(&dcfg.BootUri, "doozerboot",
-		GetDefaultEnvVar("SKYNET_DZNSHOST", DefaultDoozerdAddr),
-		"initial doozer instance to connect to")
-	flagset.BoolVar(&dcfg.AutoDiscover, "autodiscover",
-		GetDefaultEnvVar("SKYNET_DZDISCOVER", "true") == "true",
-		"auto discover new doozer instances")
-}
-
 func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
-	if ccfg.DoozerConfig == nil {
-		ccfg.DoozerConfig = &DoozerConfig{}
-	}
-
-	FlagsForDoozer(ccfg.DoozerConfig, flagset)
 	flagset.DurationVar(&ccfg.IdleTimeout, "timeout", DefaultIdleTimeout, "amount of idle time before timeout")
 	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle", DefaultIdleConnectionsToInstance, "maximum number of idle connections to a particular instance")
 	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns", DefaultMaxConnectionsToInstance, "maximum number of concurrent connections to a particular instance")
@@ -163,9 +144,7 @@ func GetClientConfig() (config *ClientConfig, args []string) {
 }
 
 func GetClientConfigFromFlags(argv []string) (config *ClientConfig, args []string) {
-	config = &ClientConfig{
-		DoozerConfig: &DoozerConfig{},
-	}
+	config = &ClientConfig{}
 
 	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
 
@@ -184,15 +163,9 @@ func GetClientConfigFromFlags(argv []string) (config *ClientConfig, args []strin
 }
 
 func FlagsForService(scfg *ServiceConfig, flagset *flag.FlagSet) {
-	if scfg.DoozerConfig == nil {
-		scfg.DoozerConfig = &DoozerConfig{}
-	}
-
-	FlagsForDoozer(scfg.DoozerConfig, flagset)
 	flagset.StringVar(&scfg.UUID, "uuid", UUID(), "UUID for this service")
 	flagset.StringVar(&scfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region service is located in")
 	flagset.StringVar(&scfg.Version, "version", DefaultVersion, "version of service")
-	flagset.DurationVar(&scfg.DoozerUpdateInterval, "dzupdate", DefaultDoozerUpdateInterval, "ns to wait before sending the next status update")
 }
 
 func GetServiceConfig() (config *ServiceConfig, args []string) {
@@ -229,9 +202,7 @@ func ParseServiceFlags(scfg *ServiceConfig, flagset *flag.FlagSet, argv []string
 
 func GetServiceConfigFromFlags(argv []string) (config *ServiceConfig, args []string) {
 
-	config = &ServiceConfig{
-		DoozerConfig: &DoozerConfig{},
-	}
+	config = &ServiceConfig{}
 
 	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
 
