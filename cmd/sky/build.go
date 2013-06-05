@@ -53,13 +53,6 @@ func Build() {
 
 func (b *build) perform() {
 	b.validate()
-
-	out, err := b.sshExec("echo $GOPATH")
-	if err != nil {
-		panic(err.Error())
-	}
-
-	fmt.Println(string(out))
 }
 
 func (b *build) validate() {
