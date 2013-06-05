@@ -10,6 +10,18 @@ type ServiceManager interface {
 	Remove(uuid string)
 	Register(uuid string)
 	Unregister(uuid string)
+	ListRegions(query ServiceQuery) []string
+	ListServices(query ServiceQuery) []string
+	ListInstances(query ServiceQuery) []ServiceInfo
+	ListHosts(query ServiceQuery) []string
+}
+
+type ServiceQuery struct {
+	UUID        []string
+	Name        []string
+	Version     []string
+	Region      []string
+	ServiceAddr []*BindAddr
 }
 
 var manager ServiceManager
