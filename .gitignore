@@ -2,5 +2,6 @@
 nbproject/*
 examples/service/service
 cmd/skydaemon/skydaemon
+cmd/sky/sky
 *~
 *.swp
