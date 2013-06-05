@@ -25,6 +25,7 @@ type build struct {
 	PostBuildCommands []string
 
 	sshClient *SSHConn
+	scm       Scm
 }
 
 func Build() {
@@ -51,10 +52,13 @@ func Build() {
 }
 
 func (b *build) perform() {
-	b.validate()
+	b.setupScm()
+	b.validateEnvironment()
+	b.updateCode()
 }
 
-func (b *build) validate() {
+// Ensure all directories exist
+func (b *build) validateEnvironment() {
 	// Validate Jail exists
 	_, err := b.sshClient.Exec("ls " + b.Jail)
 	if err != nil {
@@ -74,8 +78,25 @@ func (b *build) validate() {
 	}
 
 	// Validate Git exists
-	_, err = b.sshClient.Exec("which git")
+	_, err = b.sshClient.Exec("which " + b.scm.BinaryName())
 	if err != nil {
-		fmt.Println("Could not find Git binary: " + err.Error())
+		fmt.Println("Could not find " + b.RepoType + " binary: " + err.Error())
+	}
+}
+
+// Checkout project from repository
+func (b *build) updateCode() {
+	// Fetch code base
+	b.scm.SetSSHConn(b.sshClient)
+	b.scm.Checkout(b.AppRepo, b.RepoBranch, b.Jail)
+}
+
+func (b *build) setupScm() {
+	switch b.RepoType {
+	case "git":
+		b.scm = new(GitScm)
+
+	default:
+		panic("unkown RepoType")
 	}
 }
