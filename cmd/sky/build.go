@@ -8,6 +8,15 @@ import (
 )
 
 type build struct {
+	BuildConfig  buildConfig `json:"Build"`
+	DeployConfig buildConfig `json:"Deploy"`
+
+	term        Terminal
+	scm         Scm
+	projectPath string
+}
+
+type buildConfig struct {
 	Host       string
 	User       string
 	Jail       string
@@ -21,13 +30,16 @@ type build struct {
 	RepoType   string
 	RepoBranch string
 
+	UpdatePackages bool
+	RunTests       bool
+
 	// TODO:
 	PreBuildCommands  []string
 	PostBuildCommands []string
+}
 
-	term        Terminal
-	scm         Scm
-	projectPath string
+type deployConfig struct {
+	DeployPath string
 }
 
 func Build() {
@@ -46,12 +58,12 @@ func Build() {
 		fmt.Println("Failed to parse build.cfg: " + err.Error())
 	}
 
-	if b.Host == "localhost" || b.Host == "127.0.0.1" || b.Host == "" {
+	if b.BuildConfig.Host == "localhost" || b.BuildConfig.Host == "127.0.0.1" || b.BuildConfig.Host == "" {
 		b.term = new(LocalTerminal)
 	} else {
 		sshClient := new(SSHConn)
 		b.term = sshClient
-		sshClient.Connect(b.Host, b.User)
+		sshClient.Connect(b.BuildConfig.Host, b.BuildConfig.User)
 		defer sshClient.Close()
 	}
 
@@ -71,21 +83,21 @@ func (b *build) validateEnvironment() (valid bool) {
 	valid = true
 
 	// Validate Jail exists
-	_, err := b.term.Exec("ls " + b.Jail)
+	_, err := b.term.Exec("ls " + b.BuildConfig.Jail)
 	if err != nil {
 		fmt.Println("Could not find Jail directory: " + err.Error())
 		valid = false
 	}
 
 	// Validate GOROOT exists
-	_, err = b.term.Exec("ls " + b.GoRoot)
+	_, err = b.term.Exec("ls " + b.BuildConfig.GoRoot)
 	if err != nil {
 		fmt.Println("Could not find GOROOT directory: " + err.Error())
 		valid = false
 	}
 
 	// Validate Go Binary exists
-	_, err = b.term.Exec("ls " + b.GoRoot + "/bin/go")
+	_, err = b.term.Exec("ls " + b.BuildConfig.GoRoot + "/bin/go")
 	if err != nil {
 		fmt.Println("Could not find Go binary: " + err.Error())
 		valid = false
@@ -94,7 +106,7 @@ func (b *build) validateEnvironment() (valid bool) {
 	// Validate Git exists
 	_, err = b.term.Exec("which " + b.scm.BinaryName())
 	if err != nil {
-		fmt.Println("Could not find " + b.RepoType + " binary: " + err.Error())
+		fmt.Println("Could not find " + b.BuildConfig.RepoType + " binary: " + err.Error())
 		valid = false
 	}
 
@@ -103,8 +115,8 @@ func (b *build) validateEnvironment() (valid bool) {
 
 // Checkout project from repository
 func (b *build) updateCode() {
-	p, err := b.scm.ImportPathFromRepo(b.AppRepo)
-	b.projectPath = path.Join(b.Jail, "src", p)
+	p, err := b.scm.ImportPathFromRepo(b.BuildConfig.AppRepo)
+	b.projectPath = path.Join(b.BuildConfig.Jail, "src", p)
 
 	if err != nil {
 		panic(err.Error())
@@ -125,11 +137,11 @@ func (b *build) updateCode() {
 
 	// Fetch code base
 	b.scm.SetTerminal(b.term)
-	b.scm.Checkout(b.AppRepo, b.RepoBranch, b.projectPath)
+	b.scm.Checkout(b.BuildConfig.AppRepo, b.BuildConfig.RepoBranch, b.projectPath)
 }
 
 func (b *build) setupScm() {
-	switch b.RepoType {
+	switch b.BuildConfig.RepoType {
 	case "git":
 		b.scm = new(GitScm)
 
