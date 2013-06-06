@@ -58,12 +58,12 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		shuttingDown:   false,
 	}
 
-	s.Config = c
+	s.ServiceConfig = c
 
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
 	rpcForwarder := NewServiceRPC(s)
-	s.RPCServ.RegisterName(s.Config.Name, rpcForwarder)
+	s.RPCServ.RegisterName(s.ServiceConfig.Name, rpcForwarder)
 
 	return
 }
@@ -81,10 +81,10 @@ func (s *Service) register() {
 		return
 	}
 
-	skynet.GetServiceManager().Register(s.Config.UUID)
+	skynet.GetServiceManager().Register(s.ServiceConfig.UUID)
 
 	s.Registered = true
-	log.Printf(log.INFO, "%+v\n", ServiceRegistered{s.Config})
+	log.Printf(log.INFO, "%+v\n", ServiceRegistered{s.ServiceConfig})
 	s.Delegate.Registered(s) // Call user defined callback
 }
 
@@ -99,10 +99,10 @@ func (s *Service) unregister() {
 		return
 	}
 
-	skynet.GetServiceManager().Unregister(s.Config.UUID)
+	skynet.GetServiceManager().Unregister(s.ServiceConfig.UUID)
 
 	s.Registered = false
-	log.Printf(log.INFO, "%+v\n", ServiceUnregistered{s.Config})
+	log.Printf(log.INFO, "%+v\n", ServiceUnregistered{s.ServiceConfig})
 	s.Delegate.Unregistered(s) // Call user defined callback
 }
 
@@ -122,7 +122,7 @@ func (s *Service) Shutdown() {
 
 	s.activeRequests.Wait()
 
-	skynet.GetServiceManager().Remove(s.Config.UUID)
+	skynet.GetServiceManager().Remove(s.ServiceConfig.UUID)
 
 	s.Delegate.Stopped(s) // Call user defined callback
 
@@ -140,7 +140,7 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	bindWait := &sync.WaitGroup{}
 
 	bindWait.Add(1)
-	go s.listen(s.Config.ServiceAddr, bindWait)
+	go s.listen(s.ServiceConfig.ServiceAddr, bindWait)
 
 	// Watch signals for shutdown
 	c := make(chan os.Signal, 1)
@@ -188,7 +188,7 @@ func (s *Service) listen(addr *skynet.BindAddr, bindWait *sync.WaitGroup) {
 
 	log.Printf(log.INFO, "%+v\n", ServiceListening{
 		Addr:          addr,
-		ServiceConfig: s.Config,
+		ServiceConfig: s.ServiceConfig,
 	})
 
 	bindWait.Done()
