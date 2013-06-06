@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"io/ioutil"
 	"path"
+	"strings"
 )
 
 type builder struct {
@@ -15,6 +16,7 @@ type builder struct {
 	term        Terminal
 	scm         Scm
 	projectPath string
+	pack        *build.Package
 }
 
 type buildConfig struct {
@@ -31,8 +33,9 @@ type buildConfig struct {
 	RepoType   string
 	RepoBranch string
 
-	UpdatePackages bool
-	RunTests       bool
+	UpdatePackages   bool
+	BuildAllPackages bool
+	RunTests         bool
 
 	// TODO:
 	PreBuildCommands  []string
@@ -78,6 +81,11 @@ func (b *builder) perform() {
 
 	if b.validateEnvironment() {
 		b.updateCode()
+
+		b.term.SetEnv("GOPATH", b.goPath())
+		b.term.SetEnv("GOROOT", b.BuildConfig.GoRoot)
+		b.term.SetEnv("CGO_CFLAGS", b.BuildConfig.CgoCFlags)
+		b.term.SetEnv("CGO_LDFLAGS", b.BuildConfig.CgoLdFlags)
 		b.fetchDependencies()
 	}
 }
@@ -87,13 +95,14 @@ func (b *builder) validateEnvironment() (valid bool) {
 	valid = true
 
 	// Validate this package is a command
-	p, err := context.ImportDir(".", 0)
+	var err error
+	b.pack, err = context.ImportDir(".", 0)
 
 	if err != nil {
 		panic("Could not import package for validation")
 	}
 
-	if !p.IsCommand() {
+	if !b.pack.IsCommand() {
 		panic("Package is not a command")
 	}
 
@@ -166,4 +175,33 @@ func (b *builder) setupScm() {
 }
 
 func (b *builder) fetchDependencies() {
+	flags := []string{"-d"}
+
+	if b.BuildConfig.UpdatePackages {
+		flags = append(flags, "-u")
+	}
+
+	for _, i := range b.pack.Imports {
+		if !build.IsLocalImport(i) {
+
+			// Skip packages that were pulled down as part of repo
+			if strings.HasPrefix(path.Join(b.BuildConfig.Jail, "src", i), b.projectPath) {
+				continue
+			}
+
+			fmt.Println("Fetching package: " + i)
+			out, err := b.term.Exec("go get " + strings.Join(flags, " ") + " " + i)
+			fmt.Println(string(out))
+
+			if err != nil {
+				panic("Failed to fetch dependency: " + i + "\n" + err.Error())
+			}
+		}
+	}
+}
+
+func (b *builder) goPath() string {
+	// TODO: we need a clean gopath in case it imports itself, then we also need to append ourself so the package can be found here?
+	// another issue is if it fetches dependencies it could try to fetch itself, might need to change the gopath again once we've done the update?
+	return "/Users/erikstmartin/tmp" //b.BuildConfig.Jail + ":" + b.BuildConfig.GoPath
 }

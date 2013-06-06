@@ -58,3 +58,8 @@ func (c *SSHConn) Password(user string) (string, error) {
 func (c *SSHConn) Close() {
 	c.client.Close()
 }
+
+func (t *SSHConn) SetEnv(name, value string) {
+	// TODO:
+	return
+}
