@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"path"
 )
 
 type build struct {
@@ -24,8 +25,9 @@ type build struct {
 	PreBuildCommands  []string
 	PostBuildCommands []string
 
-	term Terminal
-	scm  Scm
+	term        Terminal
+	scm         Scm
+	projectPath string
 }
 
 func Build() {
@@ -58,6 +60,7 @@ func Build() {
 
 func (b *build) perform() {
 	b.setupScm()
+
 	if b.validateEnvironment() {
 		b.updateCode()
 	}
@@ -100,9 +103,29 @@ func (b *build) validateEnvironment() (valid bool) {
 
 // Checkout project from repository
 func (b *build) updateCode() {
+	p, err := b.scm.ImportPathFromRepo(b.AppRepo)
+	b.projectPath = path.Join(b.Jail, "src", p)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	out, err := b.term.Exec("ls " + b.projectPath)
+
+	if err != nil {
+		fmt.Println("Creating project directories")
+		out, err = b.term.Exec("mkdir -p " + b.projectPath)
+
+		if err != nil {
+			panic("Could not create project directories")
+		}
+
+		fmt.Println(string(out))
+	}
+
 	// Fetch code base
 	b.scm.SetTerminal(b.term)
-	b.scm.Checkout(b.AppRepo, b.RepoBranch, b.Jail)
+	b.scm.Checkout(b.AppRepo, b.RepoBranch, b.projectPath)
 }
 
 func (b *build) setupScm() {

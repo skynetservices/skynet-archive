@@ -1,14 +1,20 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"regexp"
+	"strings"
 )
 
 type Scm interface {
 	SetTerminal(terminal Terminal)
 	Checkout(repo, branch, path string) error
+	ImportPathFromRepo(repoUrl string) (importPath string, err error)
 	BinaryName() string
 }
+
+var gitImportRegex = regexp.MustCompile("(?:[^@]+@|(?:https?|git)://)(.+)\\.git")
 
 type GitScm struct {
 	term Terminal
@@ -59,4 +65,16 @@ func (g *GitScm) Checkout(repo, branch, path string) (err error) {
 	}
 
 	return err
+}
+
+func (g *GitScm) ImportPathFromRepo(repoUrl string) (importPath string, err error) {
+	matches := gitImportRegex.FindStringSubmatch(repoUrl)
+
+	if matches == nil || len(matches) < 2 {
+		return "", errors.New("Could not determine import path from repo url: " + repoUrl)
+	}
+
+	importPath = strings.Replace(matches[1], ":", "/", -1)
+
+	return
 }
