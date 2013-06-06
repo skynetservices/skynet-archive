@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"go/build"
 	"io/ioutil"
 	"path"
 )
 
-type build struct {
+type builder struct {
 	BuildConfig  buildConfig `json:"Build"`
 	DeployConfig buildConfig `json:"Deploy"`
 
@@ -42,6 +43,8 @@ type deployConfig struct {
 	DeployPath string
 }
 
+var context = build.Default
+
 func Build() {
 	f, err := ioutil.ReadFile("./build.cfg")
 
@@ -50,7 +53,7 @@ func Build() {
 		return
 	}
 
-	b := new(build)
+	b := new(builder)
 
 	err = json.Unmarshal(f, b)
 
@@ -70,20 +73,32 @@ func Build() {
 	b.perform()
 }
 
-func (b *build) perform() {
+func (b *builder) perform() {
 	b.setupScm()
 
 	if b.validateEnvironment() {
 		b.updateCode()
+		b.fetchDependencies()
 	}
 }
 
 // Ensure all directories exist
-func (b *build) validateEnvironment() (valid bool) {
+func (b *builder) validateEnvironment() (valid bool) {
 	valid = true
 
+	// Validate this package is a command
+	p, err := context.ImportDir(".", 0)
+
+	if err != nil {
+		panic("Could not import package for validation")
+	}
+
+	if !p.IsCommand() {
+		panic("Package is not a command")
+	}
+
 	// Validate Jail exists
-	_, err := b.term.Exec("ls " + b.BuildConfig.Jail)
+	_, err = b.term.Exec("ls " + b.BuildConfig.Jail)
 	if err != nil {
 		fmt.Println("Could not find Jail directory: " + err.Error())
 		valid = false
@@ -114,7 +129,7 @@ func (b *build) validateEnvironment() (valid bool) {
 }
 
 // Checkout project from repository
-func (b *build) updateCode() {
+func (b *builder) updateCode() {
 	p, err := b.scm.ImportPathFromRepo(b.BuildConfig.AppRepo)
 	b.projectPath = path.Join(b.BuildConfig.Jail, "src", p)
 
@@ -140,7 +155,7 @@ func (b *build) updateCode() {
 	b.scm.Checkout(b.BuildConfig.AppRepo, b.BuildConfig.RepoBranch, b.projectPath)
 }
 
-func (b *build) setupScm() {
+func (b *builder) setupScm() {
 	switch b.BuildConfig.RepoType {
 	case "git":
 		b.scm = new(GitScm)
@@ -148,4 +163,7 @@ func (b *build) setupScm() {
 	default:
 		panic("unkown RepoType")
 	}
+}
+
+func (b *builder) fetchDependencies() {
 }
