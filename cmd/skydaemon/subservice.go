@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/skynetservices/go-shellquote"
+	"github.com/kballard/go-shellquote"
 	"os"
 	"os/exec"
 	"path/filepath"

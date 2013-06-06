@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"path"
 )
 
 type build struct {
@@ -24,8 +25,9 @@ type build struct {
 	PreBuildCommands  []string
 	PostBuildCommands []string
 
-	sshClient *SSHConn
-	scm       Scm
+	term        Terminal
+	scm         Scm
+	projectPath string
 }
 
 func Build() {
@@ -44,51 +46,86 @@ func Build() {
 		fmt.Println("Failed to parse build.cfg: " + err.Error())
 	}
 
-	b.sshClient = new(SSHConn)
-	b.sshClient.Connect(b.Host, b.User)
-	defer b.sshClient.Close()
+	if b.Host == "localhost" || b.Host == "127.0.0.1" || b.Host == "" {
+		b.term = new(LocalTerminal)
+	} else {
+		sshClient := new(SSHConn)
+		b.term = sshClient
+		sshClient.Connect(b.Host, b.User)
+		defer sshClient.Close()
+	}
 
 	b.perform()
 }
 
 func (b *build) perform() {
 	b.setupScm()
-	b.validateEnvironment()
-	b.updateCode()
+
+	if b.validateEnvironment() {
+		b.updateCode()
+	}
 }
 
 // Ensure all directories exist
-func (b *build) validateEnvironment() {
+func (b *build) validateEnvironment() (valid bool) {
+	valid = true
+
 	// Validate Jail exists
-	_, err := b.sshClient.Exec("ls " + b.Jail)
+	_, err := b.term.Exec("ls " + b.Jail)
 	if err != nil {
 		fmt.Println("Could not find Jail directory: " + err.Error())
+		valid = false
 	}
 
 	// Validate GOROOT exists
-	_, err = b.sshClient.Exec("ls " + b.GoRoot)
+	_, err = b.term.Exec("ls " + b.GoRoot)
 	if err != nil {
 		fmt.Println("Could not find GOROOT directory: " + err.Error())
+		valid = false
 	}
 
 	// Validate Go Binary exists
-	_, err = b.sshClient.Exec("ls " + b.GoRoot + "/bin/go")
+	_, err = b.term.Exec("ls " + b.GoRoot + "/bin/go")
 	if err != nil {
 		fmt.Println("Could not find Go binary: " + err.Error())
+		valid = false
 	}
 
 	// Validate Git exists
-	_, err = b.sshClient.Exec("which " + b.scm.BinaryName())
+	_, err = b.term.Exec("which " + b.scm.BinaryName())
 	if err != nil {
 		fmt.Println("Could not find " + b.RepoType + " binary: " + err.Error())
+		valid = false
 	}
+
+	return
 }
 
 // Checkout project from repository
 func (b *build) updateCode() {
+	p, err := b.scm.ImportPathFromRepo(b.AppRepo)
+	b.projectPath = path.Join(b.Jail, "src", p)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	out, err := b.term.Exec("ls " + b.projectPath)
+
+	if err != nil {
+		fmt.Println("Creating project directories")
+		out, err = b.term.Exec("mkdir -p " + b.projectPath)
+
+		if err != nil {
+			panic("Could not create project directories")
+		}
+
+		fmt.Println(string(out))
+	}
+
 	// Fetch code base
-	b.scm.SetSSHConn(b.sshClient)
-	b.scm.Checkout(b.AppRepo, b.RepoBranch, b.Jail)
+	b.scm.SetTerminal(b.term)
+	b.scm.Checkout(b.AppRepo, b.RepoBranch, b.projectPath)
 }
 
 func (b *build) setupScm() {
