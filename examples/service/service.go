@@ -29,7 +29,7 @@ func (s *TestService) Upcase(requestInfo *skynet.RequestInfo, in map[string]inte
 
 func main() {
 	log.SetLogLevel(log.DEBUG)
-	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager("kratos:2181", 1*time.Second))
+	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager("127.0.0.1:2181", 1*time.Second))
 
 	testService := NewTestService()
 
@@ -39,7 +39,7 @@ func main() {
 		config.Name = "TestService"
 	}
 
-	if config.Version == "" {
+	if config.Version == "unknown" {
 		config.Version = "1"
 	}
 
