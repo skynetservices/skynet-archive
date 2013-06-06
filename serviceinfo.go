@@ -15,7 +15,7 @@ type ServiceStatistics struct {
 // service instance.
 type ServiceInfo struct {
 	// Config is the configuration used to start this instance.
-	Config *ServiceConfig
+	*ServiceConfig
 	// Registered indicates if the instance is currently accepting requests.
 	Registered bool
 }

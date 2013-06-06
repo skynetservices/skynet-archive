@@ -34,7 +34,7 @@ func (sa *ServiceAdmin) Listen(addr *skynet.BindAddr, bindWait *sync.WaitGroup) 
 
 	bindWait.Done()
 
-	log.Printf(log.TRACE, "%+v", AdminListening{sa.service.Config})
+	log.Printf(log.TRACE, "%+v", AdminListening{sa.service.ServiceConfig})
 
 	for {
 		conn, err := listener.AcceptTCP()
