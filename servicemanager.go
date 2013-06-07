@@ -14,7 +14,7 @@ type ServiceManager interface {
 	ListServices(query ServiceQuery) []string
 	ListInstances(query ServiceQuery) []ServiceInfo
 	ListHosts(query ServiceQuery) []string
-	Subscribe(query ServiceQuery) <-chan ServiceUpdate
+	Subscribe(query ServiceQuery) chan ServiceUpdate
 }
 
 type ServiceQuery struct {
