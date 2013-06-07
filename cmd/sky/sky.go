@@ -17,7 +17,21 @@ func main() {
 	case "help", "h":
 		CommandLineHelp()
 	case "build", "b":
-		Build()
+		var config string
+
+		if len(args) >= 2 {
+			config = args[1]
+		}
+
+		Build(config)
+	case "deploy", "d":
+		var config string
+
+		if len(args) >= 2 {
+			config = args[1]
+		}
+
+		Deploy(config)
 	}
 }
 
@@ -25,7 +39,8 @@ func CommandLineHelp() {
 	fmt.Print(`Usage: sky [options] command <arguments>
 
     Commands:
-            build: Uses build.cfg to build the current project
+            build: Uses build.cfg or optional config to build the current project
+            deploy: Uses build.cfg or optional config to deploy the current project
             
             
             

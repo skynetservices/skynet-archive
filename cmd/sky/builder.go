@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"go/build"
 	"io/ioutil"
+	"os/exec"
 	"path"
 	"strings"
 )
 
 type builder struct {
-	BuildConfig  buildConfig `json:"Build"`
-	DeployConfig buildConfig `json:"Deploy"`
+	BuildConfig  buildConfig  `json:"Build"`
+	DeployConfig deployConfig `json:"Deploy"`
 
 	term        Terminal
 	scm         Scm
@@ -38,23 +39,26 @@ type buildConfig struct {
 	RunTests         bool
 	TestSkynet       bool
 
-	// TODO:
 	PreBuildCommands  []string
 	PostBuildCommands []string
 }
 
 type deployConfig struct {
 	DeployPath string
+	BinaryName string
 }
 
 var context = build.Default
 
-func Build() {
-	f, err := ioutil.ReadFile("./build.cfg")
+func newBuilder(config string) *builder {
+	if config == "" {
+		config = "./build.cfg"
+	}
+
+	f, err := ioutil.ReadFile(config)
 
 	if err != nil {
-		fmt.Println("Failed to read build.cfg")
-		return
+		panic("Failed to read: " + config)
 	}
 
 	b := new(builder)
@@ -62,25 +66,38 @@ func Build() {
 	err = json.Unmarshal(f, b)
 
 	if err != nil {
-		fmt.Println("Failed to parse build.cfg: " + err.Error())
+		panic("Failed to parse " + config + ": " + err.Error())
 	}
 
-	if b.BuildConfig.Host == "localhost" || b.BuildConfig.Host == "127.0.0.1" || b.BuildConfig.Host == "" {
+	if isHostLocal(b.BuildConfig.Host) {
 		b.term = new(LocalTerminal)
 	} else {
 		sshClient := new(SSHConn)
 		b.term = sshClient
 		sshClient.Connect(b.BuildConfig.Host, b.BuildConfig.User)
-		defer sshClient.Close()
 	}
 
-	b.perform()
+	b.validatePackage()
+
+	return b
 }
 
-func (b *builder) perform() {
+func Build(config string) {
+	b := newBuilder(config)
+	b.performBuild()
+	b.term.Close()
+}
+
+func Deploy(config string) {
+	b := newBuilder(config)
+	b.deploy([]string{"localhost"})
+	b.term.Close()
+}
+
+func (b *builder) performBuild() {
 	b.setupScm()
 
-	if b.validateEnvironment() {
+	if b.validateBuildEnvironment() {
 		b.updateCode()
 
 		b.term.SetEnv("GOPATH", b.goPath())
@@ -102,10 +119,7 @@ func (b *builder) perform() {
 	}
 }
 
-// Ensure all directories exist
-func (b *builder) validateEnvironment() (valid bool) {
-	valid = true
-
+func (b *builder) validatePackage() {
 	// Validate this package is a command
 	var err error
 	b.pack, err = context.ImportDir(".", 0)
@@ -117,6 +131,12 @@ func (b *builder) validateEnvironment() (valid bool) {
 	if !b.pack.IsCommand() {
 		panic("Package is not a command")
 	}
+}
+
+// Ensure all directories exist
+func (b *builder) validateBuildEnvironment() (valid bool) {
+	var err error
+	valid = true
 
 	// Validate Jail exists
 	_, err = b.term.Exec("ls " + b.BuildConfig.Jail)
@@ -270,4 +290,27 @@ func (b *builder) goPath() string {
 	}
 
 	return b.BuildConfig.Jail
+}
+
+func (b *builder) deploy(hosts []string) {
+	for _, host := range hosts {
+		if isHostLocal(host) {
+			fmt.Println("Copying local binary")
+			command := exec.Command("cp", path.Base(b.BuildConfig.AppPath), path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
+			out, err := command.CombinedOutput()
+			fmt.Println(string(out))
+
+			if err != nil {
+				panic("Failed to copy binary: " + err.Error())
+			}
+		}
+	}
+}
+
+func isHostLocal(host string) bool {
+	if host == "localhost" || host == "127.0.0.1" || host == "" {
+		return true
+	}
+
+	return false
 }

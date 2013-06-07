@@ -11,6 +11,7 @@ type Terminal interface {
 	Exec(cmd string) (out []byte, err error)
 	ExecPath(cmd, path string) (out []byte, err error)
 	SetEnv(name, value string)
+	Close()
 }
 
 type LocalTerminal struct {
@@ -61,4 +62,8 @@ func (t *LocalTerminal) getEnv() []string {
 	}
 
 	return env
+}
+
+func (t *LocalTerminal) Close() {
+	// noop
 }
