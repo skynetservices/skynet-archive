@@ -64,7 +64,16 @@ func (g *GitScm) Checkout(repo, branch, path string) (err error) {
 		return
 	}
 
-	return err
+	// Check for submodules
+	fmt.Println("Checking for submodules: " + branch)
+	out, err = g.term.Exec("cd " + path + "&& git submodule init && git submodule update")
+	fmt.Println(string(out))
+
+	if err != nil {
+		return
+	}
+
+	return
 }
 
 func (g *GitScm) ImportPathFromRepo(repoUrl string) (importPath string, err error) {
