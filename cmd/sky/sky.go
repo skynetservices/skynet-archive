@@ -27,6 +27,7 @@ func main() {
 	case "deploy", "d":
 		var config string
 
+		// TODO: Pass additional args as server names to deploy to
 		if len(args) >= 2 {
 			config = args[1]
 		}
