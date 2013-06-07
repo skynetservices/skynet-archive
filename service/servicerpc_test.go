@@ -29,7 +29,7 @@ func (e EchoRPC) Foo(rinfo *skynet.RequestInfo, in M, out *M) (err error) {
 func TestServiceRPCBasic(t *testing.T) {
 	var addr net.Addr
 
-	config := &skynet.ServiceConfig{}
+	config := &skynet.ServiceConfig{Name: "EchoRPC"}
 	service := CreateService(EchoRPC{}, config)
 	service.ClientInfo = make(map[string]ClientInfo, 1)
 

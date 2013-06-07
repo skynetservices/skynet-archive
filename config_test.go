@@ -2,7 +2,6 @@ package skynet
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"testing"
 )
