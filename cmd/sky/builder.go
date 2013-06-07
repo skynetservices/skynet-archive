@@ -6,6 +6,7 @@ import (
 	"go/build"
 	"io/ioutil"
 	"path"
+	"strings"
 )
 
 type builder struct {
@@ -244,7 +245,7 @@ func (b *builder) getPackageDependencies(p string) {
 	}
 
 	fmt.Println("Fetching dependencies")
-	out, err := b.term.ExecPath("go get ./...", p)
+	out, err := b.term.ExecPath("go get "+strings.Join(flags, " ")+" ./...", p)
 	fmt.Println(string(out))
 
 	if err != nil {
