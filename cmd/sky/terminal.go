@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/kballard/go-shellquote"
 	"os"
 	"os/exec"
@@ -10,6 +9,7 @@ import (
 
 type Terminal interface {
 	Exec(cmd string) (out []byte, err error)
+	ExecPath(cmd, path string) (out []byte, err error)
 	SetEnv(name, value string)
 }
 
@@ -17,7 +17,7 @@ type LocalTerminal struct {
 	env map[string]string
 }
 
-func (t *LocalTerminal) Exec(cmd string) (out []byte, err error) {
+func (t *LocalTerminal) ExecPath(cmd, path string) (out []byte, err error) {
 	args, err := shellquote.Split(cmd)
 
 	if err != nil {
@@ -26,7 +26,10 @@ func (t *LocalTerminal) Exec(cmd string) (out []byte, err error) {
 
 	command := exec.Command(args[0], args[1:]...)
 	command.Env = t.getEnv()
-	fmt.Println(command.Env)
+
+	if path != "" {
+		command.Dir = path
+	}
 
 	return command.CombinedOutput()
 }
@@ -37,6 +40,10 @@ func (t *LocalTerminal) SetEnv(name, value string) {
 	}
 
 	t.env[name] = value
+}
+
+func (t *LocalTerminal) Exec(cmd string) (out []byte, err error) {
+	return t.ExecPath(cmd, "")
 }
 
 func (t *LocalTerminal) getEnv() []string {

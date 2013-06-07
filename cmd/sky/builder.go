@@ -86,7 +86,18 @@ func (b *builder) perform() {
 		b.term.SetEnv("GOROOT", b.BuildConfig.GoRoot)
 		b.term.SetEnv("CGO_CFLAGS", b.BuildConfig.CgoCFlags)
 		b.term.SetEnv("CGO_LDFLAGS", b.BuildConfig.CgoLdFlags)
+
+		b.runCommands(b.BuildConfig.PreBuildCommands)
+
 		b.fetchDependencies()
+
+		b.buildProject()
+
+		if b.BuildConfig.RunTests {
+			b.runTests()
+		}
+
+		b.runCommands(b.BuildConfig.PostBuildCommands)
 	}
 }
 
@@ -200,8 +211,50 @@ func (b *builder) fetchDependencies() {
 	}
 }
 
+func (b *builder) buildProject() {
+	p := path.Join(b.projectPath, b.BuildConfig.AppPath)
+	flags := "-v"
+
+	if b.BuildConfig.BuildAllPackages {
+		flags = flags + " -a"
+	}
+
+	fmt.Println("Building packages")
+	out, err := b.term.ExecPath("go install "+flags, p)
+	fmt.Println(string(out))
+
+	if err != nil {
+		panic("Failed build: " + err.Error())
+	}
+}
+
+func (b *builder) runTests() {
+	p := path.Join(b.projectPath, b.BuildConfig.AppPath)
+
+	fmt.Println("Testing packages")
+	out, err := b.term.ExecPath("go test", p)
+	fmt.Println(string(out))
+
+	if err != nil {
+		panic("Failed tests: " + err.Error())
+	}
+}
+
+func (b *builder) runCommands(cmds []string) {
+	for _, cmd := range cmds {
+		out, err := b.term.Exec(cmd)
+		fmt.Println(string(out))
+
+		if err != nil {
+			panic("Failed to execute dependent command: " + cmd + "\n" + err.Error())
+		}
+	}
+}
+
 func (b *builder) goPath() string {
-	// TODO: we need a clean gopath in case it imports itself, then we also need to append ourself so the package can be found here?
-	// another issue is if it fetches dependencies it could try to fetch itself, might need to change the gopath again once we've done the update?
-	return "/Users/erikstmartin/tmp" //b.BuildConfig.Jail + ":" + b.BuildConfig.GoPath
+	if b.BuildConfig.GoPath != "" {
+		return b.BuildConfig.Jail + ":" + b.BuildConfig.GoPath
+	}
+
+	return b.BuildConfig.Jail
 }

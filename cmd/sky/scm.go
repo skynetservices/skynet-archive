@@ -47,7 +47,7 @@ func (g *GitScm) Checkout(repo, branch, path string) (err error) {
 	} else {
 		// Repo exists, get latest and checkout correct branch
 		fmt.Println("Fetching latest from repo: " + repo)
-		out, err = g.term.Exec("cd " + path + " && git pull")
+		out, err = g.term.ExecPath("git pull", path)
 		fmt.Println(string(out))
 
 		if err != nil {
@@ -57,7 +57,7 @@ func (g *GitScm) Checkout(repo, branch, path string) (err error) {
 
 	// Ensure we are on the correct branch
 	fmt.Println("Checkout out branch: " + branch)
-	out, err = g.term.Exec("cd " + path + " && git checkout " + branch)
+	out, err = g.term.ExecPath("git checkout "+branch, path)
 	fmt.Println(string(out))
 
 	if err != nil {
@@ -66,7 +66,14 @@ func (g *GitScm) Checkout(repo, branch, path string) (err error) {
 
 	// Check for submodules
 	fmt.Println("Checking for submodules: " + branch)
-	out, err = g.term.Exec("cd " + path + "&& git submodule init && git submodule update")
+	out, err = g.term.ExecPath("git submodule init", path)
+	fmt.Println(string(out))
+
+	if err != nil {
+		return
+	}
+
+	out, err = g.term.ExecPath("git submodule update", path)
 	fmt.Println(string(out))
 
 	if err != nil {

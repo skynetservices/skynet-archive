@@ -63,3 +63,8 @@ func (t *SSHConn) SetEnv(name, value string) {
 	// TODO:
 	return
 }
+
+func (t *SSHConn) ExecPath(cmd, path string) (out []byte, err error) {
+	// TODO:
+	return
+}
