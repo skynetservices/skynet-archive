@@ -10,6 +10,7 @@ type SSHConn struct {
 	host   string
 	user   string
 	client *ssh.ClientConn
+	env    map[string]string
 }
 
 // SSH logic
@@ -33,7 +34,7 @@ func (c *SSHConn) Connect(host, user string) error {
 	return nil
 }
 
-func (c *SSHConn) Exec(cmd string) (out []byte, err error) {
+func (c *SSHConn) ExecPath(cmd, path string) (out []byte, err error) {
 	var session *ssh.Session
 
 	session, err = c.client.NewSession()
@@ -42,7 +43,33 @@ func (c *SSHConn) Exec(cmd string) (out []byte, err error) {
 	}
 	defer session.Close()
 
+	envVars := ""
+	if c.env != nil {
+		for name, value := range c.env {
+			envVars = envVars + name + "=\"" + value + "\" "
+			/*
+				      TODO: This should be the proper way to set the environment, but fails for some reason
+							       * Investigate why and possibly send pull-request to maintainer
+										err = session.Setenv(name, value)
+
+										if err != nil {
+											panic("Failed to set environment: " + err.Error())
+										}
+			*/
+		}
+	}
+
+	cmd = envVars + cmd
+
+	if path != "" {
+		cmd = "cd " + path + " && " + cmd
+	}
+
 	return session.CombinedOutput(cmd)
+}
+
+func (c *SSHConn) Exec(cmd string) (out []byte, err error) {
+	return c.ExecPath(cmd, "")
 }
 
 func (c *SSHConn) Password(user string) (string, error) {
@@ -59,12 +86,10 @@ func (c *SSHConn) Close() {
 	c.client.Close()
 }
 
-func (t *SSHConn) SetEnv(name, value string) {
-	// TODO:
-	return
-}
+func (c *SSHConn) SetEnv(name, value string) {
+	if c.env == nil {
+		c.env = make(map[string]string, 5)
+	}
 
-func (t *SSHConn) ExecPath(cmd, path string) (out []byte, err error) {
-	// TODO:
-	return
+	c.env[name] = value
 }
