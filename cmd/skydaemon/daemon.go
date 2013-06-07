@@ -3,11 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/skynetservices/skynet"
-	"github.com/skynetservices/skynet/daemon"
-	"github.com/skynetservices/skynet/log"
-	"github.com/skynetservices/skynet/service"
-	"github.com/skynetservices/skynet/stats"
+	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/daemon"
+	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet2/service"
+	"github.com/skynetservices/skynet2/stats"
 	"sync"
 )
 

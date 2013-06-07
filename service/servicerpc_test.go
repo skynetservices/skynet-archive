@@ -2,8 +2,8 @@ package service
 
 import (
 	"fmt"
-	"github.com/skynetservices/mgo/bson"
-	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet2"
+	"labix.org/v2/mgo/bson"
 	"net"
 	"testing"
 )

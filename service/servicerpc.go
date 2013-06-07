@@ -3,8 +3,8 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/skynetservices/skynet"
-	"github.com/skynetservices/skynet/log"
+	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/log"
 	"labix.org/v2/mgo/bson"
 	"reflect"
 	"time"
