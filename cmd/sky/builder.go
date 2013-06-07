@@ -6,7 +6,6 @@ import (
 	"go/build"
 	"io/ioutil"
 	"path"
-	"strings"
 )
 
 type builder struct {
@@ -36,6 +35,7 @@ type buildConfig struct {
 	UpdatePackages   bool
 	BuildAllPackages bool
 	RunTests         bool
+	TestSkynet       bool
 
 	// TODO:
 	PreBuildCommands  []string
@@ -89,7 +89,7 @@ func (b *builder) perform() {
 
 		b.runCommands(b.BuildConfig.PreBuildCommands)
 
-		b.fetchDependencies()
+		b.updateDependencies()
 
 		b.buildProject()
 
@@ -185,30 +185,8 @@ func (b *builder) setupScm() {
 	}
 }
 
-func (b *builder) fetchDependencies() {
-	flags := []string{"-d"}
-
-	if b.BuildConfig.UpdatePackages {
-		flags = append(flags, "-u")
-	}
-
-	for _, i := range b.pack.Imports {
-		if !build.IsLocalImport(i) {
-
-			// Skip packages that were pulled down as part of repo
-			if strings.HasPrefix(path.Join(b.BuildConfig.Jail, "src", i), b.projectPath) {
-				continue
-			}
-
-			fmt.Println("Fetching package: " + i)
-			out, err := b.term.Exec("go get " + strings.Join(flags, " ") + " " + i)
-			fmt.Println(string(out))
-
-			if err != nil {
-				panic("Failed to fetch dependency: " + i + "\n" + err.Error())
-			}
-		}
-	}
+func (b *builder) updateDependencies() {
+	b.getPackageDependencies(path.Join(b.projectPath, b.BuildConfig.AppPath))
 }
 
 func (b *builder) buildProject() {
@@ -237,6 +215,40 @@ func (b *builder) runTests() {
 
 	if err != nil {
 		panic("Failed tests: " + err.Error())
+	}
+
+	if b.BuildConfig.TestSkynet {
+		b.testSkynet()
+	}
+}
+
+func (b *builder) testSkynet() {
+	fmt.Println("Testing Skynet")
+	p := path.Join(b.BuildConfig.Jail, "src/github.com/skynetservices/skynet2")
+
+	b.getPackageDependencies(p)
+
+	out, err := b.term.ExecPath("go test ./...", p)
+	fmt.Println(string(out))
+
+	if err != nil {
+		panic("Failed tests: " + err.Error())
+	}
+}
+
+func (b *builder) getPackageDependencies(p string) {
+	flags := []string{"-d"}
+
+	if b.BuildConfig.UpdatePackages {
+		flags = append(flags, "-u")
+	}
+
+	fmt.Println("Fetching dependencies")
+	out, err := b.term.ExecPath("go get ./...", p)
+	fmt.Println(string(out))
+
+	if err != nil {
+		panic("Failed to fetch dependencies\n" + err.Error())
 	}
 }
 
