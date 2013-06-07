@@ -14,6 +14,7 @@ type ServiceManager interface {
 	ListServices(query ServiceQuery) []string
 	ListInstances(query ServiceQuery) []ServiceInfo
 	ListHosts(query ServiceQuery) []string
+	Subscribe(query ServiceQuery) <-chan ServiceUpdate
 }
 
 type ServiceQuery struct {
@@ -22,6 +23,19 @@ type ServiceQuery struct {
 	Version     []string
 	Region      []string
 	ServiceAddr []*BindAddr
+}
+
+type ServiceStatus int
+
+const (
+	ADD ServiceStatus = iota
+	REMOVE
+	UPDATE
+)
+
+type ServiceUpdate struct {
+	Service ServiceInfo
+	Event   ServiceStatus
 }
 
 var manager ServiceManager
