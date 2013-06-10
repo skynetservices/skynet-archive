@@ -18,4 +18,6 @@ func (h *Host) Update() {
 	h.Mem.Get()
 	h.Swap.Get()
 	h.Cpu.Get()
+
+	UpdateHostStats(*h)
 }
