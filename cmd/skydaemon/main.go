@@ -28,9 +28,6 @@ func main() {
 	config.Name = "SkynetDaemon"
 	config.Version = "1"
 
-	// skydaemon does not listen to admin RPC requests
-	config.AdminAddr = nil
-
 	deployment := &SkynetDaemon{
 		Services: map[string]*SubService{},
 	}

@@ -1,11 +1,3 @@
-//Copyright (c) 2011 Brian Ketelsen
-
-//Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 package skynet
 
 import (
@@ -108,7 +100,6 @@ type ServiceConfig struct {
 	Version                     string
 	Region                      string
 	ServiceAddr                 *BindAddr
-	AdminAddr                   *BindAddr
 	DoozerUpdateInterval        time.Duration `json:"-" bson:"-"`
 	CriticalClientCount         int32
 	CriticalAverageResponseTime time.Duration
@@ -175,7 +166,6 @@ func GetServiceConfig() (config *ServiceConfig, args []string) {
 func ParseServiceFlags(scfg *ServiceConfig, flagset *flag.FlagSet, argv []string) (config *ServiceConfig, args []string) {
 
 	rpcAddr := flagset.String("l", GetDefaultBindAddr(), "host:port to listen on for RPC")
-	adminAddr := flagset.String("admin", GetDefaultBindAddr(), "host:port to listen on for admin")
 
 	err := flagset.Parse(argv)
 	args = flagset.Args()
@@ -189,13 +179,8 @@ func ParseServiceFlags(scfg *ServiceConfig, flagset *flag.FlagSet, argv []string
 	if err != nil {
 		panic(err)
 	}
-	adminBA, err := BindAddrFromString(*adminAddr)
-	if err != nil {
-		panic(err)
-	}
 
 	scfg.ServiceAddr = rpcBA
-	scfg.AdminAddr = adminBA
 
 	return scfg, args
 }
