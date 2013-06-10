@@ -56,8 +56,8 @@ func (s *SkynetDaemon) Start(requestInfo *skynet.RequestInfo, in daemon.StartReq
 	return
 }
 
-func (s *SkynetDaemon) UpdateHostStats(ss *service.Service) {
-	s.HostStats.Update()
+func (s *SkynetDaemon) UpdateHostStats(host string) {
+	s.HostStats.Update(host)
 }
 
 func (s *SkynetDaemon) getSubService(uuid string) (ss *SubService) {

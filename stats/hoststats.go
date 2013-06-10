@@ -12,12 +12,12 @@ type Host struct {
 	Cpu         sigar.Cpu
 }
 
-func (h *Host) Update() {
+func (h *Host) Update(name string) {
 	h.Uptime.Get()
 	h.LoadAverage.Get()
 	h.Mem.Get()
 	h.Swap.Get()
 	h.Cpu.Get()
 
-	UpdateHostStats(*h)
+	UpdateHostStats(name, *h)
 }
