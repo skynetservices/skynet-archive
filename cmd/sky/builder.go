@@ -294,18 +294,39 @@ func (b *builder) goPath() string {
 
 func (b *builder) deploy(hosts []string) {
 	for _, host := range hosts {
-		// TODO: this assumes build and deploy are both local, but it should scp from the build box if the build box is remote
-		// TODO: if build and deploy boxes are remote, need to scp from server to server
-		if isHostLocal(host) {
-			fmt.Println("Copying local binary")
-			command := exec.Command("cp", path.Base(b.BuildConfig.AppPath), path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
-			out, err := command.CombinedOutput()
-			fmt.Println(string(out))
+		var out []byte
+		var err error
 
-			if err != nil {
-				panic("Failed to copy binary: " + err.Error())
-			}
+		// TODO: if build and deploy boxes are remote, need to scp from server to server
+		if isHostLocal(host) && isHostLocal(b.BuildConfig.Host) {
+			fmt.Println("Copying local binary")
+			command := exec.Command("cp", path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)), path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
+			out, err = command.CombinedOutput()
+		} else if isHostLocal(host) && !isHostLocal(b.BuildConfig.Host) {
+			// Deploying locally but build is remote
+			fmt.Println("Copying binary from build machine")
+			host, port := splitHostPort(b.BuildConfig.Host)
+
+			command := exec.Command("scp", "-P", port, b.BuildConfig.User+"@"+host+":"+path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)),
+				path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
+			out, err = command.CombinedOutput()
 		}
+
+		fmt.Println(string(out))
+
+		if err != nil {
+			panic("Failed to deploy: " + err.Error())
+		}
+	}
+}
+
+func splitHostPort(host string) (string, string) {
+	parts := strings.Split(host, ":")
+
+	if len(parts) < 2 {
+		return parts[0], "22"
+	} else {
+		return parts[0], parts[1]
 	}
 }
 

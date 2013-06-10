@@ -53,12 +53,13 @@ func (t *LocalTerminal) getEnv() []string {
 	for _, v := range os.Environ() {
 		parts := strings.Split(v, "=")
 
-		if n, ok := t.env[parts[0]]; ok {
-			env = append(env, parts[0]+"="+n)
-		} else {
+		if _, ok := t.env[parts[0]]; !ok {
 			env = append(env, v)
 		}
+	}
 
+	for k, v := range t.env {
+		env = append(env, k+"="+v)
 	}
 
 	return env
