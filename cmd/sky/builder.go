@@ -75,7 +75,11 @@ func newBuilder(config string) *builder {
 	} else {
 		sshClient := new(SSHConn)
 		b.term = sshClient
-		sshClient.Connect(b.BuildConfig.Host, b.BuildConfig.User)
+		err = sshClient.Connect(b.BuildConfig.Host, b.BuildConfig.User)
+
+		if err != nil {
+			panic("Failed to connect to build machine: " + err.Error())
+		}
 	}
 
 	b.validatePackage()

@@ -45,7 +45,12 @@ func (g *GitScm) Checkout(repo, branch, path string) (err error) {
 			return
 		}
 	} else {
-		// Repo exists, get latest and checkout correct branch
+		// Move to master to ensure we are on a branch
+		err = g.CheckoutBranch("master", path)
+		if err != nil {
+			return
+		}
+
 		fmt.Println("Fetching latest from repo: " + repo)
 		out, err = g.term.ExecPath("git pull", path)
 		fmt.Println(string(out))
@@ -57,9 +62,8 @@ func (g *GitScm) Checkout(repo, branch, path string) (err error) {
 
 	// Ensure we are on the correct branch
 	fmt.Println("Checkout out branch: " + branch)
-	out, err = g.term.ExecPath("git checkout "+branch, path)
-	fmt.Println(string(out))
 
+	err = g.CheckoutBranch(branch, path)
 	if err != nil {
 		return
 	}
@@ -93,4 +97,11 @@ func (g *GitScm) ImportPathFromRepo(repoUrl string) (importPath string, err erro
 	importPath = strings.Replace(matches[1], ":", "/", -1)
 
 	return
+}
+
+func (g *GitScm) CheckoutBranch(branch, path string) error {
+	out, err := g.term.ExecPath("git checkout "+branch, path)
+	fmt.Println(string(out))
+
+	return err
 }
