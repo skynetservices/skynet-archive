@@ -46,6 +46,7 @@ type buildConfig struct {
 type deployConfig struct {
 	DeployPath string
 	BinaryName string
+	User       string
 }
 
 var context = build.Default
@@ -90,7 +91,7 @@ func Build(config string) {
 
 func Deploy(config string) {
 	b := newBuilder(config)
-	b.deploy([]string{"localhost"})
+	b.deploy([]string{})
 	b.term.Close()
 }
 
@@ -299,17 +300,31 @@ func (b *builder) deploy(hosts []string) {
 
 		// TODO: if build and deploy boxes are remote, need to scp from server to server
 		if isHostLocal(host) && isHostLocal(b.BuildConfig.Host) {
+			// Built locally, deploying locally
 			fmt.Println("Copying local binary")
 			command := exec.Command("cp", path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)), path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
 			out, err = command.CombinedOutput()
 		} else if isHostLocal(host) && !isHostLocal(b.BuildConfig.Host) {
-			// Deploying locally but build is remote
+			// Built remotely, deploying locally
 			fmt.Println("Copying binary from build machine")
-			host, port := splitHostPort(b.BuildConfig.Host)
+			h, p := splitHostPort(b.BuildConfig.Host)
 
-			command := exec.Command("scp", "-P", port, b.BuildConfig.User+"@"+host+":"+path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)),
+			command := exec.Command("scp", "-P", p, b.BuildConfig.User+"@"+h+":"+path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)),
 				path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
 			out, err = command.CombinedOutput()
+		} else if !isHostLocal(host) && isHostLocal(b.BuildConfig.Host) {
+			// Built locally, deploying remotely
+			fmt.Println("Pushing binary to host: " + host)
+			h, p := splitHostPort(host)
+
+			command := exec.Command("scp", "-P", p, path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)), b.DeployConfig.User+"@"+h+":"+path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
+			out, err = command.CombinedOutput()
+		} else if !isHostLocal(host) && !isHostLocal(b.BuildConfig.Host) {
+			// Built remotely, deployed remotely
+			fmt.Println("Pushing binary from build box to host: " + host)
+			h, p := splitHostPort(host)
+
+			out, err = b.term.Exec("scp -P " + p + " " + path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)) + " " + b.DeployConfig.User + "@" + h + ":" + path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
 		}
 
 		fmt.Println(string(out))
