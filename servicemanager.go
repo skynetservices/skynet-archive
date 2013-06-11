@@ -13,6 +13,8 @@ type ServiceManager interface {
 
 	// Discovery
 	ListHosts(c Criteria) ([]string, error)
+	ListRegions(c Criteria) ([]string, error)
+	ListServices(c Criteria) ([]string, error)
 }
 
 var manager ServiceManager

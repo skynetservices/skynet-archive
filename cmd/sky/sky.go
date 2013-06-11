@@ -49,10 +49,50 @@ func main() {
 		Deploy(*config)
 	case "hosts":
 		ListHosts(args)
+	case "regions":
+		ListRegions(args)
+	case "services":
+		ListServices(args)
+	}
+}
+
+func ListRegions(args []string) {
+	regions, err := skynet.GetServiceManager().ListRegions(criteriaFromArgs(args))
+
+	if err != nil {
+		panic(err)
+	}
+
+	for _, r := range regions {
+		fmt.Println(r)
+	}
+}
+
+func ListServices(args []string) {
+	services, err := skynet.GetServiceManager().ListServices(criteriaFromArgs(args))
+
+	if err != nil {
+		panic(err)
+	}
+
+	for _, s := range services {
+		fmt.Println(s)
 	}
 }
 
 func ListHosts(args []string) {
+	hosts, err := skynet.GetServiceManager().ListHosts(criteriaFromArgs(args))
+
+	if err != nil {
+		panic(err)
+	}
+
+	for _, h := range hosts {
+		fmt.Println(h)
+	}
+}
+
+func criteriaFromArgs(args []string) skynet.Criteria {
 	flagset := flag.NewFlagSet("deploy", flag.ExitOnError)
 	services := flagset.String("services", "", "services")
 	regions := flagset.String("regions", "", "regions")
@@ -63,7 +103,6 @@ func ListHosts(args []string) {
 	err := flagset.Parse(flagsetArgs)
 	if err != nil {
 		panic(err)
-		return
 	}
 
 	regionCriteria := make([]string, 0, 0)
@@ -79,18 +118,10 @@ func ListHosts(args []string) {
 		*reg = false
 	}
 
-	hosts, err := skynet.GetServiceManager().ListHosts(skynet.Criteria{
+	return skynet.Criteria{
 		Regions:    regionCriteria,
 		Registered: reg,
 		Services:   serviceCriteriaFromCsv(*services),
-	})
-
-	if err != nil {
-		panic(err)
-	}
-
-	for _, h := range hosts {
-		fmt.Println(h)
 	}
 }
 
