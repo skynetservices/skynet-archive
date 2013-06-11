@@ -15,6 +15,8 @@ type ServiceManager interface {
 	ListHosts(c Criteria) ([]string, error)
 	ListRegions(c Criteria) ([]string, error)
 	ListServices(c Criteria) ([]string, error)
+	ListVersions(c Criteria) ([]string, error)
+	ListInstances(c Criteria) ([]ServiceInfo, error)
 }
 
 var manager ServiceManager
