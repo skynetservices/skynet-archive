@@ -24,7 +24,7 @@ func main() {
 		Services: map[string]*SubService{},
 	}
 
-	s := service.CreateService(deployment, config)
+	s := service.CreateService(deployment, *config)
 
 	deployment.Service = s
 

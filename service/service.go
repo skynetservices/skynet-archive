@@ -48,7 +48,7 @@ type Service struct {
 }
 
 // Wraps your custom service in Skynet
-func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
+func CreateService(sd ServiceDelegate, c skynet.ServiceConfig) (s *Service) {
 	s = &Service{
 		Delegate:       sd,
 		methods:        make(map[string]reflect.Value),
@@ -58,7 +58,7 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		shuttingDown:   false,
 	}
 
-	s.ServiceConfig = c
+	s.ServiceConfig = &c
 
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
@@ -189,7 +189,7 @@ func (s *Service) getClientInfo(clientID string) (ci ClientInfo, ok bool) {
 	return
 }
 
-func (s *Service) listen(addr *skynet.BindAddr, bindWait *sync.WaitGroup) {
+func (s *Service) listen(addr skynet.BindAddr, bindWait *sync.WaitGroup) {
 	var err error
 	s.rpcListener, err = addr.Listen()
 	if err != nil {
@@ -197,7 +197,7 @@ func (s *Service) listen(addr *skynet.BindAddr, bindWait *sync.WaitGroup) {
 	}
 
 	log.Printf(log.INFO, "%+v\n", ServiceListening{
-		Addr:          addr,
+		Addr:          &addr,
 		ServiceConfig: s.ServiceConfig,
 	})
 

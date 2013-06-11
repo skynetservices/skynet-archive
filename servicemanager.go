@@ -10,6 +10,9 @@ type ServiceManager interface {
 	Remove(s ServiceInfo) error
 	Register(uuid string) error
 	Unregister(uuid string) error
+
+	// Discovery
+	ListHosts(c Criteria) ([]string, error)
 }
 
 var manager ServiceManager

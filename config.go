@@ -19,7 +19,7 @@ type BindAddr struct {
 	MaxPort   int
 }
 
-func BindAddrFromString(host string) (ba *BindAddr, err error) {
+func BindAddrFromString(host string) (ba BindAddr, err error) {
 	if host == "" {
 		return
 	}
@@ -29,7 +29,7 @@ func BindAddrFromString(host string) (ba *BindAddr, err error) {
 		return
 	}
 
-	ba = &BindAddr{}
+	ba = BindAddr{}
 
 	ba.IPAddress = host[:split]
 	if ba.IPAddress == "" {
@@ -99,7 +99,7 @@ type ServiceConfig struct {
 	Name                 string
 	Version              string
 	Region               string
-	ServiceAddr          *BindAddr
+	ServiceAddr          BindAddr
 	DoozerUpdateInterval time.Duration `json:"-" bson:"-"`
 }
 
