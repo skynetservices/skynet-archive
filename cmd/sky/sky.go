@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"github.com/skynetservices/skynet2"
 	"os"
 )
 
@@ -17,22 +19,29 @@ func main() {
 	case "help", "h":
 		CommandLineHelp()
 	case "build", "b":
-		var config string
+		flagset := flag.NewFlagSet("build", flag.ExitOnError)
+		config := flagset.String("version", "", "service version")
+		flagsetArgs, _ := skynet.SplitFlagsetFromArgs(flagset, args)
 
-		if len(args) >= 2 {
-			config = args[1]
+		err := flagset.Parse(flagsetArgs)
+		if err != nil {
+			panic(err)
+			return
 		}
 
-		Build(config)
+		Build(*config)
 	case "deploy", "d":
-		var config string
+		flagset := flag.NewFlagSet("deploy", flag.ExitOnError)
+		config := flagset.String("version", "", "service version")
+		flagsetArgs, _ := skynet.SplitFlagsetFromArgs(flagset, args)
 
-		// TODO: Pass additional args as server names to deploy to
-		if len(args) >= 2 {
-			config = args[1]
+		err := flagset.Parse(flagsetArgs)
+		if err != nil {
+			panic(err)
+			return
 		}
 
-		Deploy(config)
+		Deploy(*config)
 	}
 }
 
@@ -41,8 +50,9 @@ func CommandLineHelp() {
 
     Commands:
             build: Uses build.cfg or optional config to build the current project
+                  -config - config file to use
             deploy: Uses build.cfg or optional config to deploy the current project
-            
+                  -config - config file to use
             
             
   `)
