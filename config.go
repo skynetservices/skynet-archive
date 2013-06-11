@@ -95,14 +95,12 @@ func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
 }
 
 type ServiceConfig struct {
-	UUID                        string
-	Name                        string
-	Version                     string
-	Region                      string
-	ServiceAddr                 *BindAddr
-	DoozerUpdateInterval        time.Duration `json:"-" bson:"-"`
-	CriticalClientCount         int32
-	CriticalAverageResponseTime time.Duration
+	UUID                 string
+	Name                 string
+	Version              string
+	Region               string
+	ServiceAddr          *BindAddr
+	DoozerUpdateInterval time.Duration `json:"-" bson:"-"`
 }
 
 type ClientConfig struct {

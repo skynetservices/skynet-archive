@@ -5,37 +5,11 @@ import (
 )
 
 type ServiceManager interface {
-	Add(s ServiceInfo)
-	Update(s ServiceInfo)
-	Remove(uuid string)
-	Register(uuid string)
-	Unregister(uuid string)
-	ListRegions(query ServiceQuery) []string
-	ListServices(query ServiceQuery) []string
-	ListInstances(query ServiceQuery) []ServiceInfo
-	ListHosts(query ServiceQuery) []string
-	Subscribe(query ServiceQuery) chan ServiceUpdate
-}
-
-type ServiceQuery struct {
-	UUID        []string
-	Name        []string
-	Version     []string
-	Region      []string
-	ServiceAddr []*BindAddr
-}
-
-type ServiceStatus int
-
-const (
-	ADD ServiceStatus = iota
-	REMOVE
-	UPDATE
-)
-
-type ServiceUpdate struct {
-	Service ServiceInfo
-	Event   ServiceStatus
+	Add(s ServiceInfo) error
+	Update(s ServiceInfo) error
+	Remove(s ServiceInfo) error
+	Register(uuid string) error
+	Unregister(uuid string) error
 }
 
 var manager ServiceManager

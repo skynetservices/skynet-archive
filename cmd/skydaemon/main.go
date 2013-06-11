@@ -1,16 +1,11 @@
 package main
 
 import (
-	"bufio"
-	"errors"
 	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/daemon"
 	"github.com/skynetservices/skynet2/log"
 	"github.com/skynetservices/skynet2/service"
 	"github.com/skynetservices/zkmanager"
-	"io"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -19,7 +14,7 @@ import (
 // Daemon will run the "SkynetDeployment" service, which can be used
 // to remotely spawn new services on the host.
 func main() {
-	config, args := skynet.GetServiceConfig()
+	config, _ := skynet.GetServiceConfig()
 	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager(os.Getenv("SKYNET_ZOOKEEPER"), 1*time.Second))
 
 	config.Name = "SkynetDaemon"

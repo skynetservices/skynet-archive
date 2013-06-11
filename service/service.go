@@ -70,18 +70,19 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 
 // Notifies the cluster your service is ready to handle requests
 func (s *Service) Register() {
-	log.Println(log.TRACE, "in Register")
 	s.registeredChan <- true
 }
 
 func (s *Service) register() {
-	log.Println(log.TRACE, "in register")
 	// this version must be run from the mux() goroutine
 	if s.Registered {
 		return
 	}
 
-	skynet.GetServiceManager().Register(s.ServiceConfig.UUID)
+	err := skynet.GetServiceManager().Register(s.ServiceConfig.UUID)
+	if err != nil {
+		log.Println(log.ERROR, "Failed to register service: "+err.Error())
+	}
 
 	s.Registered = true
 	log.Printf(log.INFO, "%+v\n", ServiceRegistered{s.ServiceConfig})
@@ -99,7 +100,10 @@ func (s *Service) unregister() {
 		return
 	}
 
-	skynet.GetServiceManager().Unregister(s.ServiceConfig.UUID)
+	err := skynet.GetServiceManager().Unregister(s.ServiceConfig.UUID)
+	if err != nil {
+		log.Println(log.ERROR, "Failed to unregister service: "+err.Error())
+	}
 
 	s.Registered = false
 	log.Printf(log.INFO, "%+v\n", ServiceUnregistered{s.ServiceConfig})
@@ -122,7 +126,10 @@ func (s *Service) Shutdown() {
 
 	s.activeRequests.Wait()
 
-	skynet.GetServiceManager().Remove(s.ServiceConfig.UUID)
+	err := skynet.GetServiceManager().Remove(s.ServiceInfo)
+	if err != nil {
+		log.Println(log.ERROR, "Failed to remove service: "+err.Error())
+	}
 
 	s.Delegate.Stopped(s) // Call user defined callback
 
@@ -160,7 +167,10 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	}()
 	done = s.doneGroup
 
-	skynet.GetServiceManager().Add(s.ServiceInfo)
+	err := skynet.GetServiceManager().Add(s.ServiceInfo)
+	if err != nil {
+		log.Println(log.ERROR, "Failed to add service: "+err.Error())
+	}
 
 	if register {
 		s.Register()
