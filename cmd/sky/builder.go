@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/skynetservices/skynet2"
 	"go/build"
 	"io/ioutil"
 	"os/exec"
@@ -93,9 +94,9 @@ func Build(config string) {
 	b.term.Close()
 }
 
-func Deploy(config string) {
+func Deploy(config string, criteria *skynet.Criteria) {
 	b := newBuilder(config)
-	b.deploy([]string{})
+	b.deploy(getHosts(criteria))
 	b.term.Close()
 }
 

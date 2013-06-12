@@ -15,6 +15,7 @@ import (
 )
 
 var criteria = new(skynet.Criteria)
+var configFile = "./build.cfg"
 
 /*
 * CLI Logic
@@ -24,6 +25,9 @@ var SupportedCliCommands = []string{
 	"exit",
 	"quit",
 	"filters",
+	"config",
+	"deploy",
+	"build",
 	"help",
 	"host",
 	"hosts",
@@ -54,6 +58,7 @@ func tabCompleter(line string) []string {
 			"reset registered",
 			"reset service",
 			"reset version",
+			"reset config",
 		}
 
 		for _, cmd := range filters {
@@ -150,6 +155,17 @@ func InteractiveShell() {
 			ListInstances(criteria)
 		case "versions":
 			ListVersions(criteria)
+		case "build":
+			Build(configFile)
+		case "deploy":
+			Deploy(configFile, criteria)
+
+		case "config":
+			if len(parts) >= 2 {
+				configFile = parts[1]
+			}
+
+			fmt.Printf("Config: %s\n", configFile)
 
 		case "service":
 			if len(parts) >= 2 {
@@ -200,6 +216,10 @@ func InteractiveShell() {
 			fmt.Printf("Registered: %v\n", registered)
 
 		case "reset":
+			if len(parts) == 1 || parts[1] == "config" {
+				configFile = "./build.cfg"
+			}
+
 			if len(parts) == 1 || parts[1] == "service" {
 				criteria.Services = []skynet.ServiceCriteria{}
 			}
@@ -262,6 +282,7 @@ func InteractiveShellHelp() {
   regions: List all regions available that meet the specified criteria
   services: List all services available that meet the specified criteria
   versions: List all services available that meet the specified criteria
+  config: Set config file for Build/Deploy (defaults to ./build.cfg)
 
   Filters:
   filters - list current filters

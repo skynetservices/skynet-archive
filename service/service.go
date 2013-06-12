@@ -48,7 +48,7 @@ type Service struct {
 }
 
 // Wraps your custom service in Skynet
-func CreateService(sd ServiceDelegate, c skynet.ServiceConfig) (s *Service) {
+func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	s = &Service{
 		Delegate:       sd,
 		methods:        make(map[string]reflect.Value),
@@ -58,7 +58,7 @@ func CreateService(sd ServiceDelegate, c skynet.ServiceConfig) (s *Service) {
 		shuttingDown:   false,
 	}
 
-	s.ServiceConfig = &c
+	s.ServiceConfig = c
 
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
