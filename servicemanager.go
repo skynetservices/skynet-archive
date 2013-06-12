@@ -12,11 +12,11 @@ type ServiceManager interface {
 	Unregister(uuid string) error
 
 	// Discovery
-	ListHosts(c Criteria) ([]string, error)
-	ListRegions(c Criteria) ([]string, error)
-	ListServices(c Criteria) ([]string, error)
-	ListVersions(c Criteria) ([]string, error)
-	ListInstances(c Criteria) ([]ServiceInfo, error)
+	ListHosts(c CriteriaMatcher) ([]string, error)
+	ListRegions(c CriteriaMatcher) ([]string, error)
+	ListServices(c CriteriaMatcher) ([]string, error)
+	ListVersions(c CriteriaMatcher) ([]string, error)
+	ListInstances(c CriteriaMatcher) ([]ServiceInfo, error)
 }
 
 var manager ServiceManager

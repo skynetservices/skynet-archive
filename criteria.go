@@ -1,5 +1,9 @@
 package skynet
 
+type CriteriaMatcher interface {
+	Matches(s ServiceInfo) bool
+}
+
 type Criteria struct {
 	Hosts      []string
 	Regions    []string
