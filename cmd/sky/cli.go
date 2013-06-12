@@ -2,15 +2,13 @@ package main
 
 /* TODO:
 Implement Build/Deploy
-Update filter prints so it prints comma separated list of filters for each type
-Update help to make it clear you can keep adding multiple filters of a given type
-Modify service filter to support versions (can use helper from sky.go)
 */
 
 import (
 	"fmt"
 	"github.com/sbinet/liner"
 	"github.com/skynetservices/skynet2"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -24,10 +22,12 @@ var criteria = new(skynet.Criteria)
 
 var SupportedCliCommands = []string{
 	"exit",
+	"quit",
 	"filters",
 	"help",
 	"host",
 	"hosts",
+	"instance",
 	"instances",
 	"region",
 	"regions",
@@ -39,6 +39,8 @@ var SupportedCliCommands = []string{
 	"versions",
 }
 
+var serviceRegex = regexp.MustCompile("service ([^:]+):")
+
 func tabCompleter(line string) []string {
 	cmds := make([]string, 0)
 
@@ -47,6 +49,7 @@ func tabCompleter(line string) []string {
 	if strings.HasPrefix(line, "reset") {
 		filters := []string{
 			"reset hosts",
+			"reset instance",
 			"reset region",
 			"reset registered",
 			"reset service",
@@ -61,26 +64,43 @@ func tabCompleter(line string) []string {
 	} else if strings.HasPrefix(line, "host") {
 		cmds = make([]string, 0)
 
-		for _, host := range getHosts(criteria) {
-			cmds = append(cmds, "host "+host)
+		for _, host := range getHosts(&skynet.Criteria{}) {
+			if !exists(criteria.Hosts, host) {
+				cmds = append(cmds, "host "+host)
+			}
+		}
+	} else if strings.HasPrefix(line, "instance") {
+		cmds = make([]string, 0)
+
+		for _, instance := range getInstances(&skynet.Criteria{}) {
+			if !exists(criteria.Instances, instance.UUID) {
+				cmds = append(cmds, "instance "+instance.UUID)
+			}
 		}
 	} else if strings.HasPrefix(line, "region") {
 		cmds = make([]string, 0)
 
-		for _, region := range getRegions(criteria) {
-			cmds = append(cmds, "region "+region)
+		for _, region := range getRegions(&skynet.Criteria{}) {
+			if !exists(criteria.Regions, region) {
+				cmds = append(cmds, "region "+region)
+			}
+		}
+	} else if serviceRegex.MatchString(line) {
+		cmds = make([]string, 0)
+		matches := serviceRegex.FindAllStringSubmatch(line, -1)
+		name := matches[0][1]
+
+		c := new(skynet.Criteria)
+		c.Services = []skynet.ServiceCriteria{skynet.ServiceCriteria{Name: name}}
+
+		for _, version := range getVersions(c) {
+			cmds = append(cmds, "service "+name+":"+version)
 		}
 	} else if strings.HasPrefix(line, "service") {
 		cmds = make([]string, 0)
 
-		for _, service := range getServices(criteria) {
+		for _, service := range getServices(&skynet.Criteria{}) {
 			cmds = append(cmds, "service "+service)
-		}
-	} else if strings.HasPrefix(line, "version") {
-		cmds = make([]string, 0)
-
-		for _, version := range getVersions(criteria) {
-			cmds = append(cmds, "version "+version)
 		}
 	} else if strings.HasPrefix(line, "registered") {
 		cmds = []string{"registered true", "registered false"}
@@ -133,26 +153,31 @@ func InteractiveShell() {
 
 		case "service":
 			if len(parts) >= 2 {
-				criteria.Services = []skynet.ServiceCriteria{
-					skynet.ServiceCriteria{Name: parts[1]},
-				}
+				criteria.AddService(serviceCriteriaFromString(parts[1]))
 			}
 
-			fmt.Printf("Service: %v\n", criteria.Services)
+			fmt.Printf("Services: %v\n", serviceCriteriaToString(criteria.Services))
+
+		case "instance":
+			if len(parts) >= 2 {
+				criteria.AddInstance(parts[1])
+			}
+
+			fmt.Printf("Instances: %v\n", strings.Join(criteria.Instances, ", "))
 
 		case "host":
 			if len(parts) >= 2 {
-				criteria.Hosts = append(criteria.Hosts, parts[1])
+				criteria.AddHost(parts[1])
 			}
 
-			fmt.Printf("Host: %v\n", criteria.Hosts)
+			fmt.Printf("Host: %v\n", strings.Join(criteria.Hosts, ", "))
 
 		case "region":
 			if len(parts) >= 2 {
-				criteria.Regions = append(criteria.Regions, parts[1])
+				criteria.AddRegion(parts[1])
 			}
 
-			fmt.Printf("Region: %v\n", criteria.Regions)
+			fmt.Printf("Region: %v\n", strings.Join(criteria.Regions, ", "))
 
 		case "registered":
 			if len(parts) >= 2 {
@@ -196,7 +221,7 @@ func InteractiveShell() {
 				registered = strconv.FormatBool(*criteria.Registered)
 			}
 
-			fmt.Printf("Region: %v\nHost: %v\nService: %v\nRegistered: %v\n", criteria.Regions, criteria.Hosts, criteria.Services, registered)
+			fmt.Printf("Region: %v\nHost: %v\nService: %v\nRegistered: %v\nInstances: %v\n", strings.Join(criteria.Regions, ", "), strings.Join(criteria.Hosts, ", "), serviceCriteriaToString(criteria.Services), registered, strings.Join(criteria.Instances, ", "))
 		default:
 			validCommand = false
 			fmt.Println("Unknown Command - type 'help' for a list of commands")
@@ -241,10 +266,30 @@ func InteractiveShellHelp() {
   Filters:
   filters - list current filters
   reset <filter> - reset all filters or specified filter
-  region <region> - Set region filter, all commands will be scoped to this region until reset
-  service <service> - Set service filter, all commands will be scoped to this service until reset
-  version <version> - Set version filter, all commands will be scoped to this version until reset
-  host <host> - Set host filter, all commands will be scoped to this host until reset
+  region <region> - Add a region to filter, all commands will be scoped to these regions until reset
+  service <service> - Add a service to filter, all commands will be scoped to these services until reset
+  host <host> - Add host to filter, all commands will be scoped to these hosts until reset
+  instance <uuid> - Add an instance to filter, all commands will be scoped to this instance until reset
 
   `)
+}
+
+func exists(haystack []string, needle string) bool {
+	for _, v := range haystack {
+		if v == needle {
+			return true
+		}
+	}
+
+	return false
+}
+
+func serviceCriteriaToString(sc []skynet.ServiceCriteria) string {
+	s := ""
+
+	for _, v := range sc {
+		s = s + v.String() + ", "
+	}
+
+	return s[:len(s)-2]
 }

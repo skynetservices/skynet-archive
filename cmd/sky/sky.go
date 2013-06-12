@@ -124,7 +124,7 @@ func getHosts(c *skynet.Criteria) []string {
 
 func ListInstances(c *skynet.Criteria) {
 	for _, instance := range getInstances(c) {
-		fmt.Println(instance.ServiceAddr.String() + " - " + instance.Name + " " + instance.Version + " " + strconv.FormatBool(instance.Registered))
+		fmt.Println(instance.ServiceAddr.String() + " - " + instance.Name + " " + instance.Version + " " + strconv.FormatBool(instance.Registered) + " (" + instance.UUID + ")")
 	}
 }
 
@@ -148,6 +148,8 @@ func criteriaFromArgs(args []string) *skynet.Criteria {
 	flagset := flag.NewFlagSet("deploy", flag.ExitOnError)
 	services := flagset.String("services", "", "services")
 	regions := flagset.String("regions", "", "regions")
+	instances := flagset.String("instances", "", "instances")
+	hosts := flagset.String("hosts", "", "hosts")
 	registered := flagset.String("registered", "", "registered")
 
 	flagsetArgs, _ := skynet.SplitFlagsetFromArgs(flagset, args)
@@ -163,6 +165,18 @@ func criteriaFromArgs(args []string) *skynet.Criteria {
 		regionCriteria = strings.Split(*regions, ",")
 	}
 
+	hostCriteria := make([]string, 0, 0)
+
+	if len(*regions) > 0 {
+		hostCriteria = strings.Split(*hosts, ",")
+	}
+
+	instanceCriteria := make([]string, 0, 0)
+
+	if len(*regions) > 0 {
+		instanceCriteria = strings.Split(*instances, ",")
+	}
+
 	var reg *bool
 	if *registered == "true" {
 		*reg = true
@@ -172,6 +186,8 @@ func criteriaFromArgs(args []string) *skynet.Criteria {
 
 	return &skynet.Criteria{
 		Regions:    regionCriteria,
+		Hosts:      hostCriteria,
+		Instances:  instanceCriteria,
 		Registered: reg,
 		Services:   serviceCriteriaFromCsv(*services),
 	}
@@ -185,17 +201,21 @@ func serviceCriteriaFromCsv(csv string) (criteria []skynet.ServiceCriteria) {
 	services := strings.Split(csv, ",")
 
 	for _, s := range services {
-		parts := strings.Split(s, ":")
+		criteria = append(criteria, serviceCriteriaFromString(s))
+	}
 
-		c := skynet.ServiceCriteria{
-			Name: parts[0],
-		}
+	return
+}
 
-		if len(parts) > 1 {
-			c.Version = parts[1]
-		}
+func serviceCriteriaFromString(s string) (c skynet.ServiceCriteria) {
+	parts := strings.Split(s, ":")
 
-		criteria = append(criteria, c)
+	c = skynet.ServiceCriteria{
+		Name: parts[0],
+	}
+
+	if len(parts) > 1 {
+		c.Version = parts[1]
 	}
 
 	return
@@ -214,19 +234,23 @@ func CommandLineHelp() {
                   -services - limit results to regions running the specified comma separated services example. -services=MyService or --services=MyService:v1
                   -hosts - limit results to regions with the specified comma separated hosts
                   -registered - limit results to regions that have registered instances
+                  -instances - limit results to regions that have instances specified
             hosts: List all hosts available that meet the specified criteria
                   -services - limit results to hosts running the specified comma separated services example. -services=MyService or --services=MyService:v1
                   -regions - limit results to hosts in the specified comma separated regions
                   -registered - limit results to hosts that have registered instances
+                  -instances - limit results to hosts that have instances specified
             services: List all services available that meet the specified criteria
                   -hosts - limit results to services running on the specified comma separated hosts
                   -regions - limit results to services in the specified comma separated regions
                   -registered - limit results to services that have registered instances
+                  -instances - limit results to services that have instances specified
             versions: List all versions available that meet the specified criteria
                   -hosts - limit results to versions running on the specified comma separated hosts
                   -regions - limit results to versions in the specified comma separated regions
                   -registered - limit results to versions that have registered instances
                   -services - limit results to versions running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - limit results to versions that have instances specified
             instances: List all instances available that meet the specified criteria
                   -hosts - limit results to instances running on the specified comma separated hosts
                   -regions - limit results to instances in the specified comma separated regions

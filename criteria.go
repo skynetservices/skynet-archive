@@ -7,6 +7,7 @@ type CriteriaMatcher interface {
 type Criteria struct {
 	Hosts      []string
 	Regions    []string
+	Instances  []string
 	Services   []ServiceCriteria
 	Registered *bool
 }
@@ -14,6 +15,14 @@ type Criteria struct {
 type ServiceCriteria struct {
 	Name    string
 	Version string
+}
+
+func (sc *ServiceCriteria) String() string {
+	if sc.Version == "" {
+		return sc.Name
+	}
+
+	return sc.Name + ":" + sc.Version
 }
 
 func (sc *ServiceCriteria) Matches(name, version string) bool {
@@ -29,6 +38,10 @@ func (sc *ServiceCriteria) Matches(name, version string) bool {
 }
 
 func (c *Criteria) Matches(s ServiceInfo) bool {
+	if len(c.Instances) > 0 && !exists(c.Instances, s.UUID) {
+		return false
+	}
+
 	if c.Registered != nil && s.Registered != *c.Registered {
 		return false
 	}
@@ -60,6 +73,45 @@ func (c *Criteria) Matches(s ServiceInfo) bool {
 	}
 
 	return true
+}
+
+func (c *Criteria) AddInstance(uuid string) {
+	if !exists(c.Instances, uuid) {
+		c.Instances = append(c.Instances, uuid)
+	}
+}
+
+func (c *Criteria) AddHost(host string) {
+	if !exists(c.Hosts, host) {
+		c.Hosts = append(c.Hosts, host)
+	}
+}
+
+func (c *Criteria) AddRegion(region string) {
+	if !exists(c.Regions, region) {
+		c.Regions = append(c.Regions, region)
+	}
+}
+
+func (c *Criteria) AddService(service ServiceCriteria) {
+	for _, s := range c.Services {
+		if s.Name == service.Name && s.Version == service.Version {
+			return
+		}
+	}
+
+	c.Services = append(c.Services, service)
+}
+
+// Returns a copy of this criteria
+func (c *Criteria) Clone() *Criteria {
+	criteria := new(Criteria)
+	copy(c.Hosts, criteria.Hosts)
+	copy(c.Regions, criteria.Regions)
+	copy(c.Instances, criteria.Instances)
+	copy(c.Services, criteria.Services)
+
+	return criteria
 }
 
 func exists(haystack []string, needle string) bool {
