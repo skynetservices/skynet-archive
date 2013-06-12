@@ -10,11 +10,6 @@ func clearEnv() {
 	os.Setenv("SKYNET_BIND_IP", "")
 	os.Setenv("SKYNET_MIN_PORT", "")
 	os.Setenv("SKYNET_MAX_PORT", "")
-	os.Setenv("SKYNET_DZHOST", "")
-	os.Setenv("SKYNET_DZNSHOST", "")
-	os.Setenv("SKYNET_DZDISCOVER", "")
-	os.Setenv("SKYNET_MGOSERVER", "")
-	os.Setenv("SKYNET_MGODB", "")
 	os.Setenv("SKYNET_REGION", "")
 	os.Setenv("SKYNET_VERSION", "")
 }
