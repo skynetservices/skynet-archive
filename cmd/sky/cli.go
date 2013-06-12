@@ -16,7 +16,7 @@ import (
 	"syscall"
 )
 
-var criteria skynet.Criteria
+var criteria = new(skynet.Criteria)
 
 /*
 * CLI Logic
@@ -115,7 +115,7 @@ func InteractiveShell() {
 		validCommand := true
 
 		switch parts[0] {
-		case "exit":
+		case "exit", "quit":
 			term.Close()
 			syscall.Exit(0)
 		case "help", "h":

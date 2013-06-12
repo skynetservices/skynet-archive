@@ -66,11 +66,11 @@ func main() {
 	}
 }
 
-func ListRegions(c skynet.Criteria) {
+func ListRegions(c *skynet.Criteria) {
 	printList(getRegions(c))
 }
 
-func getRegions(c skynet.Criteria) []string {
+func getRegions(c *skynet.Criteria) []string {
 	regions, err := skynet.GetServiceManager().ListRegions(c)
 
 	if err != nil {
@@ -80,11 +80,11 @@ func getRegions(c skynet.Criteria) []string {
 	return regions
 }
 
-func ListVersions(c skynet.Criteria) {
+func ListVersions(c *skynet.Criteria) {
 	printList(getVersions(c))
 }
 
-func getVersions(c skynet.Criteria) []string {
+func getVersions(c *skynet.Criteria) []string {
 	versions, err := skynet.GetServiceManager().ListVersions(c)
 
 	if err != nil {
@@ -94,11 +94,11 @@ func getVersions(c skynet.Criteria) []string {
 	return versions
 }
 
-func ListServices(c skynet.Criteria) {
+func ListServices(c *skynet.Criteria) {
 	printList(getServices(c))
 }
 
-func getServices(c skynet.Criteria) []string {
+func getServices(c *skynet.Criteria) []string {
 	services, err := skynet.GetServiceManager().ListServices(c)
 
 	if err != nil {
@@ -108,11 +108,11 @@ func getServices(c skynet.Criteria) []string {
 	return services
 }
 
-func ListHosts(c skynet.Criteria) {
+func ListHosts(c *skynet.Criteria) {
 	printList(getHosts(c))
 }
 
-func getHosts(c skynet.Criteria) []string {
+func getHosts(c *skynet.Criteria) []string {
 	hosts, err := skynet.GetServiceManager().ListHosts(c)
 
 	if err != nil {
@@ -122,13 +122,13 @@ func getHosts(c skynet.Criteria) []string {
 	return hosts
 }
 
-func ListInstances(c skynet.Criteria) {
+func ListInstances(c *skynet.Criteria) {
 	for _, instance := range getInstances(c) {
-		fmt.Println(instance.ServiceAddr.String() + " - " + instance.Name + " " + instance.Version + strconv.FormatBool(instance.Registered))
+		fmt.Println(instance.ServiceAddr.String() + " - " + instance.Name + " " + instance.Version + " " + strconv.FormatBool(instance.Registered))
 	}
 }
 
-func getInstances(c skynet.Criteria) []skynet.ServiceInfo {
+func getInstances(c *skynet.Criteria) []skynet.ServiceInfo {
 	instances, err := skynet.GetServiceManager().ListInstances(c)
 
 	if err != nil {
@@ -144,7 +144,7 @@ func printList(list []string) {
 	}
 }
 
-func criteriaFromArgs(args []string) skynet.Criteria {
+func criteriaFromArgs(args []string) *skynet.Criteria {
 	flagset := flag.NewFlagSet("deploy", flag.ExitOnError)
 	services := flagset.String("services", "", "services")
 	regions := flagset.String("regions", "", "regions")
@@ -170,7 +170,7 @@ func criteriaFromArgs(args []string) skynet.Criteria {
 		*reg = false
 	}
 
-	return skynet.Criteria{
+	return &skynet.Criteria{
 		Regions:    regionCriteria,
 		Registered: reg,
 		Services:   serviceCriteriaFromCsv(*services),
