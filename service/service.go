@@ -138,7 +138,6 @@ func (s *Service) Shutdown() {
 
 // TODO: Currently unimplemented
 func (s *Service) IsTrusted(addr net.Addr) bool {
-	// TODO: something else
 	return false
 }
 

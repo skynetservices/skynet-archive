@@ -302,7 +302,6 @@ func (b *builder) deploy(hosts []string) {
 		var out []byte
 		var err error
 
-		// TODO: if build and deploy boxes are remote, need to scp from server to server
 		if isHostLocal(host) && isHostLocal(b.BuildConfig.Host) {
 			// Built locally, deploying locally
 			fmt.Println("Copying local binary")
