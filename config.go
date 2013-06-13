@@ -109,7 +109,6 @@ type ClientConfig struct {
 	IdleConnectionsToInstance int
 	MaxConnectionsToInstance  int
 	IdleTimeout               time.Duration
-	Prioritizer               func(i1, it *ServiceInfo) (i1IsBetter bool) `json:"-" bson:"-"`
 }
 
 func GetDefaultEnvVar(name, def string) (v string) {

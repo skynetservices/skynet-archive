@@ -58,7 +58,7 @@ func (c *Criteria) Matches(s ServiceInfo) bool {
 
 	// Check for service match
 
-	if c.Regions != nil && len(c.Services) > 0 {
+	if c.Services != nil && len(c.Services) > 0 {
 		match := false
 		for _, sc := range c.Services {
 			if sc.Matches(s.Name, s.Version) {

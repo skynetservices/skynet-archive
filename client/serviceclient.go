@@ -239,6 +239,7 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 		var ok bool
 		// TODO: we need to load balance
 		instances, err := skynet.GetServiceManager().ListInstances(c.criteria)
+
 		if err == nil && len(instances) > 0 {
 			instance = instances[0]
 			c.addInstanceMux(&instance)

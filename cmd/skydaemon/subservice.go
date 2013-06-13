@@ -34,9 +34,9 @@ type SubService struct {
 	UUID string
 }
 
-func NewSubService(daemon *SkynetDaemon, servicePath, args, uuid string) (ss *SubService, err error) {
+func NewSubService(daemon *SkynetDaemon, binaryName, args, uuid string) (ss *SubService, err error) {
 	ss = &SubService{
-		ServicePath: servicePath,
+		ServicePath: binaryName,
 		Args:        args,
 		UUID:        uuid,
 		// TODO: proper argument splitting
@@ -52,7 +52,7 @@ func NewSubService(daemon *SkynetDaemon, servicePath, args, uuid string) (ss *Su
 	if bindir == "" {
 		bindir = "/usr/bin"
 	}
-	ss.binPath = filepath.Join(bindir, servicePath)
+	ss.binPath = filepath.Join(bindir, binaryName)
 
 	return
 }
@@ -61,7 +61,7 @@ func (ss *SubService) Register() {
 	// TODO: connect to admin port or remove this method
 }
 
-func (ss *SubService) Deregister() {
+func (ss *SubService) Unregister() {
 	// TODO: connect to admin port or remove this method
 }
 
@@ -74,7 +74,7 @@ func (ss *SubService) Stop() bool {
 	}
 	ss.running = false
 
-	ss.Deregister()
+	ss.Unregister()
 
 	// halt the rerunner so we can kill the processes without it relaunching
 	ss.runSignal.Add(1)

@@ -41,7 +41,7 @@ func main() {
 	statTicker := time.Tick((5 * time.Second))
 	go func() {
 		for _ = range statTicker {
-			deployment.UpdateHostStats(config.ServiceAddr.IPAddress)
+			deployment.updateHostStats(config.ServiceAddr.IPAddress)
 		}
 	}()
 

@@ -1,6 +1,7 @@
 package bsonrpc
 
 import (
+	"errors"
 	"io"
 	"net/rpc"
 )
@@ -39,6 +40,10 @@ func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {
 }
 
 func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
+	if v == nil {
+		return errors.New("Response object cannot be nil")
+	}
+
 	err = cc.dec.Decode(v)
 	return
 }

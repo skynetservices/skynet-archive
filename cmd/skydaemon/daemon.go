@@ -32,11 +32,11 @@ func (s *SkynetDaemon) Start(requestInfo *skynet.RequestInfo, in daemon.StartReq
 	out.UUID = skynet.UUID()
 
 	log.Printf(log.TRACE, "%+v", SubserviceStart{
-		ServicePath: in.ServicePath,
-		Args:        in.Args,
+		BinaryName: in.BinaryName,
+		Args:       in.Args,
 	})
 
-	ss, err := NewSubService(s, in.ServicePath, in.Args, out.UUID)
+	ss, err := NewSubService(s, in.BinaryName, in.Args, out.UUID)
 	if err != nil {
 		return
 	}
@@ -56,7 +56,7 @@ func (s *SkynetDaemon) Start(requestInfo *skynet.RequestInfo, in daemon.StartReq
 	return
 }
 
-func (s *SkynetDaemon) UpdateHostStats(host string) {
+func (s *SkynetDaemon) updateHostStats(host string) {
 	s.HostStats.Update(host)
 }
 

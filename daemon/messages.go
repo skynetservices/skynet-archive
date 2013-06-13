@@ -1,8 +1,8 @@
 package daemon
 
 type StartRequest struct {
-	ServicePath string
-	Args        string
+	BinaryName string
+	Args       string
 }
 
 type StartResponse struct {

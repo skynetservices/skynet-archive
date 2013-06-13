@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/client"
 	"github.com/skynetservices/zkmanager"
 	"os"
 	"strconv"
@@ -11,10 +12,18 @@ import (
 	"time"
 )
 
+var Config *skynet.ClientConfig
+var Client *client.Client
+
 func main() {
 	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager(os.Getenv("SKYNET_ZOOKEEPER"), 1*time.Second))
+	var args []string
+	Config, args = skynet.GetClientConfigFromFlags(os.Args)
+	Config.MaxConnectionsToInstance = 10
+	Client = client.NewClient(Config)
+	criteria, args := criteriaFromArgs(args)
 
-	args := os.Args[1:]
+	args = args[1:]
 
 	if len(args) == 0 {
 		CommandLineHelp()
@@ -41,7 +50,7 @@ func main() {
 		config := flagset.String("config", "./build.cfg", "build config file")
 		flagsetArgs, deployArgs := skynet.SplitFlagsetFromArgs(flagset, args)
 
-		criteria := criteriaFromArgs(deployArgs)
+		criteria, _ := criteriaFromArgs(deployArgs)
 
 		err := flagset.Parse(flagsetArgs)
 		if err != nil {
@@ -51,15 +60,25 @@ func main() {
 
 		Deploy(*config, criteria)
 	case "hosts":
-		ListHosts(criteriaFromArgs(args))
+		ListHosts(criteria)
 	case "regions":
-		ListRegions(criteriaFromArgs(args))
+		ListRegions(criteria)
 	case "services":
-		ListServices(criteriaFromArgs(args))
+		ListServices(criteria)
 	case "versions":
-		ListVersions(criteriaFromArgs(args))
+		ListVersions(criteria)
 	case "instances":
-		ListInstances(criteriaFromArgs(args))
+		ListInstances(criteria)
+	case "start":
+		Start(criteria, args[1:])
+	case "stop":
+		Stop(criteria)
+	case "restart":
+		Restart(criteria)
+	case "register":
+		Register(criteria)
+	case "unregister":
+		Unregister(criteria)
 	case "cli":
 		InteractiveShell()
 	default:
@@ -146,7 +165,7 @@ func printList(list []string) {
 	}
 }
 
-func criteriaFromArgs(args []string) *skynet.Criteria {
+func criteriaFromArgs(args []string) (*skynet.Criteria, []string) {
 	flagset := flag.NewFlagSet("deploy", flag.ExitOnError)
 	services := flagset.String("services", "", "services")
 	regions := flagset.String("regions", "", "regions")
@@ -154,7 +173,7 @@ func criteriaFromArgs(args []string) *skynet.Criteria {
 	hosts := flagset.String("hosts", "", "hosts")
 	registered := flagset.String("registered", "", "registered")
 
-	flagsetArgs, _ := skynet.SplitFlagsetFromArgs(flagset, args)
+	flagsetArgs, args := skynet.SplitFlagsetFromArgs(flagset, args)
 
 	err := flagset.Parse(flagsetArgs)
 	if err != nil {
@@ -192,7 +211,7 @@ func criteriaFromArgs(args []string) *skynet.Criteria {
 		Instances:  instanceCriteria,
 		Registered: reg,
 		Services:   serviceCriteriaFromCsv(*services),
-	}
+	}, args
 }
 
 func serviceCriteriaFromCsv(csv string) (criteria []skynet.ServiceCriteria) {
@@ -232,6 +251,36 @@ func CommandLineHelp() {
                   -config - config file to use
             deploy: Uses build.cfg or optional config to deploy the current project
                   -config - config file to use
+            start: Start named service on all hosts that match the supplied criteria "start <flags> <binaryName>"
+                  -hosts - start service only on the specified comma separated hosts
+                  -regions - start service only in the specified comma separated regions
+                  -registered - start service only on hosts that have registered instances
+                  -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - start service on hosts that have the specified instances on them
+            stop: Stop services that match the supplied criteria
+                  -hosts - start service only on the specified comma separated hosts
+                  -regions - start service only in the specified comma separated regions
+                  -registered - start service only on hosts that have registered instances
+                  -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - start service on hosts that have the specified instances on them
+            restart: Restart services that match the supplied criteria
+                  -hosts - start service only on the specified comma separated hosts
+                  -regions - start service only in the specified comma separated regions
+                  -registered - start service only on hosts that have registered instances
+                  -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - start service on hosts that have the specified instances on them
+            register: Register services that match the supplied criteria
+                  -hosts - start service only on the specified comma separated hosts
+                  -regions - start service only in the specified comma separated regions
+                  -registered - start service only on hosts that have registered instances
+                  -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - start service on hosts that have the specified instances on them
+            unregister: Unregister services that match the supplied criteria
+                  -hosts - start service only on the specified comma separated hosts
+                  -regions - start service only in the specified comma separated regions
+                  -registered - start service only on hosts that have registered instances
+                  -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - start service on hosts that have the specified instances on them
             regions: List all regions available that meet the specified criteria
                   -services - limit results to regions running the specified comma separated services example. -services=MyService or --services=MyService:v1
                   -hosts - limit results to regions with the specified comma separated hosts
