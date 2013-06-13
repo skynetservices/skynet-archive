@@ -38,7 +38,7 @@ func (sc *ServiceCriteria) Matches(name, version string) bool {
 }
 
 func (c *Criteria) Matches(s ServiceInfo) bool {
-	if len(c.Instances) > 0 && !exists(c.Instances, s.UUID) {
+	if c.Instances != nil && len(c.Instances) > 0 && !exists(c.Instances, s.UUID) {
 		return false
 	}
 
@@ -47,18 +47,18 @@ func (c *Criteria) Matches(s ServiceInfo) bool {
 	}
 
 	// If no hosts were provided we assume any hosts match
-	if len(c.Hosts) > 0 && !exists(c.Hosts, s.ServiceAddr.IPAddress) {
+	if c.Hosts != nil && len(c.Hosts) > 0 && !exists(c.Hosts, s.ServiceAddr.IPAddress) {
 		return false
 	}
 
 	// If no regions were provided we assume any regions match
-	if len(c.Regions) > 0 && !exists(c.Regions, s.Region) {
+	if c.Regions != nil && len(c.Regions) > 0 && !exists(c.Regions, s.Region) {
 		return false
 	}
 
 	// Check for service match
 
-	if len(c.Services) > 0 {
+	if c.Regions != nil && len(c.Services) > 0 {
 		match := false
 		for _, sc := range c.Services {
 			if sc.Matches(s.Name, s.Version) {

@@ -44,6 +44,7 @@ func newServiceClient(criteria *skynet.Criteria, c *Client) (sc *ServiceClient) 
 	sc = &ServiceClient{
 		client:        c,
 		cconfig:       c.Config,
+		criteria:      criteria,
 		instances:     make(map[string]*servicePool),
 		muxChan:       make(chan interface{}),
 		timeoutChan:   make(chan timeoutLengths),
@@ -86,22 +87,21 @@ func (c *ServiceClient) removeInstanceMux(instance *skynet.ServiceInfo) {
 }
 
 func (c *ServiceClient) mux() {
-	/* TODO:
 	for {
 		select {
-		case ns := <-c.instanceListener.NotificationChan:
-			for _, n := range ns {
-				switch n.Type {
-				case InstanceAddNotification, InstanceUpdateNotification:
-					if n.Service.Registered {
-						c.addInstanceMux(&n.Service)
-					} else {
-						c.removeInstanceMux(&n.Service)
-					}
-				case InstanceRemoveNotification:
+		/*case ns := <-c.instanceListener.NotificationChan:
+		for _, n := range ns {
+			switch n.Type {
+			case InstanceAddNotification, InstanceUpdateNotification:
+				if n.Service.Registered {
+					c.addInstanceMux(&n.Service)
+				} else {
 					c.removeInstanceMux(&n.Service)
 				}
+			case InstanceRemoveNotification:
+				c.removeInstanceMux(&n.Service)
 			}
+		}*/
 		case mi := <-c.muxChan:
 			switch m := mi.(type) {
 			case timeoutLengths:
@@ -115,7 +115,6 @@ func (c *ServiceClient) mux() {
 
 		}
 	}
-	*/
 }
 
 /*
@@ -242,6 +241,7 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 		instances, err := skynet.GetServiceManager().ListInstances(c.criteria)
 		if err == nil && len(instances) > 0 {
 			instance = instances[0]
+			c.addInstanceMux(&instance)
 			ok = true
 		}
 
