@@ -200,6 +200,11 @@ func (s *Service) listen(addr skynet.BindAddr, bindWait *sync.WaitGroup) {
 		ServiceConfig: s.ServiceConfig,
 	})
 
+	// We may have changed port due to conflict, ensure config has the correct port now
+	a, _ := skynet.BindAddrFromString(addr.String())
+	s.ServiceConfig.ServiceAddr.IPAddress = a.IPAddress
+	s.ServiceConfig.ServiceAddr.Port = a.Port
+
 	bindWait.Done()
 
 	for {
