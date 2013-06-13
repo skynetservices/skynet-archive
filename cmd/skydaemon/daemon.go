@@ -23,12 +23,10 @@ func (sd *SkynetDaemon) Registered(s *service.Service)   {}
 func (sd *SkynetDaemon) Unregistered(s *service.Service) {}
 func (sd *SkynetDaemon) Started(s *service.Service)      {}
 
-// TODO: Should we stop all services? how do we account for graceful restarts?
 func (sd *SkynetDaemon) Stopped(s *service.Service) {
-	sd.StopAllSubServices(&skynet.RequestInfo{}, daemon.StopAllSubServicesRequest{}, &daemon.StopAllSubServicesResponse{})
 }
 
-func (s *SkynetDaemon) Start(requestInfo *skynet.RequestInfo, in daemon.StartRequest, out *daemon.StartResponse) (err error) {
+func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in daemon.StartSubServiceRequest, out *daemon.StartSubServiceResponse) (err error) {
 	out.UUID = skynet.UUID()
 
 	log.Printf(log.TRACE, "%+v", SubserviceStart{
@@ -36,7 +34,7 @@ func (s *SkynetDaemon) Start(requestInfo *skynet.RequestInfo, in daemon.StartReq
 		Args:       in.Args,
 	})
 
-	ss, err := NewSubService(s, in.BinaryName, in.Args, out.UUID)
+	ss, err := NewSubService(in.BinaryName, in.Args, out.UUID)
 	if err != nil {
 		return
 	}
@@ -96,8 +94,10 @@ func (s *SkynetDaemon) StopAllSubServices(requestInfo *skynet.RequestInfo, in da
 	out.Stops = make([]daemon.StopSubServiceResponse, len(uuids))
 
 	for i, uuid := range uuids {
+		log.Println(log.TRACE, "Stopping "+uuid)
 		err = s.StopSubService(requestInfo, daemon.StopSubServiceRequest{UUID: uuid}, &out.Stops[i])
 		if err != nil {
+			log.Println(log.ERROR, "Failed to stop subservice "+uuid, err)
 			return
 		}
 		if out.Stops[i].Ok {
@@ -112,6 +112,30 @@ func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon
 	ss := s.getSubService(in.UUID)
 	if ss != nil {
 		out.Ok = ss.Stop()
+		out.UUID = in.UUID
+	} else {
+		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
+	}
+
+	return
+}
+
+func (s *SkynetDaemon) RegisterSubService(requestInfo *skynet.RequestInfo, in daemon.RegisterSubServiceRequest, out *daemon.RegisterSubServiceResponse) (err error) {
+	ss := s.getSubService(in.UUID)
+	if ss != nil {
+		out.Ok = ss.Register()
+		out.UUID = in.UUID
+	} else {
+		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
+	}
+
+	return
+}
+
+func (s *SkynetDaemon) UnregisterSubService(requestInfo *skynet.RequestInfo, in daemon.UnregisterSubServiceRequest, out *daemon.UnregisterSubServiceResponse) (err error) {
+	ss := s.getSubService(in.UUID)
+	if ss != nil {
+		out.Ok = ss.Register()
 		out.UUID = in.UUID
 	} else {
 		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))

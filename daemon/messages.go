@@ -1,14 +1,5 @@
 package daemon
 
-type StartRequest struct {
-	BinaryName string
-	Args       string
-}
-
-type StartResponse struct {
-	UUID string
-}
-
 type SubServiceInfo struct {
 	UUID        string
 	ServicePath string
@@ -31,16 +22,9 @@ type StopAllSubServicesResponse struct {
 	Stops []StopSubServiceResponse
 }
 
-type StartAllSubServicesRequest struct {
-}
-
-type StartAllSubServicesResponse struct {
-	Count  int
-	Starts []StartSubServiceResponse
-}
-
 type StartSubServiceRequest struct {
-	UUID string
+	BinaryName string
+	Args       string
 }
 
 type StartSubServiceResponse struct {
@@ -71,4 +55,22 @@ type RestartAllSubServicesRequest struct {
 type RestartAllSubServicesResponse struct {
 	Count    int
 	Restarts []RestartSubServiceResponse
+}
+
+type RegisterSubServiceRequest struct {
+	UUID string
+}
+
+type RegisterSubServiceResponse struct {
+	Ok   bool
+	UUID string
+}
+
+type UnregisterSubServiceRequest struct {
+	UUID string
+}
+
+type UnregisterSubServiceResponse struct {
+	Ok   bool
+	UUID string
 }

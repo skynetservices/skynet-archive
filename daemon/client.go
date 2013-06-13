@@ -29,11 +29,6 @@ func GetDaemonForHost(cl *client.Client, host string) (c Client) {
 	return
 }
 
-func (c Client) Start(in StartRequest) (out StartResponse, err error) {
-	err = c.Send(c.requestInfo, "Start", in, &out)
-	return
-}
-
 func (c Client) ListSubServices(in ListSubServicesRequest) (out ListSubServicesResponse, err error) {
 	err = c.Send(c.requestInfo, "ListSubServices", in, &out)
 	return
@@ -41,11 +36,6 @@ func (c Client) ListSubServices(in ListSubServicesRequest) (out ListSubServicesR
 
 func (c Client) StopAllSubServices(in StopAllSubServicesRequest) (out StopAllSubServicesResponse, err error) {
 	err = c.Send(c.requestInfo, "StopAllSubServices", in, &out)
-	return
-}
-
-func (c Client) StartAllSubServices(in StartAllSubServicesRequest) (out StartAllSubServicesResponse, err error) {
-	err = c.Send(c.requestInfo, "StartAllSubServices", in, &out)
 	return
 }
 
@@ -66,5 +56,15 @@ func (c Client) RestartSubService(in RestartSubServiceRequest) (out RestartSubSe
 
 func (c Client) RestartAllSubServices(in RestartAllSubServicesRequest) (out RestartAllSubServicesResponse, err error) {
 	err = c.Send(c.requestInfo, "RestartAllSubServices", in, &out)
+	return
+}
+
+func (c Client) RegisterSubService(in RegisterSubServiceRequest) (out RegisterSubServiceResponse, err error) {
+	err = c.Send(c.requestInfo, "RegisterSubService", in, &out)
+	return
+}
+
+func (c Client) UnregisterSubService(in UnregisterSubServiceRequest) (out UnregisterSubServiceResponse, err error) {
+	err = c.Send(c.requestInfo, "UnregisterSubService", in, &out)
 	return
 }

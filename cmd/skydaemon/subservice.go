@@ -3,10 +3,15 @@ package main
 import (
 	"fmt"
 	"github.com/kballard/go-shellquote"
+	"github.com/skynetservices/skynet2/daemon"
+	"github.com/skynetservices/skynet2/log"
+	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -32,15 +37,17 @@ type SubService struct {
 	runSignal sync.WaitGroup
 
 	UUID string
+
+	pipe *daemon.Pipe
 }
 
-func NewSubService(daemon *SkynetDaemon, binaryName, args, uuid string) (ss *SubService, err error) {
+func NewSubService(binaryName, args, uuid string) (ss *SubService, err error) {
 	ss = &SubService{
 		ServicePath: binaryName,
 		Args:        args,
 		UUID:        uuid,
-		// TODO: proper argument splitting
 	}
+
 	ss.argv, err = shellquote.Split(args)
 	if err != nil {
 		return
@@ -57,12 +64,14 @@ func NewSubService(daemon *SkynetDaemon, binaryName, args, uuid string) (ss *Sub
 	return
 }
 
-func (ss *SubService) Register() {
+func (ss *SubService) Register() bool {
 	// TODO: connect to admin port or remove this method
+	return true
 }
 
-func (ss *SubService) Unregister() {
+func (ss *SubService) Unregister() bool {
 	// TODO: connect to admin port or remove this method
+	return true
 }
 
 func (ss *SubService) Stop() bool {
@@ -72,13 +81,26 @@ func (ss *SubService) Stop() bool {
 	if !ss.running {
 		return false
 	}
+
+	ss.runSignal.Add(1)
+	close(ss.rerunChan)
+
 	ss.running = false
 
 	ss.Unregister()
 
+	// TODO: Clean this up and put it somewhere useful abstracted cleanly
+	ss.pipe.Write([]byte("SHUTDOWN"))
+	b := make([]byte, daemon.MAX_PIPE_BYTES)
+
+	n, err := ss.pipe.Read(b)
+	if err != nil && err != io.EOF {
+		log.Println(log.ERROR, err)
+	} else {
+		log.Println(log.TRACE, "Read From Service: "+string(b[:n]))
+	}
+
 	// halt the rerunner so we can kill the processes without it relaunching
-	ss.runSignal.Add(1)
-	ss.rerunChan <- false
 	ss.runSignal.Wait()
 
 	return true
@@ -94,6 +116,7 @@ func (ss *SubService) Start() (success bool, err error) {
 		return
 	}
 	ss.running = true
+
 	ss.rerunChan = make(chan bool)
 	go ss.rerunner()
 
@@ -116,11 +139,21 @@ func (ss *SubService) startProcess() (proc *os.Process, err error) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
+	dRead, ssWrite, err := os.Pipe()
+	ssRead, dWrite, err := os.Pipe()
+
+	// Store Fd's for us to read/write to SubService
+	ss.pipe = daemon.NewPipe(dRead, dWrite)
+
+	// Pass SubService their side of the connection
+	cmd.ExtraFiles = append(cmd.ExtraFiles, ssRead, ssWrite)
+
 	err = cmd.Start()
 	proc = cmd.Process
 	startupTimer := time.NewTimer(RerunWait)
 
 	if proc != nil {
+		go ss.watchSignals()
 		go ss.watchProcess(proc, startupTimer)
 	}
 
@@ -150,7 +183,6 @@ func (ss *SubService) watchProcess(proc *os.Process, startupTimer *time.Timer) {
 
 func (ss *SubService) rerunner() {
 	for rerun := range ss.rerunChan {
-
 		if !rerun {
 			break
 		}
@@ -164,4 +196,21 @@ func (ss *SubService) rerunner() {
 	}
 
 	ss.runSignal.Done()
+}
+
+func (ss *SubService) watchSignals() {
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM)
+
+	for {
+		select {
+		case sig := <-c:
+			switch sig.(syscall.Signal) {
+			// Trap signals so we don't get restarted
+			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT,
+				syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
+				ss.Stop()
+			}
+		}
+	}
 }

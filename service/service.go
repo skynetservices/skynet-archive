@@ -2,8 +2,10 @@ package service
 
 import (
 	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/daemon"
 	"github.com/skynetservices/skynet2/log"
 	"github.com/skynetservices/skynet2/rpc/bsonrpc"
+	"io"
 	"net"
 	"net/rpc"
 	"os"
@@ -45,6 +47,7 @@ type Service struct {
 	doneGroup *sync.WaitGroup
 
 	shuttingDown bool
+	pipe         *daemon.Pipe
 }
 
 // Wraps your custom service in Skynet
@@ -64,6 +67,16 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 	s.RPCServ = rpc.NewServer()
 	rpcForwarder := NewServiceRPC(s)
 	s.RPCServ.RegisterName(s.ServiceConfig.Name, rpcForwarder)
+
+	// Daemon doesn't accept commands over pipe
+	if c.Name != "SkynetDaemon" {
+		pipeReader := os.NewFile(uintptr(os.Stderr.Fd()+1), "")
+		pipeWriter := os.NewFile(uintptr(os.Stderr.Fd()+2), "")
+		s.pipe = daemon.NewPipe(pipeReader, pipeWriter)
+
+		// Listen for admin requests
+		go s.serveAdminRequests()
+	}
 
 	return
 }
@@ -272,6 +285,33 @@ loop:
 				}
 			}()
 			break loop
+		}
+	}
+}
+
+func (s *Service) serveAdminRequests() {
+	b := make([]byte, daemon.MAX_PIPE_BYTES)
+	for {
+		n, err := s.pipe.Read(b)
+
+		if err != nil && err != io.EOF {
+			log.Printf(log.ERROR, "Error reading from admin pipe "+err.Error())
+			return
+		}
+
+		cmd := string(b[:n])
+		log.Println(log.TRACE, "Received "+cmd+" from daemon")
+
+		switch cmd {
+		case "SHUTDOWN":
+			s.Shutdown()
+			s.pipe.Write([]byte("ACK"))
+		case "REGISTER":
+			s.Register()
+			s.pipe.Write([]byte("ACK"))
+		case "UNREGISTER":
+			s.Unregister()
+			s.pipe.Write([]byte("ACK"))
 		}
 	}
 }
