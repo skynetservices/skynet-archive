@@ -137,3 +137,24 @@ func SetLogLevel(level LogLevel) {
 func GetLogLevel() LogLevel {
 	return level
 }
+
+func LevelFromString(l string) (level LogLevel) {
+	switch l {
+	case "DEBUG":
+		level = DEBUG
+	case "TRACE":
+		level = TRACE
+	case "INFO":
+		level = INFO
+	case "WARN":
+		level = WARN
+	case "ERROR":
+		level = ERROR
+	case "FATAL":
+		level = FATAL
+	case "PANIC":
+		level = PANIC
+	}
+
+	return
+}

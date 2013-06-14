@@ -47,6 +47,8 @@ var SupportedCliCommands = []string{
 	"register",
 	"unregister",
 	"log",
+	"daemon",
+	"daemon",
 }
 
 var serviceRegex = regexp.MustCompile("service ([^:]+):")
@@ -117,6 +119,10 @@ func tabCompleter(line string) []string {
 		cmds = []string{"registered true", "registered false"}
 	} else if strings.HasPrefix(line, "log") {
 		cmds = append([]string{"log DEBUG", "log TRACE", "log INFO", "log WARN", "log FATAL", "log PANIC"})
+	} else if strings.HasPrefix(line, "daemon log") {
+		cmds = append([]string{"daemon log DEBUG", "daemon log TRACE", "daemon log INFO", "daemon log WARN", "daemon log FATAL", "log PANIC"})
+	} else if strings.HasPrefix(line, "daemon") {
+		cmds = append([]string{"daemon log", "daemon stop"})
 	} else {
 		cmds = SupportedCliCommands
 	}
@@ -179,6 +185,21 @@ func InteractiveShell() {
 			Unregister(criteria)
 		case "log":
 			SetLogLevel(criteria, parts[1])
+		case "daemon":
+			if len(parts) >= 2 {
+				switch parts[1] {
+				case "log":
+					if len(parts) >= 3 {
+						SetDaemonLogLevel(criteria, parts[2])
+					} else {
+						fmt.Println("Must supply a log level")
+					}
+				case "stop":
+					StopDaemon(criteria)
+				}
+			} else {
+				fmt.Println("Supported subcommands for daemon are log, and stop")
+			}
 
 		case "config":
 			if len(parts) >= 2 {
@@ -262,6 +283,7 @@ func InteractiveShell() {
 			}
 
 			fmt.Printf("Region: %v\nHost: %v\nService: %v\nRegistered: %v\nInstances: %v\n", strings.Join(criteria.Regions, ", "), strings.Join(criteria.Hosts, ", "), serviceCriteriaToString(criteria.Services), registered, strings.Join(criteria.Instances, ", "))
+		case "":
 		default:
 			validCommand = false
 			fmt.Println("Unknown Command - type 'help' for a list of commands")
@@ -291,7 +313,9 @@ func InteractiveShellHelp() {
   services: List all services available that meet the specified criteria
   versions: List all services available that meet the specified criteria
   config: Set config file for Build/Deploy (defaults to ./build.cfg)
-  log: Set change log level of service that meet the specified criteria log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
+  log: Set log level of services that meet the specified criteria log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
+  daemon log: Set log level of daemons that meet the specified criteria daemon log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
+  daemon stop: Stop daemons that match the specified criteria
 
   Filters:
   filters - list current filters

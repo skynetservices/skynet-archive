@@ -73,3 +73,13 @@ func (c Client) SubServiceLogLevel(in SubServiceLogLevelRequest) (out SubService
 	err = c.Send(c.requestInfo, "SubServiceLogLevel", in, &out)
 	return
 }
+
+func (c Client) LogLevel(in LogLevelRequest) (out LogLevelResponse, err error) {
+	err = c.Send(c.requestInfo, "LogLevel", in, &out)
+	return
+}
+
+func (c Client) Stop(in StopRequest) (out StopResponse, err error) {
+	err = c.Send(c.requestInfo, "Stop", in, &out)
+	return
+}

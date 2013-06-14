@@ -191,3 +191,24 @@ func (s *SkynetDaemon) SubServiceLogLevel(requestInfo *skynet.RequestInfo, in da
 
 	return
 }
+
+func (s *SkynetDaemon) LogLevel(requestInfo *skynet.RequestInfo, in daemon.LogLevelRequest, out *daemon.LogLevelResponse) (err error) {
+	log.SetLogLevel(log.LevelFromString(in.Level))
+	out.Ok = true
+	out.Level = in.Level
+
+	return
+}
+
+func (s *SkynetDaemon) Stop(requestInfo *skynet.RequestInfo, in daemon.StopRequest, out *daemon.StopResponse) (err error) {
+	out.Ok = true
+
+	s.serviceLock.Lock()
+	for _, ss := range s.Services {
+		ss.Stop()
+	}
+	s.serviceLock.Unlock()
+	go s.Service.Shutdown()
+
+	return
+}

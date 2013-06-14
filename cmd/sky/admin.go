@@ -192,6 +192,60 @@ func SetLogLevel(criteria *skynet.Criteria, level string) {
 	}
 }
 
+func SetDaemonLogLevel(criteria *skynet.Criteria, level string) {
+	hosts, err := skynet.GetServiceManager().ListHosts(criteria)
+
+	if err != nil {
+		panic(err)
+	}
+
+	for _, host := range hosts {
+		d := daemon.GetDaemonForHost(Client, host)
+
+		in := daemon.LogLevelRequest{
+			Level: level,
+		}
+		out, err := d.LogLevel(in)
+
+		if err != nil {
+			fmt.Println("Returned Error: " + err.Error())
+			return
+		}
+
+		if out.Ok {
+			fmt.Printf("Set daemon log level to %v on host: %v\n", level, host)
+		} else {
+			fmt.Printf("Failed to set daemon log level to %v on host: %v\n", level, host)
+		}
+	}
+}
+
+func StopDaemon(criteria *skynet.Criteria) {
+	hosts, err := skynet.GetServiceManager().ListHosts(criteria)
+
+	if err != nil {
+		panic(err)
+	}
+
+	for _, host := range hosts {
+		d := daemon.GetDaemonForHost(Client, host)
+
+		in := daemon.StopRequest{}
+		out, err := d.Stop(in)
+
+		if err != nil {
+			fmt.Println("Returned Error: " + err.Error())
+			return
+		}
+
+		if out.Ok {
+			fmt.Printf("Daemon stopped on host: %v\n", host)
+		} else {
+			fmt.Printf("Failed to stop daemon on host: %v\n", host)
+		}
+	}
+}
+
 func filterDaemon(instances []skynet.ServiceInfo) []skynet.ServiceInfo {
 	filteredInstances := make([]skynet.ServiceInfo, 0)
 

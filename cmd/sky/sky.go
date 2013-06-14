@@ -81,6 +81,21 @@ func main() {
 		Unregister(criteria)
 	case "log":
 		SetLogLevel(criteria, args[1])
+	case "daemon":
+		if len(args) >= 2 {
+			switch args[1] {
+			case "log":
+				if len(args) >= 3 {
+					SetDaemonLogLevel(criteria, args[2])
+				} else {
+					fmt.Println("Must supply a log level")
+				}
+			case "stop":
+				StopDaemon(criteria)
+			}
+		} else {
+			fmt.Println("Supported subcommands for daemon are log, and stop")
+		}
 	case "cli":
 		InteractiveShell()
 	default:
@@ -253,6 +268,21 @@ func CommandLineHelp() {
                   -config - config file to use
             deploy: Uses build.cfg or optional config to deploy the current project
                   -config - config file to use
+
+            log: Set change log level of service that meet the specified criteria log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
+                  -hosts - change log level for services only on the specified comma separated hosts
+                  -regions - change log level for services in the specified comma separated regions
+                  -registered - change log level only on hosts that have registered instances
+                  -services - change log level only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - change log level only on hosts that have the specified instances on them
+
+            daemon log: Set change log level of daemons that meet the specified criteria daemon log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
+                  -hosts - change log level for daemons only on the specified comma separated hosts
+                  -regions - change log level for daemons in the specified comma separated regions
+                  -registered - change log level only on daemons that have registered instances
+                  -services - change log level only on daemons that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - change log level only on daemons that have the specified instances on them
+
             start: Start named service on all hosts that match the supplied criteria "start <flags> <binaryName>"
                   -hosts - start service only on the specified comma separated hosts
                   -regions - start service only in the specified comma separated regions
@@ -265,13 +295,6 @@ func CommandLineHelp() {
                   -registered - start service only on hosts that have registered instances
                   -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
                   -instances - start service on hosts that have the specified instances on them
-            log: Set change log level of service that meet the specified criteria log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
-                  -hosts - change log level for services only on the specified comma separated hosts
-                  -regions - change log level for services in the specified comma separated regions
-                  -registered - change log level only on hosts that have registered instances
-                  -services - change log level only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
-                  -instances - change log level only on hosts that have the specified instances on them
-
             restart: Restart services that match the supplied criteria
                   -hosts - start service only on the specified comma separated hosts
                   -regions - start service only in the specified comma separated regions
@@ -290,6 +313,7 @@ func CommandLineHelp() {
                   -registered - start service only on hosts that have registered instances
                   -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
                   -instances - start service on hosts that have the specified instances on them
+
             regions: List all regions available that meet the specified criteria
                   -services - limit results to regions running the specified comma separated services example. -services=MyService or --services=MyService:v1
                   -hosts - limit results to regions with the specified comma separated hosts

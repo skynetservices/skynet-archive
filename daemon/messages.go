@@ -85,3 +85,19 @@ type SubServiceLogLevelResponse struct {
 	UUID  string
 	Level string
 }
+
+type LogLevelRequest struct {
+	Level string
+}
+
+type LogLevelResponse struct {
+	Ok    bool
+	Level string
+}
+
+type StopRequest struct {
+}
+
+type StopResponse struct {
+	Ok bool
+}

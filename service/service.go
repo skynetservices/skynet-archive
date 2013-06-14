@@ -330,26 +330,7 @@ func (s *Service) serveAdminRequests() {
 			s.pipe.Write([]byte("ACK"))
 		case "LOG DEBUG", "LOG TRACE", "LOG INFO", "LOG WARN", "LOG ERROR", "LOG FATAL", "LOG PANIC":
 			parts := strings.Split(cmd, " ")
-			level := log.GetLogLevel()
-
-			switch parts[1] {
-			case "DEBUG":
-				level = log.DEBUG
-			case "TRACE":
-				level = log.TRACE
-			case "INFO":
-				level = log.INFO
-			case "WARN":
-				level = log.WARN
-			case "ERROR":
-				level = log.ERROR
-			case "FATAL":
-				level = log.FATAL
-			case "PANIC":
-				level = log.PANIC
-			}
-
-			log.SetLogLevel(level)
+			log.SetLogLevel(log.LevelFromString(parts[1]))
 			log.Println(log.INFO, "Setting log level to "+parts[1])
 
 			s.pipe.Write([]byte("ACK"))
