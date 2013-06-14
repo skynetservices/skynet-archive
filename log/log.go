@@ -26,6 +26,31 @@ const (
 	PANIC
 )
 
+func (l LogLevel) String() string {
+	switch l {
+	case DEBUG:
+		return "DEBUG "
+	case TRACE:
+		return "TRACE "
+	case INFO:
+		return "INFO "
+	case WARN:
+		return "WARN "
+	case ERROR:
+		return "ERROR "
+	case FATAL:
+		return "FATAL "
+	case PANIC:
+		return "PANIC "
+	}
+
+	return ""
+}
+
+func (l LogLevel) Interface() interface{} {
+	return interface{}(l.String())
+}
+
 func init() {
 	// Default the logger, implementors can override the Output if they'd like to change it
 	logger = log.New(os.Stdout, "skynet: ", log.LstdFlags)
@@ -33,19 +58,19 @@ func init() {
 
 func Fatal(v ...interface{}) {
 	if level <= FATAL {
-		logger.Fatal(v...)
+		Print(FATAL, v...)
 	}
 }
 
 func Fatalf(format string, v ...interface{}) {
 	if level <= FATAL {
-		logger.Fatalf(format, v...)
+		Printf(FATAL, format, v...)
 	}
 }
 
 func Fatalln(v ...interface{}) {
 	if level <= FATAL {
-		logger.Fatalln(v...)
+		Println(FATAL, v...)
 	}
 }
 
@@ -55,19 +80,19 @@ func Flags() int {
 
 func Panic(v ...interface{}) {
 	if level <= PANIC {
-		logger.Panic(v...)
+		Print(PANIC, v...)
 	}
 }
 
 func Panicf(format string, v ...interface{}) {
 	if level <= PANIC {
-		logger.Panicf(format, v...)
+		Printf(PANIC, format, v...)
 	}
 }
 
 func Panicln(v ...interface{}) {
 	if level <= PANIC {
-		logger.Panicln(v...)
+		Println(PANIC, v...)
 	}
 }
 
@@ -77,19 +102,23 @@ func Prefix() string {
 
 func Print(level LogLevel, v ...interface{}) {
 	if level <= level {
-		logger.Print(v...)
+		l := []interface{}{level.Interface}
+		l = append(l, v)
+		logger.Print(l...)
 	}
 }
 
 func Printf(level LogLevel, format string, v ...interface{}) {
 	if level <= level {
-		logger.Printf(format, v...)
+		logger.Printf(level.String()+format, v...)
 	}
 }
 
 func Println(level LogLevel, v ...interface{}) {
 	if level <= level {
-		logger.Println(v...)
+		l := []interface{}{level.Interface()}
+		l = append(l, v)
+		logger.Println(l...)
 	}
 }
 
