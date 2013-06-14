@@ -145,7 +145,7 @@ func Unregister(criteria *skynet.Criteria) {
 	}
 
 	for _, instance := range filterDaemon(instances) {
-		fmt.Println("Stopping: " + instance.UUID)
+		fmt.Println("Unregistering: " + instance.UUID)
 		d := daemon.GetDaemonForService(Client, &instance)
 
 		in := daemon.UnregisterSubServiceRequest{
@@ -159,6 +159,36 @@ func Unregister(criteria *skynet.Criteria) {
 		}
 
 		unregisterTemplate.Execute(os.Stdout, out)
+	}
+}
+
+var logLevelTemplate = template.Must(template.New("").Parse(
+	`Set LogLevel to {{.Level}} for UUID {{.UUID}}.
+`))
+
+func SetLogLevel(criteria *skynet.Criteria, level string) {
+	instances, err := skynet.GetServiceManager().ListInstances(criteria)
+
+	if err != nil {
+		panic(err)
+	}
+
+	for _, instance := range filterDaemon(instances) {
+		fmt.Println("Setting LogLevel to " + level + " for: " + instance.UUID)
+		d := daemon.GetDaemonForService(Client, &instance)
+
+		in := daemon.SubServiceLogLevelRequest{
+			UUID:  instance.UUID,
+			Level: level,
+		}
+		out, err := d.SubServiceLogLevel(in)
+
+		if err != nil {
+			fmt.Println("Returned Error: " + err.Error())
+			return
+		}
+
+		logLevelTemplate.Execute(os.Stdout, out)
 	}
 }
 

@@ -133,3 +133,7 @@ func SetPrefix(prefix string) {
 func SetLogLevel(level LogLevel) {
 	level = level
 }
+
+func GetLogLevel() LogLevel {
+	return level
+}

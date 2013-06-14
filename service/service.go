@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
+	"strings"
 	"sync"
 	"syscall"
 )
@@ -37,7 +38,6 @@ type Service struct {
 	connectionChan chan *net.TCPConn
 	registeredChan chan bool
 	shutdownChan   chan bool
-	listenChan     chan bool
 
 	clientMutex sync.Mutex
 	ClientInfo  map[string]ClientInfo
@@ -60,7 +60,6 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		connectionChan: make(chan *net.TCPConn),
 		registeredChan: make(chan bool),
 		shutdownChan:   make(chan bool),
-		listenChan:     make(chan bool),
 		ClientInfo:     make(map[string]ClientInfo),
 		shuttingDown:   false,
 	}
@@ -230,8 +229,14 @@ func (s *Service) listen(addr skynet.BindAddr, bindWait *sync.WaitGroup) {
 
 	for {
 		conn, err := s.rpcListener.AcceptTCP()
+
+		if s.shuttingDown {
+			break
+		}
+
 		if err != nil && !s.shuttingDown {
 			log.Println(log.ERROR, "AcceptTCP failed", err)
+			continue
 		}
 		s.connectionChan <- conn
 	}
@@ -260,7 +265,7 @@ loop:
 			encoder := bsonrpc.NewEncoder(conn)
 			err := encoder.Encode(sh)
 			if err != nil {
-				log.Println(log.ERROR, err.Error())
+				log.Println(log.ERROR, "Failed to encode server handshake", err.Error())
 				break
 			}
 			if !s.Registered {
@@ -322,6 +327,31 @@ func (s *Service) serveAdminRequests() {
 			s.pipe.Write([]byte("ACK"))
 		case "UNREGISTER":
 			s.Unregister()
+			s.pipe.Write([]byte("ACK"))
+		case "LOG DEBUG", "LOG TRACE", "LOG INFO", "LOG WARN", "LOG ERROR", "LOG FATAL", "LOG PANIC":
+			parts := strings.Split(cmd, " ")
+			level := log.GetLogLevel()
+
+			switch parts[1] {
+			case "DEBUG":
+				level = log.DEBUG
+			case "TRACE":
+				level = log.TRACE
+			case "INFO":
+				level = log.INFO
+			case "WARN":
+				level = log.WARN
+			case "ERROR":
+				level = log.ERROR
+			case "FATAL":
+				level = log.FATAL
+			case "PANIC":
+				level = log.PANIC
+			}
+
+			log.SetLogLevel(level)
+			log.Println(log.INFO, "Setting log level to "+parts[1])
+
 			s.pipe.Write([]byte("ACK"))
 		}
 	}

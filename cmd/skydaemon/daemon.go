@@ -135,7 +135,7 @@ func (s *SkynetDaemon) RegisterSubService(requestInfo *skynet.RequestInfo, in da
 func (s *SkynetDaemon) UnregisterSubService(requestInfo *skynet.RequestInfo, in daemon.UnregisterSubServiceRequest, out *daemon.UnregisterSubServiceResponse) (err error) {
 	ss := s.getSubService(in.UUID)
 	if ss != nil {
-		out.Ok = ss.Register()
+		out.Ok = ss.Unregister()
 		out.UUID = in.UUID
 	} else {
 		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
@@ -176,5 +176,18 @@ func (s *SkynetDaemon) RestartAllSubServices(requestInfo *skynet.RequestInfo, in
 			return
 		}
 	}
+	return
+}
+
+func (s *SkynetDaemon) SubServiceLogLevel(requestInfo *skynet.RequestInfo, in daemon.SubServiceLogLevelRequest, out *daemon.SubServiceLogLevelResponse) (err error) {
+	ss := s.getSubService(in.UUID)
+	if ss != nil {
+		out.Ok = ss.SetLogLevel(in.Level)
+		out.UUID = in.UUID
+		out.Level = in.Level
+	} else {
+		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
+	}
+
 	return
 }

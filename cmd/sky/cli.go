@@ -41,6 +41,12 @@ var SupportedCliCommands = []string{
 	"services",
 	"version",
 	"versions",
+	"start",
+	"stop",
+	"restart",
+	"register",
+	"unregister",
+	"log",
 }
 
 var serviceRegex = regexp.MustCompile("service ([^:]+):")
@@ -109,6 +115,8 @@ func tabCompleter(line string) []string {
 		}
 	} else if strings.HasPrefix(line, "registered") {
 		cmds = []string{"registered true", "registered false"}
+	} else if strings.HasPrefix(line, "log") {
+		cmds = append([]string{"log DEBUG", "log TRACE", "log INFO", "log WARN", "log FATAL", "log PANIC"})
 	} else {
 		cmds = SupportedCliCommands
 	}
@@ -159,6 +167,18 @@ func InteractiveShell() {
 			Build(configFile)
 		case "deploy":
 			Deploy(configFile, criteria)
+		case "start":
+			Start(criteria, parts[1:])
+		case "stop":
+			Stop(criteria)
+		case "restart":
+			Restart(criteria)
+		case "register":
+			Register(criteria)
+		case "unregister":
+			Unregister(criteria)
+		case "log":
+			SetLogLevel(criteria, parts[1])
 
 		case "config":
 			if len(parts) >= 2 {
@@ -271,6 +291,7 @@ func InteractiveShellHelp() {
   services: List all services available that meet the specified criteria
   versions: List all services available that meet the specified criteria
   config: Set config file for Build/Deploy (defaults to ./build.cfg)
+  log: Set change log level of service that meet the specified criteria log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
 
   Filters:
   filters - list current filters

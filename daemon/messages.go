@@ -74,3 +74,14 @@ type UnregisterSubServiceResponse struct {
 	Ok   bool
 	UUID string
 }
+
+type SubServiceLogLevelRequest struct {
+	UUID  string
+	Level string
+}
+
+type SubServiceLogLevelResponse struct {
+	Ok    bool
+	UUID  string
+	Level string
+}

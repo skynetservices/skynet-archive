@@ -68,3 +68,8 @@ func (c Client) UnregisterSubService(in UnregisterSubServiceRequest) (out Unregi
 	err = c.Send(c.requestInfo, "UnregisterSubService", in, &out)
 	return
 }
+
+func (c Client) SubServiceLogLevel(in SubServiceLogLevelRequest) (out SubServiceLogLevelResponse, err error) {
+	err = c.Send(c.requestInfo, "SubServiceLogLevel", in, &out)
+	return
+}

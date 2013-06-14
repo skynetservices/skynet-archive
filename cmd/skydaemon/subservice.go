@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/kballard/go-shellquote"
 	"github.com/skynetservices/skynet2/daemon"
@@ -65,13 +66,15 @@ func NewSubService(binaryName, args, uuid string) (ss *SubService, err error) {
 }
 
 func (ss *SubService) Register() bool {
-	// TODO: connect to admin port or remove this method
-	return true
+	return ss.sendAdminCommand("REGISTER")
 }
 
 func (ss *SubService) Unregister() bool {
-	// TODO: connect to admin port or remove this method
-	return true
+	return ss.sendAdminCommand("UNREGISTER")
+}
+
+func (ss *SubService) SetLogLevel(level string) bool {
+	return ss.sendAdminCommand("LOG " + level)
 }
 
 func (ss *SubService) Stop() bool {
@@ -89,21 +92,10 @@ func (ss *SubService) Stop() bool {
 
 	ss.Unregister()
 
-	// TODO: Clean this up and put it somewhere useful abstracted cleanly
-	ss.pipe.Write([]byte("SHUTDOWN"))
-	b := make([]byte, daemon.MAX_PIPE_BYTES)
-
-	n, err := ss.pipe.Read(b)
-	if err != nil && err != io.EOF {
-		log.Println(log.ERROR, err)
-	} else {
-		log.Println(log.TRACE, "Read From Service: "+string(b[:n]))
-	}
-
 	// halt the rerunner so we can kill the processes without it relaunching
 	ss.runSignal.Wait()
 
-	return true
+	return ss.sendAdminCommand("SHUTDOWN")
 }
 
 func (ss *SubService) Start() (success bool, err error) {
@@ -130,8 +122,9 @@ func (ss *SubService) Start() (success bool, err error) {
 	return
 }
 
-func (ss *SubService) Restart() {
-	// TODO:
+func (ss *SubService) Restart() bool {
+	log.Println(log.INFO, "Restarting service intentially "+ss.UUID)
+	return ss.sendAdminCommand("SHUTDOWN")
 }
 
 func (ss *SubService) startProcess() (proc *os.Process, err error) {
@@ -213,4 +206,21 @@ func (ss *SubService) watchSignals() {
 			}
 		}
 	}
+}
+
+func (ss *SubService) sendAdminCommand(cmd string) bool {
+	ss.pipe.Write([]byte(cmd))
+	b := make([]byte, daemon.MAX_PIPE_BYTES)
+
+	n, err := ss.pipe.Read(b)
+	if err != nil && err != io.EOF {
+		log.Println(log.ERROR, "Failed to read from admin pipe", err)
+		return false
+	}
+
+	if bytes.Equal(b[:n], []byte("ACK")) {
+		return true
+	}
+
+	return false
 }

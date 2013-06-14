@@ -79,6 +79,8 @@ func main() {
 		Register(criteria)
 	case "unregister":
 		Unregister(criteria)
+	case "log":
+		SetLogLevel(criteria, args[1])
 	case "cli":
 		InteractiveShell()
 	default:
@@ -263,6 +265,13 @@ func CommandLineHelp() {
                   -registered - start service only on hosts that have registered instances
                   -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
                   -instances - start service on hosts that have the specified instances on them
+            log: Set change log level of service that meet the specified criteria log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
+                  -hosts - change log level for services only on the specified comma separated hosts
+                  -regions - change log level for services in the specified comma separated regions
+                  -registered - change log level only on hosts that have registered instances
+                  -services - change log level only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - change log level only on hosts that have the specified instances on them
+
             restart: Restart services that match the supplied criteria
                   -hosts - start service only on the specified comma separated hosts
                   -regions - start service only in the specified comma separated regions
