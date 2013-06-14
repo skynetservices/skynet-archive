@@ -2,35 +2,7 @@ package pools
 
 import (
 	"errors"
-	"fmt"
 )
-
-const DEBUG = false
-
-func dbg(items ...interface{}) {
-	if DEBUG {
-		fmt.Println(items...)
-	}
-}
-
-func dbgf(format string, items ...interface{}) {
-	if DEBUG {
-		fmt.Printf(format, items...)
-	}
-}
-
-const TRACE = false
-
-func ts(name string, items ...interface{}) {
-	if TRACE {
-		fmt.Printf("+%s %v\n", name, items)
-	}
-}
-func te(name string, items ...interface{}) {
-	if TRACE {
-		fmt.Printf("-%s %v\n", name, items)
-	}
-}
 
 type Resource interface {
 	Close()
@@ -126,14 +98,9 @@ loop:
 }
 
 func (rp *ResourcePool) acquire(acq acquireMessage) {
-	ts("acquire")
-	defer te("acquire")
-
 	for !rp.idleResources.Empty() {
-		dbg("not empty")
 		r := rp.idleResources.Dequeue()
 		if !r.IsClosed() {
-			dbg("sending resource")
 			acq.rch <- r
 			return
 		}
@@ -141,14 +108,11 @@ func (rp *ResourcePool) acquire(acq acquireMessage) {
 		rp.numResources--
 	}
 	if rp.maxResources != -1 && rp.numResources >= rp.maxResources {
-		dbg("have to wait for release")
-		dbgf("numResources = %d, maxResources = %d\n", rp.numResources, rp.maxResources)
 		// we need to wait until something comes back in
 		rp.activeWaits = append(rp.activeWaits, acq)
 		return
 	}
 
-	dbg("creating new")
 	r, err := rp.factory()
 	if err != nil {
 		acq.ech <- err

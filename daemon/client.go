@@ -81,5 +81,6 @@ func (c Client) LogLevel(in LogLevelRequest) (out LogLevelResponse, err error) {
 
 func (c Client) Stop(in StopRequest) (out StopResponse, err error) {
 	err = c.Send(c.requestInfo, "Stop", in, &out)
+	c.ServiceClient.Close()
 	return
 }

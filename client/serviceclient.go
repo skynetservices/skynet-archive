@@ -40,6 +40,12 @@ type ServiceClient struct {
 	giveupTimeout time.Duration
 }
 
+func (c *ServiceClient) Close() {
+	for _, sp := range c.instances {
+		sp.pool.Close()
+	}
+}
+
 func newServiceClient(criteria *skynet.Criteria, c *Client) (sc *ServiceClient) {
 	sc = &ServiceClient{
 		client:        c,
