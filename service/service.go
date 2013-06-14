@@ -36,6 +36,8 @@ type Service struct {
 	activeRequests sync.WaitGroup
 	connectionChan chan *net.TCPConn
 	registeredChan chan bool
+	shutdownChan   chan bool
+	listenChan     chan bool
 
 	clientMutex sync.Mutex
 	ClientInfo  map[string]ClientInfo
@@ -57,6 +59,8 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		methods:        make(map[string]reflect.Value),
 		connectionChan: make(chan *net.TCPConn),
 		registeredChan: make(chan bool),
+		shutdownChan:   make(chan bool),
+		listenChan:     make(chan bool),
 		ClientInfo:     make(map[string]ClientInfo),
 		shuttingDown:   false,
 	}
@@ -70,10 +74,6 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 
 	// Daemon doesn't accept commands over pipe
 	if c.Name != "SkynetDaemon" {
-		pipeReader := os.NewFile(uintptr(os.Stderr.Fd()+1), "")
-		pipeWriter := os.NewFile(uintptr(os.Stderr.Fd()+2), "")
-		s.pipe = daemon.NewPipe(pipeReader, pipeWriter)
-
 		// Listen for admin requests
 		go s.serveAdminRequests()
 	}
@@ -123,17 +123,25 @@ func (s *Service) unregister() {
 	s.Delegate.Unregistered(s) // Call user defined callback
 }
 
-// Wait for existing requests to complete and shutdown service
 func (s *Service) Shutdown() {
+	if s.shuttingDown {
+		return
+	}
+
+	s.registeredChan <- false
+	s.shutdownChan <- true
+}
+
+// Wait for existing requests to complete and shutdown service
+func (s *Service) shutdown() {
 	if s.shuttingDown {
 		return
 	}
 
 	s.shuttingDown = true
 
-	s.Unregister()
-
 	s.doneGroup.Add(1)
+	s.rpcListener.Close()
 
 	s.doneChan <- true
 
@@ -222,8 +230,8 @@ func (s *Service) listen(addr skynet.BindAddr, bindWait *sync.WaitGroup) {
 
 	for {
 		conn, err := s.rpcListener.AcceptTCP()
-		if err != nil {
-			panic(err)
+		if err != nil && !s.shuttingDown {
+			log.Println(log.ERROR, "AcceptTCP failed", err)
 		}
 		s.connectionChan <- conn
 	}
@@ -279,17 +287,19 @@ loop:
 			} else {
 				s.unregister()
 			}
+		case <-s.shutdownChan:
+			s.shutdown()
 		case _ = <-s.doneChan:
-			go func() {
-				for _ = range s.doneChan {
-				}
-			}()
 			break loop
 		}
 	}
 }
 
 func (s *Service) serveAdminRequests() {
+	pipeReader := os.NewFile(uintptr(os.Stderr.Fd()+1), "")
+	pipeWriter := os.NewFile(uintptr(os.Stderr.Fd()+2), "")
+	s.pipe = daemon.NewPipe(pipeReader, pipeWriter)
+
 	b := make([]byte, daemon.MAX_PIPE_BYTES)
 	for {
 		n, err := s.pipe.Read(b)
@@ -306,6 +316,7 @@ func (s *Service) serveAdminRequests() {
 		case "SHUTDOWN":
 			s.Shutdown()
 			s.pipe.Write([]byte("ACK"))
+			break
 		case "REGISTER":
 			s.Register()
 			s.pipe.Write([]byte("ACK"))
@@ -328,6 +339,7 @@ func watchSignals(c chan os.Signal, s *Service) {
 				syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
 				log.Printf(log.INFO, "%+v", KillSignal{sig.(syscall.Signal)})
 				s.Shutdown()
+				return
 			}
 		}
 	}
