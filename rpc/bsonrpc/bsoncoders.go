@@ -55,7 +55,7 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 
 	buf := make([]byte, length)
 	copy(buf[0:4], lbuf[:])
-	_, err = d.r.Read(buf[4:])
+	_, err = io.ReadFull(d.r, buf[4:])
 	if err != nil {
 		return
 	}
