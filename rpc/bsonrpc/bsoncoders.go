@@ -1,7 +1,6 @@
 package bsonrpc
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"labix.org/v2/mgo/bson"
@@ -20,8 +19,13 @@ func (e *Encoder) Encode(v interface{}) (err error) {
 	if err != nil {
 		return
 	}
-	_, err = e.w.Write(buf)
-
+	n, err := e.w.Write(buf)
+	if err != nil {
+		return
+	}
+	if l := len(buf); n != l {
+		return fmt.Errorf("Wrote %d bytes, should have wrote %d", n, l)
+	}
 	return
 }
 
@@ -37,12 +41,10 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 	var lbuf [4]byte
 	n, err := d.r.Read(lbuf[:])
 	if n == 0 {
-		err = io.EOF
-		return
+		return io.EOF
 	}
 	if n != 4 {
-		err = errors.New(fmt.Sprintf("Corrupted BSON stream: could only read %d", n))
-		return
+		return fmt.Errorf("Corrupted BSON stream: could only read %d", n)
 	}
 	if err != nil {
 		return
@@ -55,9 +57,12 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 
 	buf := make([]byte, length)
 	copy(buf[0:4], lbuf[:])
-	_, err = d.r.Read(buf[4:])
+	n, err = io.ReadFull(d.r, buf[4:])
 	if err != nil {
 		return
+	}
+	if n+4 != length {
+		return fmt.Errorf("Expected %d bytes, read %d", length, n)
 	}
 
 	err = bson.Unmarshal(buf, pv)
