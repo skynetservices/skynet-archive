@@ -311,8 +311,14 @@ func (s *Service) serveAdminRequests() {
 	for {
 		n, err := s.pipe.Read(b)
 
-		if err != nil && err != io.EOF {
-			log.Printf(log.ERROR, "Error reading from admin pipe "+err.Error())
+		if err != nil {
+			if err != io.EOF {
+				log.Printf(log.ERROR, "Error reading from admin pipe "+err.Error())
+			} else {
+				// We received EOF, ensure we shutdown (if daemon died we could be orphaned)
+				s.Shutdown()
+			}
+
 			return
 		}
 
