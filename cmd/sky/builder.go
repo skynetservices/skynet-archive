@@ -1,5 +1,8 @@
 package main
 
+// TODO: we shouldn't need to prefix Go command with path, it should honor the PATH when sshing in
+// there may be an issue with the ssh library, or possibly just something misconfigured with the pi we're testing on
+
 import (
 	"encoding/json"
 	"fmt"
@@ -46,6 +49,7 @@ type buildConfig struct {
 
 type deployConfig struct {
 	DeployPath string
+	// TODO: Should default to directory name if not supplied
 	BinaryName string
 	User       string
 }
@@ -72,10 +76,12 @@ func newBuilder(config string) *builder {
 	}
 
 	if isHostLocal(b.BuildConfig.Host) {
+		fmt.Println("Connecting to build machine: " + b.BuildConfig.Host)
 		b.term = new(LocalTerminal)
 	} else {
 		sshClient := new(SSHConn)
 		b.term = sshClient
+		fmt.Println("Connecting to build machine: " + b.BuildConfig.Host)
 		err = sshClient.Connect(b.BuildConfig.Host, b.BuildConfig.User)
 
 		if err != nil {
@@ -225,7 +231,7 @@ func (b *builder) buildProject() {
 	}
 
 	fmt.Println("Building packages")
-	out, err := b.term.ExecPath("go install "+flags, p)
+	out, err := b.term.ExecPath(b.BuildConfig.GoRoot+"/bin/go install "+flags, p)
 	fmt.Println(string(out))
 
 	if err != nil {
@@ -237,7 +243,7 @@ func (b *builder) runTests() {
 	p := path.Join(b.projectPath, b.BuildConfig.AppPath)
 
 	fmt.Println("Testing packages")
-	out, err := b.term.ExecPath("go test", p)
+	out, err := b.term.ExecPath(b.BuildConfig.GoRoot+"/bin/go test", p)
 	fmt.Println(string(out))
 
 	if err != nil {
@@ -255,7 +261,7 @@ func (b *builder) testSkynet() {
 
 	b.getPackageDependencies(p)
 
-	out, err := b.term.ExecPath("go test ./...", p)
+	out, err := b.term.ExecPath(b.BuildConfig.GoRoot+"/bin/go test ./...", p)
 	fmt.Println(string(out))
 
 	if err != nil {
@@ -271,7 +277,7 @@ func (b *builder) getPackageDependencies(p string) {
 	}
 
 	fmt.Println("Fetching dependencies")
-	out, err := b.term.ExecPath("go get "+strings.Join(flags, " ")+" ./...", p)
+	out, err := b.term.ExecPath(b.BuildConfig.GoRoot+"/bin/go get "+strings.Join(flags, " ")+" ./...", p)
 	fmt.Println(string(out))
 
 	if err != nil {

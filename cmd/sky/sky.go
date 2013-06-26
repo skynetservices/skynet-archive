@@ -16,6 +16,7 @@ var Config *skynet.ClientConfig
 var Client *client.Client
 
 func main() {
+	// TODO: We need to timeout here, if no zookeeper is up it just hangs
 	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager(os.Getenv("SKYNET_ZOOKEEPER"), 1*time.Second))
 	var args []string
 	Config, args = skynet.GetClientConfigFromFlags(os.Args)
