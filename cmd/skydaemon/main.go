@@ -18,11 +18,9 @@ func main() {
 	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager(os.Getenv("SKYNET_ZOOKEEPER"), 1*time.Second))
 
 	config.Name = "SkynetDaemon"
-	config.Version = "1"
+	config.Version = "2"
 
-	deployment := &SkynetDaemon{
-		Services: map[string]*SubService{},
-	}
+	deployment := NewSkynetDaemon()
 
 	s := service.CreateService(deployment, config)
 
@@ -31,6 +29,8 @@ func main() {
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
 	defer func() {
 		s.Shutdown()
+		deployment.closeStateFile()
+
 		if err := recover(); err != nil {
 			e := err.(error)
 			log.Fatal("Unrecovered error occured: " + e.Error())
@@ -47,5 +47,5 @@ func main() {
 
 	// If we pass false here service will not be Registered
 	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
-	s.Start(true).Wait()
+	s.Start().Wait()
 }

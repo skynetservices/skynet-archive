@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/skynetservices/skynet2"
@@ -8,20 +9,48 @@ import (
 	"github.com/skynetservices/skynet2/log"
 	"github.com/skynetservices/skynet2/service"
 	"github.com/skynetservices/skynet2/stats"
+	"io/ioutil"
+	"os"
 	"sync"
 )
 
 // SkynetDaemon is a service for administering other services
 type SkynetDaemon struct {
 	Services    map[string]*SubService
-	serviceLock sync.Mutex
-	Service     *service.Service
-	HostStats   stats.Host
+	serviceLock sync.Mutex       `json:"-"`
+	Service     *service.Service `json:"-"`
+	HostStats   stats.Host       `json:"-"`
+
+	stateFile *os.File `json:"-"`
+	saveChan  chan bool
+}
+
+func NewSkynetDaemon() *SkynetDaemon {
+	f, err := os.OpenFile(".skystate", os.O_RDWR|os.O_CREATE, 0660)
+	if err != nil {
+		panic("could not open state file")
+	}
+
+	d := &SkynetDaemon{
+		Services:  map[string]*SubService{},
+		stateFile: f,
+		saveChan:  make(chan bool, 1),
+	}
+
+	go d.mux()
+
+	return d
 }
 
 func (sd *SkynetDaemon) Registered(s *service.Service)   {}
 func (sd *SkynetDaemon) Unregistered(s *service.Service) {}
-func (sd *SkynetDaemon) Started(s *service.Service)      {}
+func (sd *SkynetDaemon) Started(s *service.Service) {
+	err := sd.restoreState()
+
+	if err != nil {
+		log.Println(log.ERROR, "Error restoring state", err)
+	}
+}
 
 func (sd *SkynetDaemon) Stopped(s *service.Service) {
 }
@@ -34,7 +63,7 @@ func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in daemo
 		Args:       in.Args,
 	})
 
-	ss, err := NewSubService(in.BinaryName, in.Args, out.UUID)
+	ss, err := NewSubService(in.BinaryName, in.Args, out.UUID, in.Registered)
 	if err != nil {
 		return
 	}
@@ -50,6 +79,8 @@ func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in daemo
 	} else if !start {
 		return errors.New("Service failed to start")
 	}
+
+	s.saveState()
 
 	return
 }
@@ -105,6 +136,8 @@ func (s *SkynetDaemon) StopAllSubServices(requestInfo *skynet.RequestInfo, in da
 		}
 	}
 
+	s.saveState()
+
 	return
 }
 
@@ -113,6 +146,8 @@ func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon
 	if ss != nil {
 		out.Ok = ss.Stop()
 		out.UUID = in.UUID
+
+		s.saveState()
 	} else {
 		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
 	}
@@ -125,6 +160,8 @@ func (s *SkynetDaemon) RegisterSubService(requestInfo *skynet.RequestInfo, in da
 	if ss != nil {
 		out.Ok = ss.Register()
 		out.UUID = in.UUID
+
+		s.saveState()
 	} else {
 		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
 	}
@@ -137,6 +174,8 @@ func (s *SkynetDaemon) UnregisterSubService(requestInfo *skynet.RequestInfo, in 
 	if ss != nil {
 		out.Ok = ss.Unregister()
 		out.UUID = in.UUID
+
+		s.saveState()
 	} else {
 		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
 	}
@@ -149,6 +188,8 @@ func (s *SkynetDaemon) RestartSubService(requestInfo *skynet.RequestInfo, in dae
 	if ss != nil {
 		ss.Restart()
 		out.UUID = in.UUID
+
+		s.saveState()
 	} else {
 		err = errors.New(fmt.Sprintf("No such service UUID %q", in.UUID))
 	}
@@ -176,6 +217,8 @@ func (s *SkynetDaemon) RestartAllSubServices(requestInfo *skynet.RequestInfo, in
 			return
 		}
 	}
+
+	s.saveState()
 	return
 }
 
@@ -210,5 +253,105 @@ func (s *SkynetDaemon) Stop(requestInfo *skynet.RequestInfo, in daemon.StopReque
 	s.serviceLock.Unlock()
 	go s.Service.Shutdown()
 
+	s.saveState()
+
 	return
+}
+
+func (s *SkynetDaemon) saveState() {
+	select {
+	case s.saveChan <- true:
+		// Throw away save, there is one already queued
+	default:
+	}
+}
+
+// TODO: This should be moved out so that it's run asynchronously
+// it should also use a buffered channel so that if a save is already queued it only saves once
+func (s *SkynetDaemon) writeStateFile() (err error) {
+	err = s.stateFile.Truncate(0)
+
+	if err != nil {
+		return
+	}
+
+	_, err = s.stateFile.Seek(0, 0)
+
+	if err != nil {
+		return
+	}
+
+	var b []byte
+	b, err = json.MarshalIndent(s.Services, "", "\t")
+
+	if err != nil {
+		log.Println(log.ERROR, "Failed to marshall daemon state")
+		return
+	}
+
+	_, err = s.stateFile.Write(b)
+
+	if err != nil {
+		log.Println(log.ERROR, "Failed to save daemon state")
+	}
+
+	return
+}
+
+func (s *SkynetDaemon) restoreState() (err error) {
+	var b []byte
+	b, err = ioutil.ReadAll(s.stateFile)
+
+	if err != nil {
+		return
+	}
+
+	// no state to restore
+	if len(b) == 0 {
+		return
+	}
+
+	services := make(map[string]*SubService)
+	err = json.Unmarshal(b, &services)
+
+	if err != nil {
+		return
+	}
+
+	for _, service := range services {
+		var ss *SubService
+		ss, err = NewSubService(service.ServicePath, service.Args, service.UUID, service.Registered)
+		if err != nil {
+			return
+		}
+
+		s.serviceLock.Lock()
+		s.Services[service.UUID] = ss
+		s.serviceLock.Unlock()
+
+		start, startErr := ss.Start()
+
+		if startErr != nil {
+			return errors.New("Service failed to start: " + startErr.Error())
+		} else if !start {
+			return errors.New("Service failed to start")
+		}
+	}
+
+	return
+}
+
+func (s *SkynetDaemon) closeStateFile() {
+	if s.stateFile != nil {
+		s.stateFile.Close()
+	}
+}
+
+func (s *SkynetDaemon) mux() {
+	for {
+		select {
+		case <-s.saveChan:
+			s.writeStateFile()
+		}
+	}
 }

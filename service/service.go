@@ -162,7 +162,7 @@ func (s *Service) IsTrusted(addr net.Addr) bool {
 }
 
 // Starts your skynet service, including binding to ports. Optionally register for requests at the same time. Returns a sync.WaitGroup that will block until all requests have finished
-func (s *Service) Start(register bool) (done *sync.WaitGroup) {
+func (s *Service) Start() (done *sync.WaitGroup) {
 	bindWait := &sync.WaitGroup{}
 
 	bindWait.Add(1)
@@ -186,12 +186,14 @@ func (s *Service) Start(register bool) (done *sync.WaitGroup) {
 	}()
 	done = s.doneGroup
 
+	s.ServiceInfo.Registered = s.ServiceConfig.Registered
+
 	err := skynet.GetServiceManager().Add(s.ServiceInfo)
 	if err != nil {
 		log.Println(log.ERROR, "Failed to add service: "+err.Error())
 	}
 
-	if register {
+	if s.ServiceConfig.Registered {
 		s.Register()
 	}
 

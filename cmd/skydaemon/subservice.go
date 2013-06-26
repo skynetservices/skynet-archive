@@ -40,13 +40,16 @@ type SubService struct {
 	UUID string
 
 	pipe *daemon.Pipe
+
+	Registered bool
 }
 
-func NewSubService(binaryName, args, uuid string) (ss *SubService, err error) {
+func NewSubService(binaryName, args, uuid string, registered bool) (ss *SubService, err error) {
 	ss = &SubService{
 		ServicePath: binaryName,
 		Args:        args,
 		UUID:        uuid,
+		Registered:  registered,
 	}
 
 	ss.argv, err = shellquote.Split(args)
@@ -55,6 +58,10 @@ func NewSubService(binaryName, args, uuid string) (ss *SubService, err error) {
 	}
 
 	ss.argv = append([]string{"-uuid", uuid}, ss.argv...)
+
+	if !registered {
+		ss.argv = append(ss.argv, "-registered=false")
+	}
 
 	bindir := os.Getenv("SKYNET_SERVICE_DIR")
 	if bindir == "" {
@@ -65,12 +72,24 @@ func NewSubService(binaryName, args, uuid string) (ss *SubService, err error) {
 	return
 }
 
-func (ss *SubService) Register() bool {
-	return ss.sendAdminCommand("REGISTER")
+func (ss *SubService) Register() (ok bool) {
+	ok = ss.sendAdminCommand("REGISTER")
+
+	if ok {
+		ss.Registered = true
+	}
+
+	return ok
 }
 
-func (ss *SubService) Unregister() bool {
-	return ss.sendAdminCommand("UNREGISTER")
+func (ss *SubService) Unregister() (ok bool) {
+	ok = ss.sendAdminCommand("UNREGISTER")
+
+	if ok {
+		ss.Registered = false
+	}
+
+	return ok
 }
 
 func (ss *SubService) SetLogLevel(level string) bool {
@@ -209,9 +228,17 @@ func (ss *SubService) watchSignals() {
 }
 
 func (ss *SubService) sendAdminCommand(cmd string) bool {
-	ss.pipe.Write([]byte(cmd))
+	log.Println(log.TRACE, "Writing to admin pipe: "+cmd)
+	_, err := ss.pipe.Write([]byte(cmd))
+
+	if err != nil {
+		log.Println(log.ERROR, "Failed to write to admin pipe", err)
+		return false
+	}
+
 	b := make([]byte, daemon.MAX_PIPE_BYTES)
 
+	log.Println(log.TRACE, "Reading from admin pipe")
 	n, err := ss.pipe.Read(b)
 	if err != nil && err != io.EOF {
 		log.Println(log.ERROR, "Failed to read from admin pipe", err)

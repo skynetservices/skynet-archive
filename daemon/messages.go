@@ -25,6 +25,7 @@ type StopAllSubServicesResponse struct {
 type StartSubServiceRequest struct {
 	BinaryName string
 	Args       string
+	Registered bool
 }
 
 type StartSubServiceResponse struct {

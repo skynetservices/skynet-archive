@@ -100,6 +100,7 @@ type ServiceConfig struct {
 	Version              string
 	Region               string
 	ServiceAddr          BindAddr
+	Registered           bool
 	DoozerUpdateInterval time.Duration `json:"-" bson:"-"`
 }
 
@@ -154,6 +155,7 @@ func FlagsForService(scfg *ServiceConfig, flagset *flag.FlagSet) {
 	flagset.StringVar(&scfg.UUID, "uuid", UUID(), "UUID for this service")
 	flagset.StringVar(&scfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region service is located in")
 	flagset.StringVar(&scfg.Version, "version", DefaultVersion, "version of service")
+	flagset.BoolVar(&scfg.Registered, "registered", true, "Service should register on start")
 }
 
 func GetServiceConfig() (config *ServiceConfig, args []string) {
@@ -161,7 +163,6 @@ func GetServiceConfig() (config *ServiceConfig, args []string) {
 }
 
 func ParseServiceFlags(scfg *ServiceConfig, flagset *flag.FlagSet, argv []string) (config *ServiceConfig, args []string) {
-
 	rpcAddr := flagset.String("l", GetDefaultBindAddr(), "host:port to listen on for RPC")
 
 	err := flagset.Parse(argv)
