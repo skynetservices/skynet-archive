@@ -49,9 +49,7 @@ func main() {
 	case "deploy", "d":
 		flagset := flag.NewFlagSet("deploy", flag.ExitOnError)
 		config := flagset.String("config", "./build.cfg", "build config file")
-		flagsetArgs, deployArgs := skynet.SplitFlagsetFromArgs(flagset, args)
-
-		criteria, _ := criteriaFromArgs(deployArgs)
+		flagsetArgs, _ := skynet.SplitFlagsetFromArgs(flagset, args)
 
 		err := flagset.Parse(flagsetArgs)
 		if err != nil {
@@ -206,7 +204,7 @@ func criteriaFromArgs(args []string) (*skynet.Criteria, []string) {
 
 	hostCriteria := make([]string, 0, 0)
 
-	if len(*regions) > 0 {
+	if len(*hosts) > 0 {
 		hostCriteria = strings.Split(*hosts, ",")
 	}
 
