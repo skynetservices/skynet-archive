@@ -147,6 +147,7 @@ func (s *SkynetDaemon) StopSubService(requestInfo *skynet.RequestInfo, in daemon
 	if ss != nil {
 		out.Ok = ss.Stop()
 		out.UUID = in.UUID
+		delete(s.Services, in.UUID)
 
 		s.saveState()
 	} else {
