@@ -6,11 +6,12 @@ import (
 	"github.com/skynetservices/skynet2"
 	"github.com/skynetservices/skynet2/daemon"
 	"os"
+	"sync"
 	"text/template"
 )
 
-var deployTemplate = template.Must(template.New("").Parse(
-	`Deployed service with UUID {{.UUID}}.
+var startTemplate = template.Must(template.New("").Parse(
+	`Started service with UUID {{.UUID}}.
 `))
 
 func Start(criteria *skynet.Criteria, args []string) {
@@ -25,23 +26,32 @@ func Start(criteria *skynet.Criteria, args []string) {
 		panic(err)
 	}
 
+	var wait sync.WaitGroup
+
 	for _, host := range hosts {
-		fmt.Println("Starting on host: " + host)
-		d := daemon.GetDaemonForHost(Client, host)
+		wait.Add(1)
+		go func(host string) {
+			fmt.Println("Starting on host: " + host)
+			d := daemon.GetDaemonForHost(Client, host)
 
-		in := daemon.StartSubServiceRequest{
-			BinaryName: args[0],
-			Args:       shellquote.Join(args[1:]...),
-		}
-		out, err := d.StartSubService(in)
+			in := daemon.StartSubServiceRequest{
+				BinaryName: args[0],
+				Args:       shellquote.Join(args[1:]...),
+			}
+			out, err := d.StartSubService(in)
 
-		if err != nil {
-			fmt.Println("Returned Error: " + err.Error())
-			return
-		}
+			if err != nil {
+				fmt.Println("Returned Error: " + err.Error())
+				wait.Done()
+				return
+			}
 
-		deployTemplate.Execute(os.Stdout, out)
+			startTemplate.Execute(os.Stdout, out)
+			wait.Done()
+		}(host)
 	}
+
+	wait.Wait()
 }
 
 var stopTemplate = template.Must(template.New("").Parse(
@@ -56,22 +66,31 @@ func Stop(criteria *skynet.Criteria) {
 		panic(err)
 	}
 
+	var wait sync.WaitGroup
+
 	for _, instance := range filterDaemon(instances) {
-		fmt.Println("Stopping: " + instance.UUID)
-		d := daemon.GetDaemonForService(Client, &instance)
+		wait.Add(1)
+		go func(instance skynet.ServiceInfo) {
+			fmt.Println("Stopping: " + instance.UUID)
+			d := daemon.GetDaemonForService(Client, &instance)
 
-		in := daemon.StopSubServiceRequest{
-			UUID: instance.UUID,
-		}
-		out, err := d.StopSubService(in)
+			in := daemon.StopSubServiceRequest{
+				UUID: instance.UUID,
+			}
+			out, err := d.StopSubService(in)
 
-		if err != nil {
-			fmt.Println("Returned Error: " + err.Error())
-			return
-		}
+			if err != nil {
+				fmt.Println("Returned Error: " + err.Error())
+				wait.Done()
+				return
+			}
 
-		stopTemplate.Execute(os.Stdout, out)
+			stopTemplate.Execute(os.Stdout, out)
+			wait.Done()
+		}(instance)
 	}
+
+	wait.Wait()
 }
 
 var restartTemplate = template.Must(template.New("").Parse(
@@ -86,22 +105,31 @@ func Restart(criteria *skynet.Criteria) {
 		panic(err)
 	}
 
+	var wait sync.WaitGroup
+
 	for _, instance := range filterDaemon(instances) {
-		fmt.Println("Restarting: " + instance.UUID)
-		d := daemon.GetDaemonForService(Client, &instance)
+		wait.Add(1)
+		go func(instance skynet.ServiceInfo) {
+			fmt.Println("Restarting: " + instance.UUID)
+			d := daemon.GetDaemonForService(Client, &instance)
 
-		in := daemon.RestartSubServiceRequest{
-			UUID: instance.UUID,
-		}
-		out, err := d.RestartSubService(in)
+			in := daemon.RestartSubServiceRequest{
+				UUID: instance.UUID,
+			}
+			out, err := d.RestartSubService(in)
 
-		if err != nil {
-			fmt.Println("Returned Error: " + err.Error())
-			return
-		}
+			if err != nil {
+				fmt.Println("Returned Error: " + err.Error())
+				wait.Done()
+				return
+			}
 
-		restartTemplate.Execute(os.Stdout, out)
+			restartTemplate.Execute(os.Stdout, out)
+			wait.Done()
+		}(instance)
 	}
+
+	wait.Wait()
 }
 
 var registerTemplate = template.Must(template.New("").Parse(
@@ -115,22 +143,31 @@ func Register(criteria *skynet.Criteria) {
 		panic(err)
 	}
 
+	var wait sync.WaitGroup
+
 	for _, instance := range filterDaemon(instances) {
-		fmt.Println("Registering: " + instance.UUID)
-		d := daemon.GetDaemonForService(Client, &instance)
+		wait.Add(1)
+		go func(instance skynet.ServiceInfo) {
+			fmt.Println("Registering: " + instance.UUID)
+			d := daemon.GetDaemonForService(Client, &instance)
 
-		in := daemon.RegisterSubServiceRequest{
-			UUID: instance.UUID,
-		}
-		out, err := d.RegisterSubService(in)
+			in := daemon.RegisterSubServiceRequest{
+				UUID: instance.UUID,
+			}
+			out, err := d.RegisterSubService(in)
 
-		if err != nil {
-			fmt.Println("Returned Error: " + err.Error())
-			return
-		}
+			if err != nil {
+				fmt.Println("Returned Error: " + err.Error())
+				wait.Done()
+				return
+			}
 
-		registerTemplate.Execute(os.Stdout, out)
+			registerTemplate.Execute(os.Stdout, out)
+			wait.Done()
+		}(instance)
 	}
+
+	wait.Wait()
 }
 
 var unregisterTemplate = template.Must(template.New("").Parse(
@@ -144,22 +181,31 @@ func Unregister(criteria *skynet.Criteria) {
 		panic(err)
 	}
 
+	var wait sync.WaitGroup
+
 	for _, instance := range filterDaemon(instances) {
-		fmt.Println("Unregistering: " + instance.UUID)
-		d := daemon.GetDaemonForService(Client, &instance)
+		wait.Add(1)
+		go func(instance skynet.ServiceInfo) {
+			fmt.Println("Unregistering: " + instance.UUID)
+			d := daemon.GetDaemonForService(Client, &instance)
 
-		in := daemon.UnregisterSubServiceRequest{
-			UUID: instance.UUID,
-		}
-		out, err := d.UnregisterSubService(in)
+			in := daemon.UnregisterSubServiceRequest{
+				UUID: instance.UUID,
+			}
+			out, err := d.UnregisterSubService(in)
 
-		if err != nil {
-			fmt.Println("Returned Error: " + err.Error())
-			return
-		}
+			if err != nil {
+				fmt.Println("Returned Error: " + err.Error())
+				wait.Done()
+				return
+			}
 
-		unregisterTemplate.Execute(os.Stdout, out)
+			unregisterTemplate.Execute(os.Stdout, out)
+			wait.Done()
+		}(instance)
 	}
+
+	wait.Wait()
 }
 
 var logLevelTemplate = template.Must(template.New("").Parse(
@@ -173,23 +219,32 @@ func SetLogLevel(criteria *skynet.Criteria, level string) {
 		panic(err)
 	}
 
+	var wait sync.WaitGroup
+
 	for _, instance := range filterDaemon(instances) {
-		fmt.Println("Setting LogLevel to " + level + " for: " + instance.UUID)
-		d := daemon.GetDaemonForService(Client, &instance)
+		wait.Add(1)
+		go func(instance skynet.ServiceInfo) {
+			fmt.Println("Setting LogLevel to " + level + " for: " + instance.UUID)
+			d := daemon.GetDaemonForService(Client, &instance)
 
-		in := daemon.SubServiceLogLevelRequest{
-			UUID:  instance.UUID,
-			Level: level,
-		}
-		out, err := d.SubServiceLogLevel(in)
+			in := daemon.SubServiceLogLevelRequest{
+				UUID:  instance.UUID,
+				Level: level,
+			}
+			out, err := d.SubServiceLogLevel(in)
 
-		if err != nil {
-			fmt.Println("Returned Error: " + err.Error())
-			return
-		}
+			if err != nil {
+				fmt.Println("Returned Error: " + err.Error())
+				wait.Done()
+				return
+			}
 
-		logLevelTemplate.Execute(os.Stdout, out)
+			logLevelTemplate.Execute(os.Stdout, out)
+			wait.Done()
+		}(instance)
 	}
+
+	wait.Wait()
 }
 
 func SetDaemonLogLevel(criteria *skynet.Criteria, level string) {
@@ -199,25 +254,35 @@ func SetDaemonLogLevel(criteria *skynet.Criteria, level string) {
 		panic(err)
 	}
 
+	var wait sync.WaitGroup
+
 	for _, host := range hosts {
-		d := daemon.GetDaemonForHost(Client, host)
+		wait.Add(1)
+		go func(host string) {
+			d := daemon.GetDaemonForHost(Client, host)
 
-		in := daemon.LogLevelRequest{
-			Level: level,
-		}
-		out, err := d.LogLevel(in)
+			in := daemon.LogLevelRequest{
+				Level: level,
+			}
+			out, err := d.LogLevel(in)
 
-		if err != nil {
-			fmt.Println("Returned Error: " + err.Error())
-			return
-		}
+			if err != nil {
+				fmt.Println("Returned Error: " + err.Error())
+				wait.Done()
+				return
+			}
 
-		if out.Ok {
-			fmt.Printf("Set daemon log level to %v on host: %v\n", level, host)
-		} else {
-			fmt.Printf("Failed to set daemon log level to %v on host: %v\n", level, host)
-		}
+			if out.Ok {
+				fmt.Printf("Set daemon log level to %v on host: %v\n", level, host)
+			} else {
+				fmt.Printf("Failed to set daemon log level to %v on host: %v\n", level, host)
+			}
+
+			wait.Done()
+		}(host)
 	}
+
+	wait.Wait()
 }
 
 func StopDaemon(criteria *skynet.Criteria) {
@@ -227,23 +292,33 @@ func StopDaemon(criteria *skynet.Criteria) {
 		panic(err)
 	}
 
+	var wait sync.WaitGroup
+
 	for _, host := range hosts {
-		d := daemon.GetDaemonForHost(Client, host)
+		wait.Add(1)
+		go func(host string) {
+			d := daemon.GetDaemonForHost(Client, host)
 
-		in := daemon.StopRequest{}
-		out, err := d.Stop(in)
+			in := daemon.StopRequest{}
+			out, err := d.Stop(in)
 
-		if err != nil {
-			fmt.Println("Returned Error: " + err.Error())
-			return
-		}
+			if err != nil {
+				fmt.Println("Returned Error: " + err.Error())
+				wait.Done()
+				return
+			}
 
-		if out.Ok {
-			fmt.Printf("Daemon stopped on host: %v\n", host)
-		} else {
-			fmt.Printf("Failed to stop daemon on host: %v\n", host)
-		}
+			if out.Ok {
+				fmt.Printf("Daemon stopped on host: %v\n", host)
+			} else {
+				fmt.Printf("Failed to stop daemon on host: %v\n", host)
+			}
+
+			wait.Done()
+		}(host)
 	}
+
+	wait.Wait()
 }
 
 func filterDaemon(instances []skynet.ServiceInfo) []skynet.ServiceInfo {
