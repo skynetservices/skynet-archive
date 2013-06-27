@@ -11,9 +11,9 @@ const (
 	// DefaultTimeoutDuration is how long a client.ServiceClient will wait before giving up.
 	DefaultTimeoutDuration = 10 * time.Second
 	// DefaultIdleConnectionsToInstance is the number of connections to a particular instance that may sit idle.
-	DefaultIdleConnectionsToInstance = 1
+	DefaultIdleConnectionsToInstance = 2
 	// DefaultMaxConnectionsToInstance is the maximum number of concurrent connections to a particular instance.
-	DefaultMaxConnectionsToInstance = 1
+	DefaultMaxConnectionsToInstance = 5
 )
 
 // skynet
