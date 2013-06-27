@@ -11,6 +11,7 @@ import (
 	"github.com/skynetservices/skynet2/stats"
 	"io/ioutil"
 	"os"
+	"path"
 	"sync"
 )
 
@@ -26,7 +27,7 @@ type SkynetDaemon struct {
 }
 
 func NewSkynetDaemon() *SkynetDaemon {
-	f, err := os.OpenFile(".skystate", os.O_RDWR|os.O_CREATE, 0660)
+	f, err := os.OpenFile(path.Join("/var/lib/skynet/", ".skystate"), os.O_RDWR|os.O_CREATE, 0660)
 	if err != nil {
 		panic("could not open state file")
 	}
