@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"github.com/skynetservices/skynet2"
 	"github.com/skynetservices/skynet2/log"
@@ -60,6 +61,14 @@ func newServiceClient(criteria *skynet.Criteria, c *Client) (sc *ServiceClient) 
 	sc.listenID = skynet.UUID()
 
 	go sc.mux()
+
+	instances, err := skynet.GetServiceManager().ListInstances(sc.criteria)
+
+	if err == nil && len(instances) > 0 {
+		for _, instance := range instances {
+			sc.addInstanceMux(&instance)
+		}
+	}
 	return
 }
 
@@ -238,25 +247,20 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 	fn string, in interface{}) {
 
 	// first find an available instance
-	var instance skynet.ServiceInfo
 	var r pools.Resource
 	var err error
 	for r == nil {
-		var ok bool
-		// TODO: we need to load balance
-		instances, err := skynet.GetServiceManager().ListInstances(c.criteria)
-
-		if err == nil && len(instances) > 0 {
-			instance = instances[0]
-			c.addInstanceMux(&instance)
-			ok = true
-		}
-
-		if !ok {
-			// must have timed out
+		if len(c.instances) < 1 {
+			attempts <- sendAttempt{err: errors.New("No instances found")}
 			return
 		}
-		sp := c.instances[getInstanceKey(&instance)]
+
+		// TODO: we need to load balance
+		var sp *servicePool
+		for _, instance := range c.instances {
+			sp = instance
+			break
+		}
 
 		// then, get a connection to that instance
 		r, err = sp.pool.Acquire()
