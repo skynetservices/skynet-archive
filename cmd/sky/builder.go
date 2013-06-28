@@ -317,7 +317,7 @@ func (b *builder) deploy(hosts []string) {
 			command := exec.Command("mv", path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName), path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName+".old"))
 			out, err = command.CombinedOutput()
 
-			if err != nil {
+			if err == nil {
 				fmt.Println(string(out))
 				command = exec.Command("cp", path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)), path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
 				out, err = command.CombinedOutput()
@@ -329,14 +329,12 @@ func (b *builder) deploy(hosts []string) {
 
 			// First move binary to .old in case it's currently running
 			command := exec.Command("mv", path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName), path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName+".old"))
-			out, err = command.CombinedOutput()
+			out, _ = command.CombinedOutput()
 
-			if err != nil {
-				fmt.Println(string(out))
-				command = exec.Command("scp", "-P", p, b.BuildConfig.User+"@"+h+":"+path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)),
-					path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
-				out, err = command.CombinedOutput()
-			}
+			fmt.Println(string(out))
+			command = exec.Command("scp", "-P", p, b.BuildConfig.User+"@"+h+":"+path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)),
+				path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
+			out, err = command.CombinedOutput()
 		} else if !isHostLocal(host) && isHostLocal(b.BuildConfig.Host) {
 			// Built locally, deploying remotely
 			fmt.Println("Pushing binary to host: " + host)
@@ -344,26 +342,21 @@ func (b *builder) deploy(hosts []string) {
 
 			// First move binary to .old in case it's currently running
 			command := exec.Command("ssh", "-p", p, b.DeployConfig.User+"@"+h, "mv", path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName), path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName+".old"))
-			out, err = command.CombinedOutput()
+			out, _ = command.CombinedOutput()
 
-			if err != nil {
-				fmt.Println(string(out))
-				command = exec.Command("scp", "-P", p, path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)), b.DeployConfig.User+"@"+h+":"+path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
-				out, err = command.CombinedOutput()
-			}
+			fmt.Println(string(out))
+			command = exec.Command("scp", "-P", p, path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)), b.DeployConfig.User+"@"+h+":"+path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
+			out, err = command.CombinedOutput()
 		} else if !isHostLocal(host) && !isHostLocal(b.BuildConfig.Host) {
 			// Built remotely, deployed remotely
 			fmt.Println("Pushing binary from build box to host: " + host)
 			h, p := splitHostPort(host)
 
 			// First move binary to .old in case it's currently running
-			command := exec.Command("ssh", "-p", p, b.DeployConfig.User+"@"+h, "mv", path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName), path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName+".old"))
-			out, err = command.CombinedOutput()
+			out, _ := b.term.Exec("ssh -p " + p + " " + b.DeployConfig.User + "@" + h + " mv " + path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName) + " " + path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName+".old"))
 
-			if err != nil {
-				fmt.Println(string(out))
-				out, err = b.term.Exec("scp -P " + p + " " + path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)) + " " + b.DeployConfig.User + "@" + h + ":" + path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
-			}
+			fmt.Println(string(out))
+			out, err = b.term.Exec("scp -P " + p + " " + path.Join(b.BuildConfig.Jail, "bin", path.Base(b.BuildConfig.AppPath)) + " " + b.DeployConfig.User + "@" + h + ":" + path.Join(b.DeployConfig.DeployPath, b.DeployConfig.BinaryName))
 		}
 
 		fmt.Println(string(out))
