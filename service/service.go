@@ -199,6 +199,10 @@ func (s *Service) Start() (done *sync.WaitGroup) {
 
 	go s.Delegate.Started(s) // Call user defined callback
 
+	if s.ServiceInfo.Registered {
+		go s.Delegate.Registered(s) // Call user defined callback
+	}
+
 	return
 }
 
