@@ -40,15 +40,18 @@ func NewSkynetDaemon() *SkynetDaemon {
 
 	go d.mux()
 
-	d.cleanupHost()
-
 	return d
 }
 
 func (sd *SkynetDaemon) Registered(s *service.Service)   {}
 func (sd *SkynetDaemon) Unregistered(s *service.Service) {}
 func (sd *SkynetDaemon) Started(s *service.Service) {
-	err := sd.restoreState()
+	err := sd.cleanupHost()
+	if err != nil {
+		log.Println(log.ERROR, "Error cleaning up host", err)
+	}
+
+	err = sd.restoreState()
 
 	if err != nil {
 		log.Println(log.ERROR, "Error restoring state", err)
