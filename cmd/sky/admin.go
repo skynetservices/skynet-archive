@@ -37,6 +37,8 @@ func Start(criteria *skynet.Criteria, args []string) {
 			in := daemon.StartSubServiceRequest{
 				BinaryName: args[0],
 				Args:       shellquote.Join(args[1:]...),
+				// TODO: maybe an optional flag to change this?
+				Registered: true,
 			}
 			out, err := d.StartSubService(in)
 
