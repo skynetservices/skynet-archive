@@ -210,7 +210,7 @@ func criteriaFromArgs(args []string) (*skynet.Criteria, []string) {
 
 	instanceCriteria := make([]string, 0, 0)
 
-	if len(*regions) > 0 {
+	if len(*instances) > 0 {
 		instanceCriteria = strings.Split(*instances, ",")
 	}
 
