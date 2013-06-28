@@ -281,6 +281,12 @@ func CommandLineHelp() {
                   -registered - change log level only on daemons that have registered instances
                   -services - change log level only on daemons that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
                   -instances - change log level only on daemons that have the specified instances on them
+            daemon stop: Stop daemons that meet the specified criteria daemon log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
+                  -hosts - stop daemons only on the specified comma separated hosts
+                  -regions - stop daemons in the specified comma separated regions
+                  -registered - stop daemons that have registered instances
+                  -services - stop daemons that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - stop daemons that have the specified instances on them
 
             start: Start named service on all hosts that match the supplied criteria "start <flags> <binaryName>"
                   -hosts - start service only on the specified comma separated hosts
