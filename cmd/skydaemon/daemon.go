@@ -40,6 +40,8 @@ func NewSkynetDaemon() *SkynetDaemon {
 
 	go d.mux()
 
+	d.cleanupHost()
+
 	return d
 }
 
@@ -356,4 +358,24 @@ func (s *SkynetDaemon) mux() {
 			s.writeStateFile()
 		}
 	}
+}
+
+func (s *SkynetDaemon) cleanupHost() (err error) {
+	sm := skynet.GetServiceManager()
+	c := skynet.Criteria{}
+
+	c.AddHost(s.Service.ServiceInfo.ServiceAddr.IPAddress)
+
+	var instances []skynet.ServiceInfo
+	instances, err = sm.ListInstances(&c)
+
+	if err != nil {
+		return
+	}
+
+	for _, i := range instances {
+		sm.Remove(i)
+	}
+
+	return
 }
