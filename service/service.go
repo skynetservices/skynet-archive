@@ -151,6 +151,8 @@ func (s *Service) shutdown() {
 		log.Println(log.ERROR, "Failed to remove service: "+err.Error())
 	}
 
+	skynet.GetServiceManager().Shutdown()
+
 	s.Delegate.Stopped(s) // Call user defined callback
 
 	s.doneGroup.Done()

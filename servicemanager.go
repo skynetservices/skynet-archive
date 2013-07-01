@@ -11,6 +11,8 @@ type ServiceManager interface {
 	Register(uuid string) error
 	Unregister(uuid string) error
 
+	Shutdown() error
+
 	// Discovery
 	ListHosts(c CriteriaMatcher) ([]string, error)
 	ListRegions(c CriteriaMatcher) ([]string, error)
