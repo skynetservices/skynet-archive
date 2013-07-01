@@ -46,7 +46,7 @@ func NewSkynetDaemon() *SkynetDaemon {
 func (sd *SkynetDaemon) Registered(s *service.Service)   {}
 func (sd *SkynetDaemon) Unregistered(s *service.Service) {}
 func (sd *SkynetDaemon) Started(s *service.Service) {
-	err := sd.cleanupHost()
+	err := sd.cleanupHost(s.ServiceInfo.UUID)
 	if err != nil {
 		log.Println(log.ERROR, "Error cleaning up host", err)
 	}
@@ -363,7 +363,7 @@ func (s *SkynetDaemon) mux() {
 	}
 }
 
-func (s *SkynetDaemon) cleanupHost() (err error) {
+func (s *SkynetDaemon) cleanupHost(daemonUUID string) (err error) {
 	sm := skynet.GetServiceManager()
 	c := skynet.Criteria{}
 
@@ -377,7 +377,9 @@ func (s *SkynetDaemon) cleanupHost() (err error) {
 	}
 
 	for _, i := range instances {
-		sm.Remove(i)
+		if i.UUID != daemonUUID {
+			sm.Remove(i)
+		}
 	}
 
 	return
