@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/skynetservices/skynet2"
 	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet2/stats"
 	"labix.org/v2/mgo/bson"
 	"reflect"
 	"time"
@@ -184,6 +185,8 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		rerr, _ := erri.(error)
 		out.ErrString = rerr.Error()
 	}
+
+	stats.MethodCompleted(in.Method, duration, erri.(error))
 
 	return
 }

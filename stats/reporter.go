@@ -4,6 +4,8 @@ var reporters []Reporter
 
 type Reporter interface {
 	UpdateHostStats(host string, stats Host)
+	MethodCalled(method string)
+	MethodCompleted(method string, duration int64, err error)
 }
 
 func AddReporter(r Reporter) {
@@ -13,5 +15,17 @@ func AddReporter(r Reporter) {
 func UpdateHostStats(host string, s Host) {
 	for _, r := range reporters {
 		go r.UpdateHostStats(host, s)
+	}
+}
+
+func MethodCalled(method string) {
+	for _, r := range reporters {
+		go r.MethodCalled(method)
+	}
+}
+
+func MethodCompleted(method string, duration int64, err error) {
+	for _, r := range reporters {
+		go r.MethodCompleted(method, duration, err)
 	}
 }
