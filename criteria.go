@@ -52,6 +52,7 @@ func (c *Criteria) Matches(s ServiceInfo) bool {
 	}
 
 	// If no regions were provided we assume any regions match
+
 	if c.Regions != nil && len(c.Regions) > 0 && !exists(c.Regions, s.Region) {
 		return false
 	}

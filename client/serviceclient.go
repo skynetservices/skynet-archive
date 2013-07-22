@@ -39,6 +39,9 @@ type ServiceClient struct {
 
 	retryTimeout  time.Duration
 	giveupTimeout time.Duration
+
+	servicePool chan *servicePool
+	updateChan  <-chan time.Time
 }
 
 func (c *ServiceClient) Close() {
@@ -57,6 +60,8 @@ func newServiceClient(criteria *skynet.Criteria, c *Client) (sc *ServiceClient) 
 		timeoutChan:   make(chan timeoutLengths),
 		retryTimeout:  skynet.DefaultRetryDuration,
 		giveupTimeout: skynet.DefaultTimeoutDuration,
+		servicePool:   make(chan *servicePool, 100),
+		updateChan:    time.Tick(15 * time.Second),
 	}
 	sc.listenID = skynet.UUID()
 
@@ -66,9 +71,12 @@ func newServiceClient(criteria *skynet.Criteria, c *Client) (sc *ServiceClient) 
 
 	if err == nil && len(instances) > 0 {
 		for _, instance := range instances {
-			sc.addInstanceMux(&instance)
+			sc.addInstanceMux(instance)
 		}
 	}
+
+	go sc.managePools()
+
 	return
 }
 
@@ -81,42 +89,29 @@ type timeoutLengths struct {
 	retry, giveup time.Duration
 }
 
-func (c *ServiceClient) addInstanceMux(instance *skynet.ServiceInfo) {
-	m := skynet.ServiceDiscovered{instance}
-	key := getInstanceKey(m.Service)
+func (c *ServiceClient) addInstanceMux(instance skynet.ServiceInfo) {
+	m := skynet.ServiceDiscovered{&instance}
+	key := getInstanceKey(&instance)
 	_, known := c.instances[key]
 	if !known {
 		// we got a new pool, put it into the wild
-		c.instances[key] = c.client.getServicePool(m.Service)
+		pool := c.client.getServicePool(m.Service)
+		c.instances[key] = pool
 	}
 }
 
-func (c *ServiceClient) removeInstanceMux(instance *skynet.ServiceInfo) {
-	m := skynet.ServiceRemoved{instance}
-	key := m.Service.ServiceAddr.String()
+func (c *ServiceClient) removeInstanceMux(instance skynet.ServiceInfo) {
+	key := getInstanceKey(&instance)
 	_, known := c.instances[key]
 	if !known {
 		return
 	}
-	delete(c.instances, m.Service.ServiceAddr.String())
+	delete(c.instances, key)
 }
 
 func (c *ServiceClient) mux() {
 	for {
 		select {
-		/*case ns := <-c.instanceListener.NotificationChan:
-		for _, n := range ns {
-			switch n.Type {
-			case InstanceAddNotification, InstanceUpdateNotification:
-				if n.Service.Registered {
-					c.addInstanceMux(&n.Service)
-				} else {
-					c.removeInstanceMux(&n.Service)
-				}
-			case InstanceRemoveNotification:
-				c.removeInstanceMux(&n.Service)
-			}
-		}*/
 		case mi := <-c.muxChan:
 			switch m := mi.(type) {
 			case timeoutLengths:
@@ -128,6 +123,38 @@ func (c *ServiceClient) mux() {
 			giveup: c.giveupTimeout,
 		}:
 
+		}
+	}
+}
+
+// TODO: This is a short term solution to keeping the pools up to date with zookeeper, and load balancing across them
+// to be replaced by full implementation later, with proper load balancing based off host metrics, and region/host priorities
+func (c *ServiceClient) managePools() {
+	for {
+		for _, p := range c.instances {
+			select {
+			case <-c.updateChan:
+				var currentInstances = make(map[string]*skynet.ServiceInfo)
+
+				instances, err := skynet.GetServiceManager().ListInstances(c.criteria)
+				if err == nil && len(instances) > 0 {
+					for _, instance := range instances {
+						key := getInstanceKey(&instance)
+						currentInstances[key] = &instance
+						c.addInstanceMux(instance)
+					}
+				}
+
+				// Remove old instances
+				for key, _ := range c.instances {
+					if i, ok := currentInstances[key]; !ok {
+						c.removeInstanceMux(*i)
+					}
+				}
+
+				break
+			case c.servicePool <- p:
+			}
 		}
 	}
 }
@@ -255,12 +282,9 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 			return
 		}
 
-		// TODO: we need to load balance
-		var sp *servicePool
-		for _, instance := range c.instances {
-			sp = instance
-			break
-		}
+		sp := <-c.servicePool
+
+		log.Println(log.TRACE, "Sending request to: "+sp.service.UUID)
 
 		// then, get a connection to that instance
 		r, err = sp.pool.Acquire()
