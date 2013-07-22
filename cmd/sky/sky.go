@@ -161,7 +161,7 @@ func getHosts(c *skynet.Criteria) []string {
 
 func ListInstances(c *skynet.Criteria) {
 	for _, instance := range getInstances(c) {
-		fmt.Println(instance.ServiceAddr.String() + " - " + instance.Name + " " + instance.Version + " " + strconv.FormatBool(instance.Registered) + " (" + instance.UUID + ")")
+		fmt.Println(instance.ServiceAddr.String() + " - " + instance.Region + " - " + instance.Name + " " + instance.Version + " " + strconv.FormatBool(instance.Registered) + " (" + instance.UUID + ")")
 	}
 }
 
