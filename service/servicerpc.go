@@ -180,13 +180,14 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		return
 	}
 
+	var rerr error = nil
 	erri := returns[0].Interface()
 	if erri != nil {
-		rerr, _ := erri.(error)
+		rerr, _ = erri.(error)
 		out.ErrString = rerr.Error()
 	}
 
-	stats.MethodCompleted(in.Method, duration, erri.(error))
+	stats.MethodCompleted(in.Method, duration, rerr)
 
 	return
 }
