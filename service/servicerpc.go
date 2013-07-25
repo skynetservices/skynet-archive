@@ -110,6 +110,8 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	srpc.service.activeRequests.Add(1)
 	defer srpc.service.activeRequests.Done()
 
+	go stats.MethodCalled(in.Method)
+
 	clientInfo, ok := srpc.service.getClientInfo(in.ClientID)
 	if !ok {
 		err = errors.New("did not provide the ClientID")
@@ -187,7 +189,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		out.ErrString = rerr.Error()
 	}
 
-	stats.MethodCompleted(in.Method, duration, rerr)
+	go stats.MethodCompleted(in.Method, duration, rerr)
 
 	return
 }
