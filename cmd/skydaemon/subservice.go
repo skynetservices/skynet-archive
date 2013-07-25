@@ -82,6 +82,10 @@ func (ss *SubService) Register() (ok bool) {
 	return ok
 }
 
+func (ss *SubService) IsRunning() bool {
+	return ss.running
+}
+
 func (ss *SubService) Unregister() (ok bool) {
 	ok = ss.sendAdminCommand("UNREGISTER")
 

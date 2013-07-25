@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"sync"
+	"time"
 )
 
 // SkynetDaemon is a service for administering other services
@@ -86,7 +87,17 @@ func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in daemo
 		return errors.New("Service failed to start")
 	}
 
-	s.saveState()
+	tc := time.Tick(RerunWait * 2)
+
+	go func() {
+		// Wait for startup timer to see if we're still running
+		// We want to avoid keeping a state of a large list of services that failed to start
+		<-tc
+
+		if ss.IsRunning() {
+			s.saveState()
+		}
+	}()
 
 	return
 }
