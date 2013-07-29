@@ -72,6 +72,13 @@ func (c *Client) getServicePool(instance *skynet.ServiceInfo) (sp *servicePool) 
 	return
 }
 
+func (c *Client) removeServicePool(instance skynet.ServiceInfo) {
+	servicePoolMutex.Lock()
+	defer servicePoolMutex.Unlock()
+
+	delete(c.servicePools, getInstanceKey(&instance))
+}
+
 func (c *Client) GetService(criteria *skynet.Criteria) *ServiceClient {
 	return newServiceClient(criteria, c)
 }

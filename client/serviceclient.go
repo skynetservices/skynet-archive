@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+const MaxFailureCount = 2
+const CacheRebuildInterval = 5 * time.Second
+
 type serviceError struct {
 	msg string
 }
@@ -40,8 +43,11 @@ type ServiceClient struct {
 	retryTimeout  time.Duration
 	giveupTimeout time.Duration
 
-	servicePool chan *servicePool
-	updateChan  <-chan time.Time
+	servicePool         chan *servicePool
+	updateChan          <-chan time.Time
+	removeInstanceChan  chan skynet.ServiceInfo
+	addInstanceChan     chan skynet.ServiceInfo
+	instanceFailureChan chan skynet.ServiceInfo
 }
 
 func (c *ServiceClient) Close() {
@@ -52,16 +58,19 @@ func (c *ServiceClient) Close() {
 
 func newServiceClient(criteria *skynet.Criteria, c *Client) (sc *ServiceClient) {
 	sc = &ServiceClient{
-		client:        c,
-		cconfig:       c.Config,
-		criteria:      criteria,
-		instances:     make(map[string]*servicePool),
-		muxChan:       make(chan interface{}),
-		timeoutChan:   make(chan timeoutLengths),
-		retryTimeout:  skynet.DefaultRetryDuration,
-		giveupTimeout: skynet.DefaultTimeoutDuration,
-		servicePool:   make(chan *servicePool, 100),
-		updateChan:    time.Tick(15 * time.Second),
+		client:              c,
+		cconfig:             c.Config,
+		criteria:            criteria,
+		instances:           make(map[string]*servicePool),
+		muxChan:             make(chan interface{}),
+		timeoutChan:         make(chan timeoutLengths),
+		retryTimeout:        skynet.DefaultRetryDuration,
+		giveupTimeout:       skynet.DefaultTimeoutDuration,
+		servicePool:         make(chan *servicePool, 1),
+		updateChan:          time.Tick(CacheRebuildInterval),
+		addInstanceChan:     make(chan skynet.ServiceInfo),
+		removeInstanceChan:  make(chan skynet.ServiceInfo),
+		instanceFailureChan: make(chan skynet.ServiceInfo),
 	}
 	sc.listenID = skynet.UUID()
 
@@ -71,7 +80,7 @@ func newServiceClient(criteria *skynet.Criteria, c *Client) (sc *ServiceClient) 
 
 	if err == nil && len(instances) > 0 {
 		for _, instance := range instances {
-			sc.addInstanceMux(instance)
+			sc.addInstance(instance)
 		}
 	}
 
@@ -89,6 +98,10 @@ type timeoutLengths struct {
 	retry, giveup time.Duration
 }
 
+func (c *ServiceClient) addInstance(instance skynet.ServiceInfo) {
+	c.addInstanceChan <- instance
+}
+
 func (c *ServiceClient) addInstanceMux(instance skynet.ServiceInfo) {
 	m := skynet.ServiceDiscovered{&instance}
 	key := getInstanceKey(&instance)
@@ -100,6 +113,10 @@ func (c *ServiceClient) addInstanceMux(instance skynet.ServiceInfo) {
 	}
 }
 
+func (c *ServiceClient) removeInstance(instance skynet.ServiceInfo) {
+	c.removeInstanceChan <- instance
+}
+
 func (c *ServiceClient) removeInstanceMux(instance skynet.ServiceInfo) {
 	key := getInstanceKey(&instance)
 	_, known := c.instances[key]
@@ -107,6 +124,7 @@ func (c *ServiceClient) removeInstanceMux(instance skynet.ServiceInfo) {
 		return
 	}
 	delete(c.instances, key)
+	c.client.removeServicePool(instance)
 }
 
 func (c *ServiceClient) mux() {
@@ -118,6 +136,12 @@ func (c *ServiceClient) mux() {
 				c.retryTimeout = m.retry
 				c.giveupTimeout = m.giveup
 			}
+		case i := <-c.addInstanceChan:
+			c.addInstanceMux(i)
+
+		case i := <-c.removeInstanceChan:
+			c.removeInstanceMux(i)
+
 		case c.timeoutChan <- timeoutLengths{
 			retry:  c.retryTimeout,
 			giveup: c.giveupTimeout,
@@ -130,6 +154,8 @@ func (c *ServiceClient) mux() {
 // TODO: This is a short term solution to keeping the pools up to date with zookeeper, and load balancing across them
 // to be replaced by full implementation later, with proper load balancing based off host metrics, and region/host priorities
 func (c *ServiceClient) managePools() {
+	var failedInstances = make(map[string]int)
+
 	for {
 		for _, p := range c.instances {
 			select {
@@ -139,20 +165,39 @@ func (c *ServiceClient) managePools() {
 				instances, err := skynet.GetServiceManager().ListInstances(c.criteria)
 				if err == nil && len(instances) > 0 {
 					for _, instance := range instances {
+						if !instance.Registered {
+							continue
+						}
+
 						key := getInstanceKey(&instance)
 						currentInstances[key] = &instance
-						c.addInstanceMux(instance)
+						c.addInstance(instance)
 					}
 				}
 
 				// Remove old instances
 				for key, _ := range c.instances {
-					if i, ok := currentInstances[key]; !ok {
-						c.removeInstanceMux(*i)
+					if i, ok := currentInstances[key]; ok {
+						c.removeInstance(*i)
 					}
 				}
 
 				break
+			case i := <-c.instanceFailureChan:
+				key := getInstanceKey(&i)
+
+				if _, ok := failedInstances[key]; !ok {
+					failedInstances[key] = 1
+				}
+
+				failedInstances[key]++
+
+				if failedInstances[key] >= MaxFailureCount {
+					log.Println(log.TRACE, "Max failure count reached for instance: ", i.UUID)
+					c.removeInstance(i)
+					delete(failedInstances, key)
+				}
+
 			case c.servicePool <- p:
 			}
 		}
@@ -276,26 +321,30 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 	// first find an available instance
 	var r pools.Resource
 	var err error
+	var sp *servicePool
+
 	for r == nil {
 		if len(c.instances) < 1 {
 			attempts <- sendAttempt{err: errors.New("No instances found")}
 			return
 		}
 
-		sp := <-c.servicePool
+		sp = <-c.servicePool
 
 		log.Println(log.TRACE, "Sending request to: "+sp.service.UUID)
 
 		// then, get a connection to that instance
 		r, err = sp.pool.Acquire()
 		defer sp.pool.Release(r)
+
 		if err != nil {
 			if r != nil {
 				r.Close()
 			}
-			// TODO: report connection failure
+
 			failed := FailedConnection{err}
 			log.Printf(log.ERROR, "%T: %+v", failed, failed)
+			c.instanceFailureChan <- *sp.service
 		}
 	}
 
@@ -311,6 +360,10 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 	result, serviceErr, err := c.sendToInstance(sr, ri, fn, in)
 	if err != nil {
 		// some communication error happened, shut down this connection and remove it from the pool
+		failed := FailedConnection{err}
+		log.Printf(log.ERROR, "%T: %+v", failed, failed)
+
+		c.instanceFailureChan <- *sp.service
 		sr.Close()
 		return
 	}
