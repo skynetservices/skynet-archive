@@ -1,5 +1,7 @@
 ![logo](https://github.com/skynetservices/skynet/raw/master/documentation/SkyNetLogo.png)
 
+##Skynet is being refactored at [skynet2](https://github.com/skynetservices/skynet2) if you want to take a peek.  The new version uses ZooKeeper.
+
 ##Introduction
 Skynet is a communication protocol for building massively distributed apps in Go.
 It is not constrained to Go, so it will lend itself nicely to polyglot environments.
