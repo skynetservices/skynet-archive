@@ -102,7 +102,7 @@ func Prefix() string {
 
 func Print(level LogLevel, v ...interface{}) {
 	if level <= level {
-		l := []interface{}{level.Interface}
+		l := []interface{}{level.Interface()}
 		l = append(l, v)
 		logger.Print(l...)
 	}
