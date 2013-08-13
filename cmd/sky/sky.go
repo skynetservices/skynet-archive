@@ -17,7 +17,8 @@ var Client *client.Client
 
 func main() {
 	// TODO: We need to timeout here, if no zookeeper is up it just hangs
-	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager(os.Getenv("SKYNET_ZOOKEEPER"), 1*time.Second))
+	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager(skynet.GetDefaultEnvVar("SKYNET_ZOOKEEPER", "localhost:2181"), 1*time.Second))
+
 	var args []string
 	Config, args = skynet.GetClientConfigFromFlags(os.Args)
 	Config.MaxConnectionsToInstance = 10

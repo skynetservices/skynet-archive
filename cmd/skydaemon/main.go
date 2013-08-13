@@ -5,7 +5,6 @@ import (
 	"github.com/skynetservices/skynet2/log"
 	"github.com/skynetservices/skynet2/service"
 	"github.com/skynetservices/zkmanager"
-	"os"
 	"time"
 )
 
@@ -15,8 +14,9 @@ import (
 // to remotely spawn new services on the host.
 func main() {
 	config, _ := skynet.GetServiceConfig()
-	log.Println(log.INFO, "Connecting to ZooKeeper: ", os.Getenv("SKYNET_ZOOKEEPER"))
-	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager(os.Getenv("SKYNET_ZOOKEEPER"), 1*time.Second))
+	zkServer := skynet.GetDefaultEnvVar("SKYNET_ZOOKEEPER", "localhost:2181")
+	log.Println(log.INFO, "Connecting to ZooKeeper: ", zkServer)
+	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager(zkServer, 1*time.Second))
 
 	config.Name = "SkynetDaemon"
 	config.Version = "2"
