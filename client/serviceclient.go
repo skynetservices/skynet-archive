@@ -322,13 +322,14 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 	var err error
 	var sp *servicePool
 
-	for r == nil {
+	for {
+		log.Println(log.DEBUG, "Acquiring pool")
 		sp = <-c.servicePool
 
-		log.Println(log.TRACE, "Sending request to: "+sp.service.UUID)
-
 		// then, get a connection to that instance
+		log.Println(log.DEBUG, "Acquiring resource from pool")
 		r, err = sp.pool.Acquire()
+		log.Println(log.DEBUG, "Resource acquired from pool")
 		defer sp.pool.Release(r)
 
 		if err != nil {
@@ -339,7 +340,11 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 			failed := FailedConnection{err}
 			log.Printf(log.ERROR, "%T: %+v", failed, failed)
 			c.instanceFailureChan <- *sp.service
+
+			continue
 		}
+
+		break
 	}
 
 	if err != nil {
@@ -349,6 +354,7 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 		return
 	}
 
+	log.Println(log.TRACE, "Sending request to: "+sp.service.UUID)
 	sr := r.(ServiceResource)
 
 	result, serviceErr, err := c.sendToInstance(sr, ri, fn, in)

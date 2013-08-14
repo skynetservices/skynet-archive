@@ -53,16 +53,21 @@ func NewClient(config *skynet.ClientConfig) *Client {
 var servicePoolMutex sync.Mutex
 
 func (c *Client) getServicePool(instance *skynet.ServiceInfo) (sp *servicePool) {
+	log.Println(log.TRACE, "in getServicePool")
+
 	servicePoolMutex.Lock()
+	log.Println(log.TRACE, "have servicePoolMutex lock")
 	defer servicePoolMutex.Unlock()
 
 	key := getInstanceKey(instance)
 
 	var ok bool
 	if sp, ok = c.servicePools[key]; ok {
+		log.Println(log.TRACE, "returning existing connection from servicePool")
 		return
 	}
 
+	log.Println(log.TRACE, "creating new connection in servicePool")
 	sp = &servicePool{
 		service: instance,
 		pool: pools.NewResourcePool(getConnectionFactory(instance),
@@ -89,10 +94,13 @@ func getInstanceKey(service *skynet.ServiceInfo) string {
 
 func getConnectionFactory(s *skynet.ServiceInfo) (factory pools.Factory) {
 	factory = func() (pools.Resource, error) {
+		log.Println(log.DEBUG, "Attempting connection to: "+s.ServiceAddr.String())
 		conn, err := net.Dial("tcp", s.ServiceAddr.String())
+		log.Println(log.DEBUG, "dial returned")
 
 		if err != nil {
 			// TODO: handle failure here and attempt to connect to a different instance
+			log.Println(log.ERROR, "Failed connection attempt to instance", err)
 			return nil, errors.New("Failed to connect to service: " + s.ServiceAddr.String())
 		}
 
@@ -100,27 +108,36 @@ func getConnectionFactory(s *skynet.ServiceInfo) (factory pools.Factory) {
 		var sh skynet.ServiceHandshake
 		decoder := bsonrpc.NewDecoder(conn)
 
+		log.Println(log.DEBUG, "Decoding ServiceHandshake")
 		err = decoder.Decode(&sh)
 		if err != nil {
+			log.Println(log.ERROR, "Failed to decode ServiceHandshake", err)
 			conn.Close()
 			return nil, err
 		}
+
+		log.Println(log.DEBUG, sh)
 
 		ch := skynet.ClientHandshake{}
 		encoder := bsonrpc.NewEncoder(conn)
 
+		log.Println(log.DEBUG, "Encoding ClientHandshake")
 		err = encoder.Encode(ch)
 		if err != nil {
+			log.Println(log.ERROR, "Failed to encode ClientHandshake", err)
 			conn.Close()
 			return nil, err
 		}
 
+		log.Println(log.DEBUG, "Checking if service is registered")
 		if !sh.Registered {
+			log.Println(log.DEBUG, "Instance not registered")
 			// this service has unregistered itself, look elsewhere
 			conn.Close()
 			return factory()
 		}
 
+		log.Println(log.DEBUG, "returning resource")
 		resource := ServiceResource{
 			rpcClient: bsonrpc.NewClient(conn),
 			service:   s,

@@ -236,7 +236,9 @@ func (s *Service) listen(addr skynet.BindAddr, bindWait *sync.WaitGroup) {
 	bindWait.Done()
 
 	for {
+		log.Println(log.DEBUG, "Waiting for connection")
 		conn, err := s.rpcListener.AcceptTCP()
+		log.Println(log.DEBUG, "Received connection")
 
 		if s.shuttingDown {
 			break
@@ -274,11 +276,11 @@ loop:
 			err := encoder.Encode(sh)
 			if err != nil {
 				log.Println(log.ERROR, "Failed to encode server handshake", err.Error())
-				break
+				continue
 			}
 			if !s.Registered {
 				conn.Close()
-				break
+				continue
 			}
 
 			// read the client handshake
@@ -287,7 +289,7 @@ loop:
 			err = decoder.Decode(&ch)
 			if err != nil {
 				log.Println(log.ERROR, "Error calling bsonrpc.NewDecoder: "+err.Error())
-				break
+				continue
 			}
 
 			// here do stuff with the client handshake
