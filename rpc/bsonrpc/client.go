@@ -1,26 +1,22 @@
 package bsonrpc
 
 import (
-	"bufio"
 	"errors"
 	"io"
 	"net/rpc"
 )
 
 type ccodec struct {
-	conn   io.ReadWriteCloser
-	enc    *Encoder
-	dec    *Decoder
-	encBuf *bufio.Writer
+	conn io.ReadWriteCloser
+	enc  *Encoder
+	dec  *Decoder
 }
 
 func NewClientCodec(conn io.ReadWriteCloser) (codec rpc.ClientCodec) {
-	encBuf := bufio.NewWriter(conn)
 	cc := &ccodec{
-		conn:   conn,
-		enc:    NewEncoder(encBuf),
-		dec:    NewDecoder(conn),
-		encBuf: encBuf,
+		conn: conn,
+		enc:  NewEncoder(conn),
+		dec:  NewDecoder(conn),
 	}
 	codec = cc
 	return
@@ -35,7 +31,7 @@ func (cc *ccodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
 	if err != nil {
 		return
 	}
-	return cc.encBuf.Flush()
+	return
 }
 
 func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {

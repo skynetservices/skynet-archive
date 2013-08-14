@@ -1,25 +1,21 @@
 package bsonrpc
 
 import (
-	"bufio"
 	"io"
 	"net/rpc"
 )
 
 type scodec struct {
-	conn   io.ReadWriteCloser
-	enc    *Encoder
-	dec    *Decoder
-	encBuf *bufio.Writer
+	conn io.ReadWriteCloser
+	enc  *Encoder
+	dec  *Decoder
 }
 
 func NewServerCodec(conn io.ReadWriteCloser) (codec rpc.ServerCodec) {
-	encBuf := bufio.NewWriter(conn)
 	sc := &scodec{
-		conn:   conn,
-		enc:    NewEncoder(encBuf),
-		dec:    NewDecoder(conn),
-		encBuf: encBuf,
+		conn: conn,
+		enc:  NewEncoder(conn),
+		dec:  NewDecoder(conn),
 	}
 	codec = sc
 	return
@@ -44,7 +40,7 @@ func (sc *scodec) WriteResponse(rs *rpc.Response, v interface{}) (err error) {
 	if err != nil {
 		return
 	}
-	return sc.encBuf.Flush()
+	return
 }
 
 func (sc *scodec) Close() (err error) {

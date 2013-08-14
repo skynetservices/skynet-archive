@@ -1,7 +1,6 @@
 package bsonrpc
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -31,8 +30,7 @@ type Decoder struct {
 }
 
 func NewDecoder(r io.Reader) *Decoder {
-	buf := bufio.NewReader(r)
-	return &Decoder{r: buf}
+	return &Decoder{r: r}
 }
 
 func (d *Decoder) Decode(pv interface{}) (err error) {
