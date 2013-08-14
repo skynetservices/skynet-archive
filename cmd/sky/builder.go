@@ -372,9 +372,9 @@ func splitHostPort(host string) (string, string) {
 
 	if len(parts) < 2 {
 		return parts[0], "22"
-	} else {
-		return parts[0], parts[1]
 	}
+
+	return parts[0], parts[1]
 }
 
 func isHostLocal(host string) bool {
