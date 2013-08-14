@@ -11,7 +11,7 @@ import (
 	"github.com/skynetservices/skynet2/stats"
 	"io/ioutil"
 	"os"
-	"path"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -28,9 +28,16 @@ type SkynetDaemon struct {
 }
 
 func NewSkynetDaemon() *SkynetDaemon {
-	f, err := os.OpenFile(path.Join("/var/lib/skynet/", ".skystate"), os.O_RDWR|os.O_CREATE, 0660)
+	sFile := stateFileName()
+
+	if _, err := os.Stat(sFile); os.IsNotExist(err) {
+		panic("state file is missing:" + sFile)
+	}
+
+	f, err := os.OpenFile(sFile, os.O_RDWR|os.O_CREATE, 0660)
+
 	if err != nil {
-		panic("could not open state file")
+		panic("could not open state file" + sFile)
 	}
 
 	d := &SkynetDaemon{
@@ -282,6 +289,18 @@ func (s *SkynetDaemon) saveState() {
 		// Throw away save, there is one already queued
 	default:
 	}
+}
+
+func stateFileName() string {
+	if os.Getenv("SKYNET_STATEFILE") != "" {
+		return os.Getenv("SKYNET_STATEFILE")
+	}
+
+	if runtime.GOOS == "darwin" {
+		return "/usr/local/lib/skynet/.skystate"
+	}
+
+	return "/var/lib/skynet/.skystate"
 }
 
 // TODO: This should be moved out so that it's run asynchronously
