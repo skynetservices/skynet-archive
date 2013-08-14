@@ -1,7 +1,6 @@
 package client
 
 import (
-	"errors"
 	"fmt"
 	"github.com/skynetservices/skynet2"
 	"github.com/skynetservices/skynet2/log"
@@ -324,11 +323,6 @@ func (c *ServiceClient) attemptSend(timeout chan bool,
 	var sp *servicePool
 
 	for r == nil {
-		if len(c.instances) < 1 {
-			attempts <- sendAttempt{err: errors.New("No instances found")}
-			return
-		}
-
 		sp = <-c.servicePool
 
 		log.Println(log.TRACE, "Sending request to: "+sp.service.UUID)
