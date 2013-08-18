@@ -14,8 +14,21 @@ type ServiceStatistics struct {
 // ServiceInfo is the publicly reported information about a particular
 // service instance.
 type ServiceInfo struct {
+	// TODO: is there any reason this needs to be a pointer?
 	// Config is the configuration used to start this instance.
 	*ServiceConfig
 	// Registered indicates if the instance is currently accepting requests.
 	Registered bool
+}
+
+func NewServiceInfo(c *ServiceConfig) ServiceInfo {
+	if c == nil {
+		c = &ServiceConfig{
+			UUID: UUID(),
+		}
+	}
+
+	return ServiceInfo{
+		ServiceConfig: c,
+	}
 }

@@ -104,6 +104,10 @@ type ServiceConfig struct {
 	DoozerUpdateInterval time.Duration `json:"-" bson:"-"`
 }
 
+func (sc ServiceConfig) AddrString() string {
+	return sc.ServiceAddr.String()
+}
+
 type ClientConfig struct {
 	Host                      string
 	Region                    string

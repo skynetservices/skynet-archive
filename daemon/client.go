@@ -6,15 +6,15 @@ import (
 )
 
 type Client struct {
-	*client.ServiceClient
+	client.ServiceClientProvider
 	requestInfo *skynet.RequestInfo
 }
 
-func GetDaemonForService(cl *client.Client, s *skynet.ServiceInfo) (c Client) {
-	return GetDaemonForHost(cl, s.ServiceAddr.IPAddress)
+func GetDaemonForService(s *skynet.ServiceInfo) (c Client) {
+	return GetDaemonForHost(s.ServiceAddr.IPAddress)
 }
 
-func GetDaemonForHost(cl *client.Client, host string) (c Client) {
+func GetDaemonForHost(host string) (c Client) {
 	registered := true
 	criteria := &skynet.Criteria{
 		Hosts:      []string{host},
@@ -24,7 +24,7 @@ func GetDaemonForHost(cl *client.Client, host string) (c Client) {
 		},
 	}
 
-	s := cl.GetService(criteria)
+	s := client.GetServiceFromCriteria(criteria)
 	c = Client{s, nil}
 	return
 }
@@ -81,6 +81,6 @@ func (c Client) LogLevel(in LogLevelRequest) (out LogLevelResponse, err error) {
 
 func (c Client) Stop(in StopRequest) (out StopResponse, err error) {
 	err = c.Send(c.requestInfo, "Stop", in, &out)
-	c.ServiceClient.Close()
+	c.Close()
 	return
 }

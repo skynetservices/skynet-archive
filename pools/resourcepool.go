@@ -168,3 +168,8 @@ func (rp *ResourcePool) Release(resource Resource) {
 func (rp *ResourcePool) Close() {
 	rp.cchan <- closeMessage{}
 }
+
+// NumResources() the number of resources known at this time
+func (rp *ResourcePool) NumResources() int {
+	return rp.numResources
+}

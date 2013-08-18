@@ -1,224 +1,76 @@
 package client
 
 import (
-	"fmt"
+	"errors"
 	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/log"
-	"github.com/skynetservices/skynet2/pools"
-	"labix.org/v2/mgo/bson"
+	"github.com/skynetservices/skynet2/client/loadbalancer"
+	"reflect"
+	"sync"
 	"time"
 )
 
-const MaxFailureCount = 2
-const CacheRebuildInterval = 5 * time.Second
+// TODO: Implement SendTimeout()
+// TODO: Implement SendOnceTimeout()
 
-type serviceError struct {
-	msg string
-}
+var (
+	ServiceClientClosed = errors.New("Service client shutdown")
+	RequestTimeout      = errors.New("Request timed out")
+)
 
-func (se serviceError) Error() string {
-	return se.msg
-}
+/*
+ServiceSender Responsible for sending requests to the cluster.
+This is mostly used as way to test that clients make appropriate requests to services without the need to run those services
+*/
+type ServiceClientProvider interface {
+	SetDefaultTimeout(retry, giveup time.Duration)
+	GetDefaultTimeout() (retry, giveup time.Duration)
 
-type ServiceClientInterface interface {
-	SetTimeout(retry, giveup time.Duration)
-	GetTimeout() (retry, giveup time.Duration)
+	Close()
+
 	Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error)
 	SendOnce(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error)
+
+	Notify(n skynet.InstanceNotification)
+	Matches(n skynet.ServiceInfo) bool
 }
 
 type ServiceClient struct {
-	client   *Client
-	cconfig  *skynet.ClientConfig
-	criteria *skynet.Criteria
-	// a list of the known instances
-	instances map[string]*servicePool
-
-	muxChan     chan interface{}
-	timeoutChan chan timeoutLengths
-
-	listenID string
+	loadBalancer loadbalancer.LoadBalancer
+	criteria     *skynet.Criteria
+	shutdown     bool
+	closed       bool
 
 	retryTimeout  time.Duration
 	giveupTimeout time.Duration
 
-	servicePool         chan *servicePool
-	updateChan          <-chan time.Time
-	removeInstanceChan  chan skynet.ServiceInfo
-	addInstanceChan     chan skynet.ServiceInfo
-	instanceFailureChan chan skynet.ServiceInfo
-}
+	waiter sync.WaitGroup
 
-func (c *ServiceClient) Close() {
-	for _, sp := range c.instances {
-		sp.pool.Close()
-	}
-}
+	// mux channels
+	muxChan               chan interface{}
+	instanceNotifications chan skynet.InstanceNotification
+	timeoutChan           chan timeoutLengths
+	shutdownChan          chan bool
 
-func newServiceClient(criteria *skynet.Criteria, c *Client) (sc *ServiceClient) {
-	sc = &ServiceClient{
-		client:              c,
-		cconfig:             c.Config,
-		criteria:            criteria,
-		instances:           make(map[string]*servicePool),
-		muxChan:             make(chan interface{}),
-		timeoutChan:         make(chan timeoutLengths),
-		retryTimeout:        skynet.DefaultRetryDuration,
-		giveupTimeout:       skynet.DefaultTimeoutDuration,
-		servicePool:         make(chan *servicePool, 1),
-		updateChan:          time.Tick(CacheRebuildInterval),
-		addInstanceChan:     make(chan skynet.ServiceInfo),
-		removeInstanceChan:  make(chan skynet.ServiceInfo),
-		instanceFailureChan: make(chan skynet.ServiceInfo),
-	}
-	sc.listenID = skynet.UUID()
-
-	go sc.mux()
-
-	instances, err := skynet.GetServiceManager().ListInstances(sc.criteria)
-
-	if err == nil && len(instances) > 0 {
-		for _, instance := range instances {
-			sc.addInstance(instance)
-		}
-	}
-
-	go sc.managePools()
-
-	return
-}
-
-type servicePool struct {
-	service *skynet.ServiceInfo
-	pool    *pools.ResourcePool
-}
-
-type timeoutLengths struct {
-	retry, giveup time.Duration
-}
-
-func (c *ServiceClient) addInstance(instance skynet.ServiceInfo) {
-	c.addInstanceChan <- instance
-}
-
-func (c *ServiceClient) addInstanceMux(instance skynet.ServiceInfo) {
-	m := skynet.ServiceDiscovered{&instance}
-	key := getInstanceKey(&instance)
-	_, known := c.instances[key]
-	if !known {
-		// we got a new pool, put it into the wild
-		pool := c.client.getServicePool(m.Service)
-		c.instances[key] = pool
-	}
-}
-
-func (c *ServiceClient) removeInstance(instance skynet.ServiceInfo) {
-	c.removeInstanceChan <- instance
-}
-
-func (c *ServiceClient) removeInstanceMux(instance skynet.ServiceInfo) {
-	key := getInstanceKey(&instance)
-	_, known := c.instances[key]
-	if !known {
-		return
-	}
-	delete(c.instances, key)
-	c.client.removeServicePool(instance)
-}
-
-func (c *ServiceClient) mux() {
-	for {
-		select {
-		case mi := <-c.muxChan:
-			switch m := mi.(type) {
-			case timeoutLengths:
-				c.retryTimeout = m.retry
-				c.giveupTimeout = m.giveup
-			}
-		case i := <-c.addInstanceChan:
-			c.addInstanceMux(i)
-
-		case i := <-c.removeInstanceChan:
-			c.removeInstanceMux(i)
-
-		case c.timeoutChan <- timeoutLengths{
-			retry:  c.retryTimeout,
-			giveup: c.giveupTimeout,
-		}:
-
-		}
-	}
-}
-
-// TODO: This is a short term solution to keeping the pools up to date with zookeeper, and load balancing across them
-// to be replaced by full implementation later, with proper load balancing based off host metrics, and region/host priorities
-func (c *ServiceClient) managePools() {
-	var failedInstances = make(map[string]int)
-
-	for {
-		for _, p := range c.instances {
-			select {
-			case <-c.updateChan:
-				var currentInstances = make(map[string]*skynet.ServiceInfo)
-
-				instances, err := skynet.GetServiceManager().ListInstances(c.criteria)
-				if err == nil && len(instances) > 0 {
-					for _, instance := range instances {
-						if !instance.Registered {
-							continue
-						}
-
-						key := getInstanceKey(&instance)
-						currentInstances[key] = &instance
-						c.addInstance(instance)
-					}
-				}
-
-				// Remove old instances
-				for key, _ := range c.instances {
-					if i, ok := currentInstances[key]; ok {
-						c.removeInstance(*i)
-					}
-				}
-
-				break
-			case i := <-c.instanceFailureChan:
-				key := getInstanceKey(&i)
-
-				if _, ok := failedInstances[key]; !ok {
-					failedInstances[key] = 1
-				}
-
-				failedInstances[key]++
-
-				if failedInstances[key] >= MaxFailureCount {
-					log.Println(log.TRACE, "Max failure count reached for instance: ", i.UUID)
-					c.removeInstance(i)
-					delete(failedInstances, key)
-				}
-
-			case c.servicePool <- p:
-			}
-		}
-	}
+	// TODO: remove this if we dont need it, but i think we need it for items that go into the RequestInfo
+	//cconfig       skynet.ClientConfig
 }
 
 /*
-ServiceClient.SetTimeout() sets the time before ServiceClient.Send() retries requests, and
-the time before ServiceClient.Send() and ServiceClient.SendOnce() give up. Setting retry
-or giveup to 0 indicates no retry or time out.
+client.NewServiceClient Initializes a new ClientService
 */
-func (c *ServiceClient) SetTimeout(retry, giveup time.Duration) {
-	c.muxChan <- timeoutLengths{
-		retry:  retry,
-		giveup: giveup,
+func NewServiceClient(c *skynet.Criteria) ServiceClientProvider {
+	sc := &ServiceClient{
+		criteria:              c,
+		instanceNotifications: make(chan skynet.InstanceNotification, 100),
+		timeoutChan:           make(chan timeoutLengths),
+		shutdownChan:          make(chan bool),
+		muxChan:               make(chan interface{}),
+		loadBalancer:          LoadBalancerFactory([]skynet.ServiceInfo{}),
 	}
-}
 
-func (c *ServiceClient) GetTimeout() (retry, giveup time.Duration) {
-	tls := <-c.timeoutChan
-	retry, giveup = tls.retry, tls.giveup
-	return
+	go sc.mux()
+
+	return sc
 }
 
 /*
@@ -227,7 +79,11 @@ it will send additional requests to other known instances. If no response is hea
 the giveup time has passed, it will return an error.
 */
 func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
-	retry, giveup := c.GetTimeout()
+	if c.closed {
+		return ServiceClientClosed
+	}
+
+	retry, giveup := c.GetDefaultTimeout()
 	return c.send(retry, giveup, ri, fn, in, out)
 }
 
@@ -236,8 +92,55 @@ ServiceClient.SendOnce() will send a request to one of the available instances. 
 the giveup time has passed, it will return an error.
 */
 func (c *ServiceClient) SendOnce(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
-	_, giveup := c.GetTimeout()
+	if c.closed {
+		return ServiceClientClosed
+	}
+	_, giveup := c.GetDefaultTimeout()
 	return c.send(0, giveup, ri, fn, in, out)
+}
+
+/*
+ServiceClient.SetTimeout() sets the time before ServiceClient.Send() retries requests, and
+the time before ServiceClient.Send() and ServiceClient.SendOnce() give up. Setting retry
+or giveup to 0 indicates no retry or time out.
+*/
+func (c *ServiceClient) SetDefaultTimeout(retry, giveup time.Duration) {
+	c.muxChan <- timeoutLengths{
+		retry:  retry,
+		giveup: giveup,
+	}
+}
+
+/*
+ServiceClient.GetTimeout() returns current timeout values
+*/
+func (c *ServiceClient) GetDefaultTimeout() (retry, giveup time.Duration) {
+	tls := <-c.timeoutChan
+	retry, giveup = tls.retry, tls.giveup
+
+	return
+}
+
+/*
+ServiceClient.Close() refuses any new requests, and waits for active requests to finish
+*/
+func (c *ServiceClient) Close() {
+	c.shutdownChan <- true
+	c.waiter.Wait()
+}
+
+/*
+ServiceClient.Matches() determins if the provided Service matches the criteria associated with this client
+*/
+func (c *ServiceClient) Matches(s skynet.ServiceInfo) bool {
+	return c.criteria.Matches(s)
+}
+
+/*
+ServiceClient.Notify() Update available instances based off provided InstanceNotification
+*/
+func (c *ServiceClient) Notify(n skynet.InstanceNotification) {
+	c.instanceNotifications <- n
 }
 
 func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
@@ -249,163 +152,118 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 
 	attempts := make(chan sendAttempt)
 
-	var ticker <-chan time.Time
+	var retryTicker <-chan time.Time
 	if retry > 0 {
-		ticker = time.NewTicker(retry).C
+		retryTicker = time.Tick(retry)
 	}
 
-	var timeout <-chan time.Time
+	var timeoutTimer <-chan time.Time
 	if giveup > 0 {
-		timeout = time.NewTimer(giveup).C
+		timeoutTimer = time.NewTimer(giveup).C
 	}
 
-	doneSignal := make(chan bool)
 	attemptCount := 1
-
-	defer func() {
-		go func() {
-			for i := 0; i < attemptCount; i++ {
-				doneSignal <- true
-			}
-		}()
-	}()
-
-	go c.attemptSend(doneSignal, attempts, ri, fn, in)
+	go c.attemptSend(retry, attempts, ri, fn, in, out)
 
 	for {
 		select {
-		case <-ticker:
+		case <-retryTicker:
 			attemptCount++
 			ri.RetryCount++
+			go c.attemptSend(retry, attempts, ri, fn, in, out)
 
-			go c.attemptSend(doneSignal, attempts, ri, fn, in)
-		case <-timeout:
-			if err == nil {
-				err = ErrRequestTimeout
-			}
-			// otherwise use the last error reported from an attempt
+		case <-timeoutTimer:
+			err = RequestTimeout
 			return
+
 		case attempt := <-attempts:
 			err = attempt.err
 			if err != nil {
-				if _, ok := err.(serviceError); !ok {
-					// error during transmition, abort this attempt
-					if giveup == 0 {
-						return
-					}
-					continue
-				}
+				continue
 			}
 
-			unmarshallerr := bson.Unmarshal(attempt.result, out)
-			if unmarshallerr != nil {
-				err = unmarshallerr
-			}
+			// copy into the caller's value
+			v := reflect.Indirect(reflect.ValueOf(out))
+			v.Set(reflect.Indirect(reflect.ValueOf(attempt.result)))
+
 			return
 		}
 	}
-
-	return
 }
 
 type sendAttempt struct {
-	result []byte
 	err    error
+	result interface{}
 }
 
-func (c *ServiceClient) attemptSend(timeout chan bool,
-	attempts chan sendAttempt, ri *skynet.RequestInfo,
-	fn string, in interface{}) {
-
-	// first find an available instance
-	var r pools.Resource
-	var err error
-	var sp *servicePool
-
-	for {
-		log.Println(log.DEBUG, "Acquiring pool")
-		sp = <-c.servicePool
-
-		// then, get a connection to that instance
-		log.Println(log.DEBUG, "Acquiring resource from pool")
-		r, err = sp.pool.Acquire()
-		log.Println(log.DEBUG, "Resource acquired from pool")
-		defer sp.pool.Release(r)
-
-		if err != nil {
-			if r != nil {
-				r.Close()
-			}
-
-			failed := FailedConnection{err}
-			log.Printf(log.ERROR, "%T: %+v", failed, failed)
-			c.instanceFailureChan <- *sp.service
-
-			continue
-		}
-
-		break
-	}
+func (c *ServiceClient) attemptSend(timeout time.Duration, attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
+	s, err := c.loadBalancer.Choose()
 
 	if err != nil {
-		log.Printf(log.ERROR, "Error: %v", err)
-
 		attempts <- sendAttempt{err: err}
-		return
 	}
 
-	log.Println(log.TRACE, "Sending request to: "+sp.service.UUID)
-	sr := r.(ServiceResource)
+	conn, err := acquire(s)
+	defer release(conn)
 
-	result, serviceErr, err := c.sendToInstance(sr, ri, fn, in)
 	if err != nil {
-		// some communication error happened, shut down this connection and remove it from the pool
-		failed := FailedConnection{err}
-		log.Printf(log.ERROR, "%T: %+v", failed, failed)
-
-		c.instanceFailureChan <- *sp.service
-		sr.Close()
-		return
+		attempts <- sendAttempt{err: err}
 	}
 
-	attempts <- sendAttempt{
-		result: result,
-		err:    serviceErr,
+	// Create a new instance of the type, we dont want race conditions where 2 connections are unmarshalling to the same object
+	res := sendAttempt{
+		result: reflect.New(reflect.Indirect(reflect.ValueOf(out)).Type()).Interface(),
+	}
+
+	err = conn.SendTimeout(ri, fn, in, res.result, timeout)
+
+	if err != nil {
+		res.err = err
+	}
+
+	attempts <- res
+}
+
+type timeoutLengths struct {
+	retry, giveup time.Duration
+}
+
+func (c *ServiceClient) mux() {
+	for {
+		select {
+		case mi := <-c.muxChan:
+			switch m := mi.(type) {
+			case timeoutLengths:
+				c.retryTimeout = m.retry
+				c.giveupTimeout = m.giveup
+			}
+		case n := <-c.instanceNotifications:
+			c.handleInstanceNotification(n)
+
+		case c.timeoutChan <- timeoutLengths{
+			retry:  c.retryTimeout,
+			giveup: c.giveupTimeout,
+		}:
+
+		case shutdown := <-c.shutdownChan:
+			// TODO: Close out all channels, and this goroutine after waiting for requests to finish
+			if shutdown {
+				c.closed = true
+				return
+			}
+		}
 	}
 }
 
-// ServiceClient.sendToInstance() tries to make an RPC request on a particular connection to an instance
-func (c *ServiceClient) sendToInstance(sr ServiceResource,
-	requestInfo *skynet.RequestInfo, funcName string, in interface{}) (
-	result []byte, serviceErr, err error) {
-
-	sin := skynet.ServiceRPCIn{
-		RequestInfo: requestInfo,
-		Method:      funcName,
-		ClientID:    sr.clientID,
+// this should only be called by mux()
+func (c *ServiceClient) handleInstanceNotification(n skynet.InstanceNotification) {
+	// TODO: ensure LoadBalancer is thread safe and call these as goroutines
+	switch n.Type {
+	case skynet.InstanceAdded:
+		c.loadBalancer.AddInstance(n.Service)
+	case skynet.InstanceUpdated:
+		c.loadBalancer.UpdateInstance(n.Service)
+	case skynet.InstanceRemoved:
+		c.loadBalancer.RemoveInstance(n.Service)
 	}
-
-	sin.In, err = bson.Marshal(in)
-	if err != nil {
-		err = fmt.Errorf("Error calling bson.Marshal: %v", err)
-		return
-	}
-
-	sout := skynet.ServiceRPCOut{}
-
-	err = sr.rpcClient.Call(sr.service.Name+".Forward", sin, &sout)
-	if err != nil {
-		sr.Close()
-
-		// Log failure
-		log.Printf(log.ERROR, "Error calling sr.rpcClient.Call: "+err.Error())
-	}
-
-	if sout.ErrString != "" {
-		serviceErr = serviceError{sout.ErrString}
-	}
-
-	result = sout.Out
-
-	return
 }

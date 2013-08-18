@@ -6,7 +6,6 @@ import (
 )
 
 /* TODO:
-- Should prefix lines with log level
 - Should possibly add Debug, Debugf type helper methods
 */
 

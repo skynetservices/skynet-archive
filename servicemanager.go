@@ -4,6 +4,18 @@ import (
 	"github.com/skynetservices/skynet2/log"
 )
 
+const (
+	_ = iota
+	InstanceAdded
+	InstanceRemoved
+	InstanceUpdated
+)
+
+type InstanceNotification struct {
+	Type    int
+	Service ServiceInfo
+}
+
 type ServiceManager interface {
 	Add(s ServiceInfo) error
 	Update(s ServiceInfo) error
@@ -19,6 +31,7 @@ type ServiceManager interface {
 	ListServices(c CriteriaMatcher) ([]string, error)
 	ListVersions(c CriteriaMatcher) ([]string, error)
 	ListInstances(c CriteriaMatcher) ([]ServiceInfo, error)
+	Watch(criteria CriteriaMatcher, c <-chan InstanceNotification) []ServiceInfo
 }
 
 var manager ServiceManager
@@ -29,7 +42,7 @@ func SetServiceManager(sm ServiceManager) {
 
 func GetServiceManager() ServiceManager {
 	if manager == nil {
-		log.Panic("No ServiceManager provided")
+		log.Fatal("No ServiceManager provided")
 	}
 
 	return manager
