@@ -103,7 +103,15 @@ func Print(level LogLevel, v ...interface{}) {
 	if level <= level {
 		l := []interface{}{level.Interface()}
 		l = append(l, v)
-		logger.Print(l...)
+
+		switch level {
+		case FATAL:
+			logger.Fatal(l...)
+		case PANIC:
+			logger.Panic(l...)
+		default:
+			logger.Print(l...)
+		}
 	}
 }
 
