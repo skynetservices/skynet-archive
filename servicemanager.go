@@ -31,7 +31,7 @@ type ServiceManager interface {
 	ListServices(c CriteriaMatcher) ([]string, error)
 	ListVersions(c CriteriaMatcher) ([]string, error)
 	ListInstances(c CriteriaMatcher) ([]ServiceInfo, error)
-	Watch(criteria CriteriaMatcher, c <-chan InstanceNotification) []ServiceInfo
+	Watch(criteria CriteriaMatcher, c chan<- InstanceNotification) []ServiceInfo
 }
 
 var manager ServiceManager
