@@ -13,7 +13,6 @@ import (
 )
 
 var Config *skynet.ClientConfig
-var Client *client.Client
 
 func main() {
 	// TODO: We need to timeout here, if no zookeeper is up it just hangs
@@ -22,7 +21,7 @@ func main() {
 	var args []string
 	Config, args = skynet.GetClientConfigFromFlags(os.Args)
 	Config.MaxConnectionsToInstance = 10
-	Client = client.NewClient(Config)
+	client.SetConfig(*Config)
 	criteria, args := criteriaFromArgs(args)
 
 	args = args[1:]

@@ -32,7 +32,7 @@ func Start(criteria *skynet.Criteria, args []string) {
 		wait.Add(1)
 		go func(host string) {
 			fmt.Println("Starting on host: " + host)
-			d := daemon.GetDaemonForHost(Client, host)
+			d := daemon.GetDaemonForHost(host)
 
 			in := daemon.StartSubServiceRequest{
 				BinaryName: args[0],
@@ -74,7 +74,7 @@ func Stop(criteria *skynet.Criteria) {
 		wait.Add(1)
 		go func(instance skynet.ServiceInfo) {
 			fmt.Println("Stopping: " + instance.UUID)
-			d := daemon.GetDaemonForService(Client, &instance)
+			d := daemon.GetDaemonForService(&instance)
 
 			in := daemon.StopSubServiceRequest{
 				UUID: instance.UUID,
@@ -113,7 +113,7 @@ func Restart(criteria *skynet.Criteria) {
 		wait.Add(1)
 		go func(instance skynet.ServiceInfo) {
 			fmt.Println("Restarting: " + instance.UUID)
-			d := daemon.GetDaemonForService(Client, &instance)
+			d := daemon.GetDaemonForService(&instance)
 
 			in := daemon.RestartSubServiceRequest{
 				UUID: instance.UUID,
@@ -151,7 +151,7 @@ func Register(criteria *skynet.Criteria) {
 		wait.Add(1)
 		go func(instance skynet.ServiceInfo) {
 			fmt.Println("Registering: " + instance.UUID)
-			d := daemon.GetDaemonForService(Client, &instance)
+			d := daemon.GetDaemonForService(&instance)
 
 			in := daemon.RegisterSubServiceRequest{
 				UUID: instance.UUID,
@@ -189,7 +189,7 @@ func Unregister(criteria *skynet.Criteria) {
 		wait.Add(1)
 		go func(instance skynet.ServiceInfo) {
 			fmt.Println("Unregistering: " + instance.UUID)
-			d := daemon.GetDaemonForService(Client, &instance)
+			d := daemon.GetDaemonForService(&instance)
 
 			in := daemon.UnregisterSubServiceRequest{
 				UUID: instance.UUID,
@@ -227,7 +227,7 @@ func SetLogLevel(criteria *skynet.Criteria, level string) {
 		wait.Add(1)
 		go func(instance skynet.ServiceInfo) {
 			fmt.Println("Setting LogLevel to " + level + " for: " + instance.UUID)
-			d := daemon.GetDaemonForService(Client, &instance)
+			d := daemon.GetDaemonForService(&instance)
 
 			in := daemon.SubServiceLogLevelRequest{
 				UUID:  instance.UUID,
@@ -261,7 +261,7 @@ func SetDaemonLogLevel(criteria *skynet.Criteria, level string) {
 	for _, host := range hosts {
 		wait.Add(1)
 		go func(host string) {
-			d := daemon.GetDaemonForHost(Client, host)
+			d := daemon.GetDaemonForHost(host)
 
 			in := daemon.LogLevelRequest{
 				Level: level,
@@ -299,7 +299,7 @@ func StopDaemon(criteria *skynet.Criteria) {
 	for _, host := range hosts {
 		wait.Add(1)
 		go func(host string) {
-			d := daemon.GetDaemonForHost(Client, host)
+			d := daemon.GetDaemonForHost(host)
 
 			in := daemon.StopRequest{}
 			out, err := d.Stop(in)
