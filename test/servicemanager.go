@@ -18,7 +18,7 @@ type ServiceManager struct {
 	ListServicesFunc  func(c skynet.CriteriaMatcher) ([]string, error)
 	ListVersionsFunc  func(c skynet.CriteriaMatcher) ([]string, error)
 	ListInstancesFunc func(c skynet.CriteriaMatcher) ([]skynet.ServiceInfo, error)
-	WatchFunc         func(criteria skynet.CriteriaMatcher, c <-chan skynet.InstanceNotification) []skynet.ServiceInfo
+	WatchFunc         func(criteria skynet.CriteriaMatcher, c chan<- skynet.InstanceNotification) []skynet.ServiceInfo
 }
 
 func (sm *ServiceManager) Add(s skynet.ServiceInfo) error {
@@ -109,7 +109,7 @@ func (sm *ServiceManager) ListInstances(c skynet.CriteriaMatcher) ([]skynet.Serv
 	return []skynet.ServiceInfo{}, nil
 }
 
-func (sm *ServiceManager) Watch(criteria skynet.CriteriaMatcher, c <-chan skynet.InstanceNotification) (s []skynet.ServiceInfo) {
+func (sm *ServiceManager) Watch(criteria skynet.CriteriaMatcher, c chan<- skynet.InstanceNotification) (s []skynet.ServiceInfo) {
 	if sm.ListInstancesFunc != nil {
 		return sm.WatchFunc(criteria, c)
 	}

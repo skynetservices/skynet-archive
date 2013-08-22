@@ -17,7 +17,7 @@ func TestHandshake(t *testing.T) {
 
 	go doServiceHandshake(server, true, t)
 
-	cn, err := NewConnectionFromNetConn(client)
+	cn, err := NewConnectionFromNetConn("TestService", client)
 	c := cn.(*Conn)
 
 	if err != nil {
@@ -39,7 +39,7 @@ func TestErrorOnUnregistered(t *testing.T) {
 
 	go doServiceHandshake(server, false, t)
 
-	_, err := NewConnectionFromNetConn(client)
+	_, err := NewConnectionFromNetConn("TestService", client)
 
 	if err != ServiceUnregistered {
 		t.Fatal("Connection should return error when service is unregistered")
@@ -61,7 +61,7 @@ func TestDialConn(t *testing.T) {
 		}
 	}()
 
-	c, err := NewConnection("tcp", ":51900", 500*time.Millisecond)
+	c, err := NewConnection("TestService", "tcp", ":51900", 500*time.Millisecond)
 
 	if err != nil || c == nil {
 		t.Fatal("NewConnection() failed to establish tcp connection", err)
@@ -96,7 +96,7 @@ func TestSendTimeout(t *testing.T) {
 		}
 	}()
 
-	c, err := NewConnection("tcp", ":51900", 500*time.Millisecond)
+	c, err := NewConnection("TestService", "tcp", ":51900", 500*time.Millisecond)
 
 	if err != nil {
 		t.Error("Failed to establish connection for test", err)
@@ -114,7 +114,7 @@ func TestSend(t *testing.T) {
 	client, server := net.Pipe()
 	go doServiceHandshake(server, true, t)
 
-	cn, err := NewConnectionFromNetConn(client)
+	cn, err := NewConnectionFromNetConn("TestRPCService", client)
 	c := cn.(*Conn)
 
 	s := rpc.NewServer()
@@ -126,9 +126,7 @@ func TestSend(t *testing.T) {
 	tp.Val1 = "Hello World"
 	tp.Val2 = 10
 
-	ri := &skynet.RequestInfo{
-		ServiceName: "TestRPCService",
-	}
+	ri := &skynet.RequestInfo{}
 
 	ts.TestMethod = func(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOut) (err error) {
 		out.Out, err = bson.Marshal(&tp)
@@ -177,16 +175,14 @@ func TestSendOnClosedConnection(t *testing.T) {
 	client, server := net.Pipe()
 	go doServiceHandshake(server, true, t)
 
-	c, err := NewConnectionFromNetConn(client)
+	c, err := NewConnectionFromNetConn("TestService", client)
 	c.Close()
 
 	var tp TestParam
 	tp.Val1 = "Hello World"
 	tp.Val2 = 10
 
-	ri := &skynet.RequestInfo{
-		ServiceName: "TestRPCService",
-	}
+	ri := &skynet.RequestInfo{}
 
 	err = c.Send(ri, "foo", tp.Val1, &tp.Val2)
 

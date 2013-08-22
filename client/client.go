@@ -25,9 +25,8 @@ var (
 	config         = skynet.ClientConfig{IdleConnectionsToInstance: 5, MaxConnectionsToInstance: 10, IdleTimeout: 10 * time.Minute}
 	serviceClients = []ServiceClientProvider{}
 
-	addServiceClientChan = make(chan ServiceClientProvider)
-	closeChan            = make(chan bool)
-	instanceWatcher      = make(chan skynet.InstanceNotification, 100)
+	closeChan       = make(chan bool, 1)
+	instanceWatcher = make(chan skynet.InstanceNotification, 100)
 
 	pool                ConnectionPooler     = NewPool()
 	LoadBalancerFactory loadbalancer.Factory = roundrobin.New
@@ -128,8 +127,6 @@ func GetService(name string, version string, region string, host string) Service
 func mux() {
 	for {
 		select {
-		case s := <-addServiceClientChan:
-			addServiceClient(s)
 		case n := <-instanceWatcher:
 			updateInstance(n)
 		case <-closeChan:

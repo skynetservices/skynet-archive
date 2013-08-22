@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/skynetservices/skynet2"
 	"github.com/skynetservices/skynet2/client/loadbalancer"
+	"github.com/skynetservices/skynet2/log"
 	"reflect"
 	"sync"
 	"time"
@@ -66,6 +67,9 @@ func NewServiceClient(c *skynet.Criteria) ServiceClientProvider {
 		shutdownChan:          make(chan bool),
 		muxChan:               make(chan interface{}),
 		loadBalancer:          LoadBalancerFactory([]skynet.ServiceInfo{}),
+
+		retryTimeout:  skynet.DefaultRetryDuration,
+		giveupTimeout: skynet.DefaultTimeoutDuration,
 	}
 
 	go sc.mux()
@@ -130,6 +134,18 @@ func (c *ServiceClient) Close() {
 }
 
 /*
+ServiceClient.NewRequestInfo() create a new RequestInfo object specific to this service
+*/
+func (c *ServiceClient) NewRequestInfo() (ri *skynet.RequestInfo) {
+	// TODO: Set
+	ri = &skynet.RequestInfo{
+		RequestID: skynet.UUID(),
+	}
+
+	return
+}
+
+/*
 ServiceClient.Matches() determins if the provided Service matches the criteria associated with this client
 */
 func (c *ServiceClient) Matches(s skynet.ServiceInfo) bool {
@@ -145,12 +161,12 @@ func (c *ServiceClient) Notify(n skynet.InstanceNotification) {
 
 func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
 	if ri == nil {
-		ri = &skynet.RequestInfo{
-			RequestID: skynet.UUID(),
-		}
+		ri = c.NewRequestInfo()
 	}
 
 	attempts := make(chan sendAttempt)
+
+	retryChan := make(chan bool, 1)
 
 	var retryTicker <-chan time.Time
 	if retry > 0 {
@@ -168,6 +184,8 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 	for {
 		select {
 		case <-retryTicker:
+			retryChan <- true
+		case <-retryChan:
 			attemptCount++
 			ri.RetryCount++
 			go c.attemptSend(retry, attempts, ri, fn, in, out)
@@ -177,8 +195,14 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 			return
 
 		case attempt := <-attempts:
-			err = attempt.err
-			if err != nil {
+			if attempt.err != nil {
+				log.Println(log.ERROR, "Attempt Error: ", attempt.err)
+
+				// If there is no retry timer we should retry after each failed attempt
+				if retryTicker == nil {
+					retryChan <- true
+				}
+
 				continue
 			}
 
@@ -201,6 +225,7 @@ func (c *ServiceClient) attemptSend(timeout time.Duration, attempts chan sendAtt
 
 	if err != nil {
 		attempts <- sendAttempt{err: err}
+		return
 	}
 
 	conn, err := acquire(s)
@@ -208,6 +233,7 @@ func (c *ServiceClient) attemptSend(timeout time.Duration, attempts chan sendAtt
 
 	if err != nil {
 		attempts <- sendAttempt{err: err}
+		return
 	}
 
 	// Create a new instance of the type, we dont want race conditions where 2 connections are unmarshalling to the same object

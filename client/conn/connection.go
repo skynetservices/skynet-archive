@@ -49,11 +49,12 @@ Conn
 Implementation of Connection
 */
 type Conn struct {
-	addr      string
-	conn      net.Conn
-	clientID  string
-	rpcClient *rpc.Client
-	closed    bool
+	addr        string
+	conn        net.Conn
+	clientID    string
+	serviceName string
+	rpcClient   *rpc.Client
+	closed      bool
 
 	idleTimeout time.Duration
 }
@@ -61,14 +62,14 @@ type Conn struct {
 /*
 client.NewConnection() Establishes new connection to skynet service specified by addr
 */
-func NewConnection(network, addr string, timeout time.Duration) (conn Connection, err error) {
+func NewConnection(serviceName, network, addr string, timeout time.Duration) (conn Connection, err error) {
 	c, err := net.DialTimeout(network, addr, timeout)
 
 	if err != nil {
 		return
 	}
 
-	conn, err = NewConnectionFromNetConn(c)
+	conn, err = NewConnectionFromNetConn(serviceName, c)
 
 	return
 }
@@ -77,9 +78,10 @@ func NewConnection(network, addr string, timeout time.Duration) (conn Connection
 client.NewConn() Establishes new connection to skynet service with existing net.Conn
 This is beneficial if you want to communicate over a pipe
 */
-func NewConnectionFromNetConn(c net.Conn) (conn Connection, err error) {
+func NewConnectionFromNetConn(serviceName string, c net.Conn) (conn Connection, err error) {
 	cn := &Conn{conn: c}
 	cn.addr = c.RemoteAddr().String()
+	cn.serviceName = serviceName
 
 	err = cn.performHandshake()
 
@@ -148,7 +150,7 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 	c.setDeadline(timeout)
 	defer c.setDeadline(c.idleTimeout)
 
-	err = c.rpcClient.Call(ri.ServiceName+".Forward", sin, &sout)
+	err = c.rpcClient.Call(c.serviceName+".Forward", sin, &sout)
 	if err != nil {
 		c.Close()
 		err = serviceError{err.Error()}
