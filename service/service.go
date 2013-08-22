@@ -236,9 +236,7 @@ func (s *Service) listen(addr skynet.BindAddr, bindWait *sync.WaitGroup) {
 	bindWait.Done()
 
 	for {
-		log.Println(log.DEBUG, "Waiting for connection")
 		conn, err := s.rpcListener.AcceptTCP()
-		log.Println(log.DEBUG, "Received connection")
 
 		if s.shuttingDown {
 			break
