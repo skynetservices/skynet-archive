@@ -166,8 +166,6 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 
 	attempts := make(chan sendAttempt)
 
-	retryChan := make(chan bool, 1)
-
 	var retryTicker <-chan time.Time
 	if retry > 0 {
 		retryTicker = time.Tick(retry)
@@ -184,8 +182,6 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 	for {
 		select {
 		case <-retryTicker:
-			retryChan <- true
-		case <-retryChan:
 			attemptCount++
 			ri.RetryCount++
 			go c.attemptSend(retry, attempts, ri, fn, in, out)
@@ -198,9 +194,9 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 			if attempt.err != nil {
 				log.Println(log.ERROR, "Attempt Error: ", attempt.err)
 
-				// If there is no retry timer we should retry after each failed attempt
+				// If there is no retry timer we need to exit as retries were disabled
 				if retryTicker == nil {
-					retryChan <- true
+					return err
 				}
 
 				continue
