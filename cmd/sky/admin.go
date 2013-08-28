@@ -5,6 +5,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/skynetservices/skynet2"
 	"github.com/skynetservices/skynet2/daemon"
+	"github.com/skynetservices/skynet2/log"
 	"os"
 	"sync"
 	"text/template"
@@ -23,7 +24,7 @@ func Start(criteria *skynet.Criteria, args []string) {
 	hosts, err := skynet.GetServiceManager().ListHosts(criteria)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	var wait sync.WaitGroup
@@ -65,7 +66,7 @@ func Stop(criteria *skynet.Criteria) {
 	instances, err := skynet.GetServiceManager().ListInstances(criteria)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	var wait sync.WaitGroup
@@ -104,7 +105,7 @@ func Restart(criteria *skynet.Criteria) {
 	instances, err := skynet.GetServiceManager().ListInstances(criteria)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	var wait sync.WaitGroup
@@ -142,7 +143,7 @@ func Register(criteria *skynet.Criteria) {
 	instances, err := skynet.GetServiceManager().ListInstances(criteria)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	var wait sync.WaitGroup
@@ -180,7 +181,7 @@ func Unregister(criteria *skynet.Criteria) {
 	instances, err := skynet.GetServiceManager().ListInstances(criteria)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	var wait sync.WaitGroup
@@ -218,7 +219,7 @@ func SetLogLevel(criteria *skynet.Criteria, level string) {
 	instances, err := skynet.GetServiceManager().ListInstances(criteria)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	var wait sync.WaitGroup
@@ -253,7 +254,7 @@ func SetDaemonLogLevel(criteria *skynet.Criteria, level string) {
 	hosts, err := skynet.GetServiceManager().ListHosts(criteria)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	var wait sync.WaitGroup
@@ -291,7 +292,7 @@ func StopDaemon(criteria *skynet.Criteria) {
 	hosts, err := skynet.GetServiceManager().ListHosts(criteria)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	var wait sync.WaitGroup

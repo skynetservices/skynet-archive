@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/log"
 	"go/build"
 	"io/ioutil"
 	"os/exec"
@@ -64,7 +65,7 @@ func newBuilder(config string) *builder {
 	f, err := ioutil.ReadFile(config)
 
 	if err != nil {
-		panic("Failed to read: " + config)
+		log.Fatal("Failed to read: " + config)
 	}
 
 	b := new(builder)
@@ -72,7 +73,7 @@ func newBuilder(config string) *builder {
 	err = json.Unmarshal(f, b)
 
 	if err != nil {
-		panic("Failed to parse " + config + ": " + err.Error())
+		log.Fatal("Failed to parse " + config + ": " + err.Error())
 	}
 
 	if isHostLocal(b.BuildConfig.Host) {
@@ -85,7 +86,7 @@ func newBuilder(config string) *builder {
 		err = sshClient.Connect(b.BuildConfig.Host, b.BuildConfig.User)
 
 		if err != nil {
-			panic("Failed to connect to build machine: " + err.Error())
+			log.Fatal("Failed to connect to build machine: " + err.Error())
 		}
 	}
 
@@ -137,11 +138,11 @@ func (b *builder) validatePackage() {
 	b.pack, err = context.ImportDir(".", 0)
 
 	if err != nil {
-		panic("Could not import package for validation")
+		log.Fatal("Could not import package for validation")
 	}
 
 	if !b.pack.IsCommand() {
-		panic("Package is not a command")
+		log.Fatal("Package is not a command")
 	}
 }
 
@@ -187,7 +188,7 @@ func (b *builder) updateCode() {
 	b.projectPath = path.Join(b.BuildConfig.Jail, "src", p)
 
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err.Error())
 	}
 
 	out, err := b.term.Exec("ls " + b.projectPath)
@@ -197,7 +198,7 @@ func (b *builder) updateCode() {
 		out, err = b.term.Exec("mkdir -p " + b.projectPath)
 
 		if err != nil {
-			panic("Could not create project directories")
+			log.Fatal("Could not create project directories")
 		}
 
 		fmt.Println(string(out))
@@ -214,7 +215,7 @@ func (b *builder) setupScm() {
 		b.scm = new(GitScm)
 
 	default:
-		panic("unkown RepoType")
+		log.Fatal("unkown RepoType")
 	}
 }
 
@@ -235,7 +236,7 @@ func (b *builder) buildProject() {
 	fmt.Println(string(out))
 
 	if err != nil {
-		panic("Failed build: " + err.Error())
+		log.Fatal("Failed build: " + err.Error())
 	}
 }
 
@@ -247,7 +248,7 @@ func (b *builder) runTests() {
 	fmt.Println(string(out))
 
 	if err != nil {
-		panic("Failed tests: " + err.Error())
+		log.Fatal("Failed tests: " + err.Error())
 	}
 
 	if b.BuildConfig.TestSkynet {
@@ -265,7 +266,7 @@ func (b *builder) testSkynet() {
 	fmt.Println(string(out))
 
 	if err != nil {
-		panic("Failed tests: " + err.Error())
+		log.Fatal("Failed tests: " + err.Error())
 	}
 }
 
@@ -281,7 +282,7 @@ func (b *builder) getPackageDependencies(p string) {
 	fmt.Println(string(out))
 
 	if err != nil {
-		panic("Failed to fetch dependencies\n" + err.Error())
+		log.Fatal("Failed to fetch dependencies\n" + err.Error())
 	}
 }
 
@@ -291,7 +292,7 @@ func (b *builder) runCommands(cmds []string) {
 		fmt.Println(string(out))
 
 		if err != nil {
-			panic("Failed to execute dependent command: " + cmd + "\n" + err.Error())
+			log.Fatal("Failed to execute dependent command: " + cmd + "\n" + err.Error())
 		}
 	}
 }
@@ -362,7 +363,7 @@ func (b *builder) deploy(hosts []string) {
 		fmt.Println(string(out))
 
 		if err != nil {
-			panic("Failed to deploy: " + err.Error())
+			log.Fatal("Failed to deploy: " + err.Error())
 		}
 	}
 }
