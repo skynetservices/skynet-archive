@@ -97,7 +97,7 @@ func (p *Pool) addInstanceMux(s skynet.ServiceInfo) {
 			pool: pools.NewResourcePool(func() (pools.Resource, error) {
 				c, err := conn.NewConnection(s.Name, GetNetwork(), s.AddrString(), DIAL_TIMEOUT)
 
-				if err != nil {
+				if err == nil {
 					c.SetIdleTimeout(config.IdleTimeout)
 				}
 
