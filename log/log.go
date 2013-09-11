@@ -13,7 +13,7 @@ var logger *log.Logger
 
 type LogLevel int8
 
-var level LogLevel
+var minLevel LogLevel
 
 const (
 	DEBUG LogLevel = iota
@@ -56,19 +56,19 @@ func init() {
 }
 
 func Fatal(v ...interface{}) {
-	if level <= FATAL {
+	if minLevel <= FATAL {
 		Print(FATAL, v...)
 	}
 }
 
 func Fatalf(format string, v ...interface{}) {
-	if level <= FATAL {
+	if minLevel <= FATAL {
 		Printf(FATAL, format, v...)
 	}
 }
 
 func Fatalln(v ...interface{}) {
-	if level <= FATAL {
+	if minLevel <= FATAL {
 		Println(FATAL, v...)
 	}
 }
@@ -78,19 +78,19 @@ func Flags() int {
 }
 
 func Panic(v ...interface{}) {
-	if level <= PANIC {
+	if minLevel <= PANIC {
 		Print(PANIC, v...)
 	}
 }
 
 func Panicf(format string, v ...interface{}) {
-	if level <= PANIC {
+	if minLevel <= PANIC {
 		Printf(PANIC, format, v...)
 	}
 }
 
 func Panicln(v ...interface{}) {
-	if level <= PANIC {
+	if minLevel <= PANIC {
 		Println(PANIC, v...)
 	}
 }
@@ -100,29 +100,29 @@ func Prefix() string {
 }
 
 func Print(level LogLevel, v ...interface{}) {
-	if level <= level {
-		l := []interface{}{level.Interface()}
-		l = append(l, v)
+	if minLevel <= level {
+		args := []interface{}{level.Interface()}
+		args = append(args, v)
 
 		switch level {
 		case FATAL:
-			logger.Fatal(l...)
+			logger.Fatal(args...)
 		case PANIC:
-			logger.Panic(l...)
+			logger.Panic(args...)
 		default:
-			logger.Print(l...)
+			logger.Print(args...)
 		}
 	}
 }
 
 func Printf(level LogLevel, format string, v ...interface{}) {
-	if level <= level {
+	if minLevel <= level {
 		logger.Printf(level.String()+format, v...)
 	}
 }
 
 func Println(level LogLevel, v ...interface{}) {
-	if level <= level {
+	if minLevel <= level {
 		l := []interface{}{level.Interface()}
 		l = append(l, v)
 		logger.Println(l...)
@@ -138,11 +138,11 @@ func SetPrefix(prefix string) {
 }
 
 func SetLogLevel(level LogLevel) {
-	level = level
+	minLevel = level
 }
 
 func GetLogLevel() LogLevel {
-	return level
+	return minLevel
 }
 
 func LevelFromString(l string) (level LogLevel) {
