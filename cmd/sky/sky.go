@@ -16,6 +16,8 @@ import (
 var Config *skynet.ClientConfig
 
 func main() {
+	log.SetLogLevel(log.ERROR)
+
 	var args []string
 	Config, args = skynet.GetClientConfigFromFlags(os.Args)
 	Config.MaxConnectionsToInstance = 10
