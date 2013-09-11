@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/go.crypto/ssh"
 	"code.google.com/p/gopass"
 	"errors"
+	"github.com/skynetservices/skynet2/log"
 )
 
 type SSHConn struct {
@@ -39,7 +40,7 @@ func (c *SSHConn) ExecPath(cmd, path string) (out []byte, err error) {
 
 	session, err = c.client.NewSession()
 	if err != nil {
-		panic("Failed to create session: " + err.Error())
+		log.Fatal("Failed to create session: " + err.Error())
 	}
 	defer session.Close()
 
@@ -53,7 +54,7 @@ func (c *SSHConn) ExecPath(cmd, path string) (out []byte, err error) {
 										err = session.Setenv(name, value)
 
 										if err != nil {
-											panic("Failed to set environment: " + err.Error())
+											log.Fatal("Failed to set environment: " + err.Error())
 										}
 			*/
 		}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/skynetservices/skynet2"
 	"github.com/skynetservices/skynet2/client"
+	"github.com/skynetservices/skynet2/log"
 	"github.com/skynetservices/zkmanager"
 	"os"
 	"strconv"
@@ -15,9 +16,6 @@ import (
 var Config *skynet.ClientConfig
 
 func main() {
-	// TODO: We need to timeout here, if no zookeeper is up it just hangs
-	skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager(skynet.GetDefaultEnvVar("SKYNET_ZOOKEEPER", "localhost:2181"), 1*time.Second))
-
 	var args []string
 	Config, args = skynet.GetClientConfigFromFlags(os.Args)
 	Config.MaxConnectionsToInstance = 10
@@ -31,6 +29,12 @@ func main() {
 		return
 	}
 
+	// We dont need a zookeeper connection for builds
+	if args[0] != "build" && args[0] != "b" {
+		// TODO: We need to timeout here, if no zookeeper is up it just hangs
+		skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager(skynet.GetDefaultEnvVar("SKYNET_ZOOKEEPER", "localhost:2181"), 1*time.Second))
+	}
+
 	switch args[0] {
 	case "help", "h":
 		CommandLineHelp()
@@ -41,7 +45,7 @@ func main() {
 
 		err := flagset.Parse(flagsetArgs)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 			return
 		}
 
@@ -53,7 +57,7 @@ func main() {
 
 		err := flagset.Parse(flagsetArgs)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 			return
 		}
 
@@ -111,7 +115,7 @@ func getRegions(c *skynet.Criteria) []string {
 	regions, err := skynet.GetServiceManager().ListRegions(c)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	return regions
@@ -125,7 +129,7 @@ func getVersions(c *skynet.Criteria) []string {
 	versions, err := skynet.GetServiceManager().ListVersions(c)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	return versions
@@ -139,7 +143,7 @@ func getServices(c *skynet.Criteria) []string {
 	services, err := skynet.GetServiceManager().ListServices(c)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	return services
@@ -153,7 +157,7 @@ func getHosts(c *skynet.Criteria) []string {
 	hosts, err := skynet.GetServiceManager().ListHosts(c)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	return hosts
@@ -169,7 +173,7 @@ func getInstances(c *skynet.Criteria) []skynet.ServiceInfo {
 	instances, err := skynet.GetServiceManager().ListInstances(c)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	return instances
@@ -193,7 +197,7 @@ func criteriaFromArgs(args []string) (*skynet.Criteria, []string) {
 
 	err := flagset.Parse(flagsetArgs)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	regionCriteria := make([]string, 0, 0)
