@@ -69,8 +69,8 @@ func NewServiceClient(c *skynet.Criteria) ServiceClientProvider {
 		muxChan:               make(chan interface{}),
 		loadBalancer:          LoadBalancerFactory([]skynet.ServiceInfo{}),
 
-		retryTimeout:  config.DefaultRetryDuration,
-		giveupTimeout: config.DefaultTimeoutDuration,
+		retryTimeout:  getRetryTimeout(c.Services[0].Name, c.Services[0].Version),
+		giveupTimeout: getGiveupTimeout(c.Services[0].Name, c.Services[0].Version),
 	}
 
 	go sc.mux()
@@ -289,4 +289,28 @@ func (c *ServiceClient) handleInstanceNotification(n skynet.InstanceNotification
 	case skynet.InstanceRemoved:
 		c.loadBalancer.RemoveInstance(n.Service)
 	}
+}
+
+func getRetryTimeout(service, version string) time.Duration {
+	if d, err := config.String(service, version, "client.timeout.retry"); err == nil {
+		if timeout, err := time.ParseDuration(d); err != nil {
+			return timeout
+		}
+
+		log.Println(log.ERROR, "Failed to parse client.timeout.total", err)
+	}
+
+	return config.DefaultRetryDuration
+}
+
+func getGiveupTimeout(service, version string) time.Duration {
+	if d, err := config.String(service, version, "client.timeout.total"); err == nil {
+		if timeout, err := time.ParseDuration(d); err != nil {
+			return timeout
+		}
+
+		log.Println(log.ERROR, "Failed to parse client.timeout.total", err)
+	}
+
+	return config.DefaultRetryDuration
 }

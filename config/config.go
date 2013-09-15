@@ -5,7 +5,6 @@ import (
 	"github.com/robfig/config"
 	"github.com/skynetservices/skynet2/log"
 	"os"
-	"time"
 )
 
 var defaultConfigFiles = []string{
@@ -133,54 +132,6 @@ func SplitFlagsetFromArgs(flagset *flag.FlagSet, args []string) (flagsetArgs []s
 		} else {
 			additionalArgs = append(additionalArgs, f)
 		}
-	}
-
-	return
-}
-
-// Client
-type ClientConfig struct {
-	Host                      string
-	Region                    string
-	IdleConnectionsToInstance int
-	MaxConnectionsToInstance  int
-	IdleTimeout               time.Duration
-}
-
-func GetDefaultEnvVar(name, def string) (v string) {
-	v = os.Getenv(name)
-	if v == "" {
-		v = def
-	}
-	return
-}
-
-func FlagsForClient(ccfg *ClientConfig, flagset *flag.FlagSet) {
-	flagset.DurationVar(&ccfg.IdleTimeout, "timeout", DefaultIdleTimeout, "amount of idle time before timeout")
-	flagset.IntVar(&ccfg.IdleConnectionsToInstance, "maxidle", DefaultIdleConnectionsToInstance, "maximum number of idle connections to a particular instance")
-	flagset.IntVar(&ccfg.MaxConnectionsToInstance, "maxconns", DefaultMaxConnectionsToInstance, "maximum number of concurrent connections to a particular instance")
-	flagset.StringVar(&ccfg.Region, "region", GetDefaultEnvVar("SKYNET_REGION", DefaultRegion), "region client is located in")
-	flagset.StringVar(&ccfg.Host, "host", GetDefaultEnvVar("SKYNET_HOST", DefaultRegion), "host client is located in")
-}
-
-func GetClientConfig() (config *ClientConfig, args []string) {
-	return GetClientConfigFromFlags(os.Args[1:])
-}
-
-func GetClientConfigFromFlags(argv []string) (config *ClientConfig, args []string) {
-	config = &ClientConfig{}
-
-	flagset := flag.NewFlagSet("config", flag.ContinueOnError)
-
-	FlagsForClient(config, flagset)
-
-	err := flagset.Parse(argv)
-
-	args = flagset.Args()
-	if err == flag.ErrHelp {
-		// -help was given, pass it on to caller who
-		// may decide to quit instead of continuing
-		args = append(args, "-help")
 	}
 
 	return

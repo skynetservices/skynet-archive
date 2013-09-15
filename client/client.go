@@ -7,6 +7,7 @@ import (
 	"github.com/skynetservices/skynet2/client/loadbalancer"
 	"github.com/skynetservices/skynet2/client/loadbalancer/roundrobin"
 	"github.com/skynetservices/skynet2/config"
+	"github.com/skynetservices/skynet2/log"
 	"sync"
 	"time"
 )
@@ -23,7 +24,6 @@ func init() {
 var (
 	network        = "tcp"
 	knownNetworks  = []string{"tcp", "tcp4", "tcp6", "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unix", "unixgram", "unixpacket"}
-	conf           = config.ClientConfig{IdleConnectionsToInstance: 5, MaxConnectionsToInstance: 10, IdleTimeout: 10 * time.Minute}
 	serviceClients = []ServiceClientProvider{}
 
 	closeChan       = make(chan bool, 1)
@@ -65,13 +65,6 @@ client.SetLoadBalancer() provide a custom load balancer to determine the order i
 */
 func SetLoadBalancerFactory(factory loadbalancer.Factory) {
 	LoadBalancerFactory = factory
-}
-
-/*
-client.SetConfig() sets the client configuration for all Clients
-*/
-func SetConfig(c config.ClientConfig) {
-	conf = c
 }
 
 /*
@@ -191,4 +184,32 @@ func updateInstance(n skynet.InstanceNotification) {
 		go pool.RemoveInstance(n.Service)
 	}
 
+}
+
+func getIdleConnectionsToInstance(s skynet.ServiceInfo) int {
+	if n, err := config.Int(s.Name, s.Version, "client.conn.idle"); err == nil {
+		return n
+	}
+
+	return config.DefaultIdleConnectionsToInstance
+}
+
+func getMaxConnectionsToInstance(s skynet.ServiceInfo) int {
+	if n, err := config.Int(s.Name, s.Version, "client.conn.max"); err == nil {
+		return n
+	}
+
+	return config.DefaultMaxConnectionsToInstance
+}
+
+func getIdleTimeout(s skynet.ServiceInfo) time.Duration {
+	if d, err := config.String(s.Name, s.Version, "client.timeout.idle"); err == nil {
+		if timeout, err := time.ParseDuration(d); err != nil {
+			return timeout
+		}
+
+		log.Println(log.ERROR, "Failed to parse client.timeout.idle", err)
+	}
+
+	return config.DefaultIdleTimeout
 }

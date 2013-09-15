@@ -40,7 +40,12 @@ func TestInstanceNotificationsUpdateLoadBalancer(t *testing.T) {
 	timeout := 5 * time.Millisecond
 
 	// watching isn't started till we have at least one ServiceClient
-	criteria := &skynet.Criteria{}
+	criteria := &skynet.Criteria{Services: []skynet.ServiceCriteria{
+		skynet.ServiceCriteria{
+			Name:    "TestService",
+			Version: "",
+		},
+	}}
 	sc := NewServiceClient(criteria)
 	sClient := sc.(*ServiceClient)
 

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/skynetservices/skynet2"
 	"github.com/skynetservices/skynet2/client/loadbalancer/roundrobin"
-	"github.com/skynetservices/skynet2/config"
 	"github.com/skynetservices/skynet2/test"
 	"testing"
 	"time"
@@ -37,15 +36,6 @@ func TestSetNetwork(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("SetNetwork() accepted invalid network")
-	}
-}
-
-func TestSetConfig(t *testing.T) {
-	c := config.ClientConfig{IdleConnectionsToInstance: 25}
-	SetConfig(c)
-
-	if conf != c {
-		t.Fatal("SetConfig() failed to set new skynet.ClientConfig")
 	}
 }
 
@@ -211,7 +201,6 @@ func resetClient() {
 
 	network = "tcp"
 	knownNetworks = []string{"tcp", "tcp4", "tcp6", "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unix", "unixgram", "unixpacket"}
-	conf = config.ClientConfig{IdleConnectionsToInstance: 5, MaxConnectionsToInstance: 10, IdleTimeout: 10 * time.Minute}
 
 	pool = NewPool()
 	LoadBalancerFactory = roundrobin.New

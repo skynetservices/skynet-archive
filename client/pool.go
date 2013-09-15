@@ -98,13 +98,13 @@ func (p *Pool) addInstanceMux(s skynet.ServiceInfo) {
 				c, err := conn.NewConnection(s.Name, GetNetwork(), s.AddrString(), DIAL_TIMEOUT)
 
 				if err == nil {
-					c.SetIdleTimeout(conf.IdleTimeout)
+					c.SetIdleTimeout(getIdleTimeout(s))
 				}
 
 				return c, err
 			},
-				conf.IdleConnectionsToInstance,
-				conf.MaxConnectionsToInstance),
+				getIdleConnectionsToInstance(s),
+				getMaxConnectionsToInstance(s)),
 		}
 
 		p.servicePools[s.AddrString()] = sp
