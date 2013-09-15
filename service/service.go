@@ -67,6 +67,11 @@ func CreateService(sd ServiceDelegate, si *skynet.ServiceInfo) (s *Service) {
 		shuttingDown:   false,
 	}
 
+	// Override LogLevel for Service
+	if l, err := config.String(s.Name, s.Version, "log.level"); err != nil {
+		log.SetLogLevel(log.LevelFromString(l))
+	}
+
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
 	rpcForwarder := NewServiceRPC(s)

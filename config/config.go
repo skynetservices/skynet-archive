@@ -56,6 +56,11 @@ func init() {
 		conf = config.NewDefault()
 		log.Fatal(err)
 	}
+
+	// Set default log level from config, this can be overriden at the service level when the service is created
+	if l, err := conf.RawStringDefault("log.level"); err != nil {
+		log.SetLogLevel(log.LevelFromString(l))
+	}
 }
 
 func String(service, version, option string) (string, error) {

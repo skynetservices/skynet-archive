@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/skynetservices/skynet2/log"
 	"time"
 )
 
@@ -20,13 +21,13 @@ const (
 // skynet
 const (
 	DefaultIdleTimeout = 0
-	// DefaultRegion is the region specified for a service.
-	DefaultRegion = "unknown"
-	// DefaultVersion is the version specified for a service.
-	DefaultVersion = "unknown"
-	DefaultHost    = "127.0.0.1"
-	DefaultMinPort = 9000
-	DefaultMaxPort = 9999
+	DefaultRegion      = "unknown"
+	DefaultVersion     = "unknown"
+	DefaultHost        = "127.0.0.1"
+	DefaultMinPort     = 9000
+	DefaultMaxPort     = 9999
+
+	DefaultLogLevel = log.DEBUG
 )
 
 func GetDefaultBindAddr() string {
