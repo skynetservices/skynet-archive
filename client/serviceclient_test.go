@@ -60,7 +60,7 @@ func TestInstanceNotificationsUpdateLoadBalancer(t *testing.T) {
 	}
 
 	go receiveOrTimeout(watch, receive, timeout)
-	go sendInstanceNotification(skynet.InstanceAdded, si)
+	go sendInstanceNotification(skynet.InstanceAdded, *si)
 
 	v := <-receive
 	if _, fail := v.(error); fail {
@@ -76,7 +76,7 @@ func TestInstanceNotificationsUpdateLoadBalancer(t *testing.T) {
 	}
 
 	go receiveOrTimeout(watch, receive, timeout)
-	go sendInstanceNotification(skynet.InstanceUpdated, si)
+	go sendInstanceNotification(skynet.InstanceUpdated, *si)
 
 	v = <-receive
 	if _, fail := v.(error); fail {
@@ -91,7 +91,7 @@ func TestInstanceNotificationsUpdateLoadBalancer(t *testing.T) {
 	}
 
 	go receiveOrTimeout(watch, receive, timeout)
-	go sendInstanceNotification(skynet.InstanceRemoved, si)
+	go sendInstanceNotification(skynet.InstanceRemoved, *si)
 
 	v = <-receive
 	if _, fail := v.(error); fail {

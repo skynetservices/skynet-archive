@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/skynetservices/skynet2"
 	"github.com/skynetservices/skynet2/client/loadbalancer"
+	"github.com/skynetservices/skynet2/config"
 	"github.com/skynetservices/skynet2/log"
 	"reflect"
 	"sync"
@@ -68,8 +69,8 @@ func NewServiceClient(c *skynet.Criteria) ServiceClientProvider {
 		muxChan:               make(chan interface{}),
 		loadBalancer:          LoadBalancerFactory([]skynet.ServiceInfo{}),
 
-		retryTimeout:  skynet.DefaultRetryDuration,
-		giveupTimeout: skynet.DefaultTimeoutDuration,
+		retryTimeout:  config.DefaultRetryDuration,
+		giveupTimeout: config.DefaultTimeoutDuration,
 	}
 
 	go sc.mux()
@@ -139,7 +140,7 @@ ServiceClient.NewRequestInfo() create a new RequestInfo object specific to this 
 func (c *ServiceClient) NewRequestInfo() (ri *skynet.RequestInfo) {
 	// TODO: Set
 	ri = &skynet.RequestInfo{
-		RequestID: skynet.UUID(),
+		RequestID: config.NewUUID(),
 	}
 
 	return

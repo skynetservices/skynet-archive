@@ -42,26 +42,26 @@ func (ks KillSignal) String() string {
 }
 
 type ServiceListening struct {
-	ServiceConfig *skynet.ServiceConfig
-	Addr          *skynet.BindAddr
+	ServiceInfo *skynet.ServiceInfo
+	Addr        *skynet.BindAddr
 }
 
 func (sc ServiceListening) String() string {
-	return fmt.Sprintf("Service %q listening on %s", sc.ServiceConfig.Name, sc.Addr)
+	return fmt.Sprintf("Service %q listening on %s", sc.ServiceInfo.Name, sc.Addr)
 }
 
 type ServiceRegistered struct {
-	ServiceConfig *skynet.ServiceConfig
+	ServiceInfo *skynet.ServiceInfo
 }
 
 func (sr ServiceRegistered) String() string {
-	return fmt.Sprintf("Service %q registered", sr.ServiceConfig.Name)
+	return fmt.Sprintf("Service %q registered", sr.ServiceInfo.Name)
 }
 
 type ServiceUnregistered struct {
-	ServiceConfig *skynet.ServiceConfig
+	ServiceInfo *skynet.ServiceInfo
 }
 
 func (sr ServiceUnregistered) String() string {
-	return fmt.Sprintf("Service %q unregistered", sr.ServiceConfig.Name)
+	return fmt.Sprintf("Service %q unregistered", sr.ServiceInfo.Name)
 }

@@ -1,6 +1,7 @@
-package skynet
+package config
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -23,12 +24,11 @@ const (
 	DefaultRegion = "unknown"
 	// DefaultVersion is the version specified for a service.
 	DefaultVersion = "unknown"
+	DefaultHost    = "127.0.0.1"
+	DefaultMinPort = 9000
+	DefaultMaxPort = 9999
 )
 
 func GetDefaultBindAddr() string {
-	host := GetDefaultEnvVar("SKYNET_BIND_IP", "127.0.0.1")
-	minPort := GetDefaultEnvVar("SKYNET_MIN_PORT", "9000")
-	maxPort := GetDefaultEnvVar("SKYNET_MAX_PORT", "9999")
-
-	return host + ":" + minPort + "-" + maxPort
+	return fmt.Sprintf("%s:%d-%d", DefaultHost, DefaultMinPort, DefaultMaxPort)
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/skynetservices/skynet2"
 	"github.com/skynetservices/skynet2/client/loadbalancer/roundrobin"
+	"github.com/skynetservices/skynet2/config"
 	"github.com/skynetservices/skynet2/test"
 	"testing"
 	"time"
@@ -40,10 +41,10 @@ func TestSetNetwork(t *testing.T) {
 }
 
 func TestSetConfig(t *testing.T) {
-	c := skynet.ClientConfig{IdleConnectionsToInstance: 25}
+	c := config.ClientConfig{IdleConnectionsToInstance: 25}
 	SetConfig(c)
 
-	if config != c {
+	if conf != c {
 		t.Fatal("SetConfig() failed to set new skynet.ClientConfig")
 	}
 }
@@ -105,7 +106,7 @@ func TestInstanceNotificationForwardedToServiceClient(t *testing.T) {
 
 	// Add
 	go receiveOrTimeout(watch, receive, timeout)
-	go sendInstanceNotification(skynet.InstanceAdded, si)
+	go sendInstanceNotification(skynet.InstanceAdded, *si)
 
 	v := <-receive
 	if _, fail := v.(error); fail {
@@ -116,7 +117,7 @@ func TestInstanceNotificationForwardedToServiceClient(t *testing.T) {
 	si.Registered = false
 
 	go receiveOrTimeout(watch, receive, timeout)
-	go sendInstanceNotification(skynet.InstanceUpdated, si)
+	go sendInstanceNotification(skynet.InstanceUpdated, *si)
 
 	v = <-receive
 	if _, fail := v.(error); fail {
@@ -125,7 +126,7 @@ func TestInstanceNotificationForwardedToServiceClient(t *testing.T) {
 
 	// Remove
 	go receiveOrTimeout(watch, receive, timeout)
-	go sendInstanceNotification(skynet.InstanceRemoved, si)
+	go sendInstanceNotification(skynet.InstanceRemoved, *si)
 
 	v = <-receive
 	if _, fail := v.(error); fail {
@@ -159,7 +160,7 @@ func TestInstanceNotificationsUpdatePool(t *testing.T) {
 	}
 
 	go receiveOrTimeout(watch, receive, timeout)
-	go sendInstanceNotification(skynet.InstanceAdded, si)
+	go sendInstanceNotification(skynet.InstanceAdded, *si)
 
 	v := <-receive
 	if _, fail := v.(error); fail {
@@ -175,7 +176,7 @@ func TestInstanceNotificationsUpdatePool(t *testing.T) {
 	}
 
 	go receiveOrTimeout(watch, receive, timeout)
-	go sendInstanceNotification(skynet.InstanceUpdated, si)
+	go sendInstanceNotification(skynet.InstanceUpdated, *si)
 
 	v = <-receive
 	if _, fail := v.(error); fail {
@@ -190,7 +191,7 @@ func TestInstanceNotificationsUpdatePool(t *testing.T) {
 	}
 
 	go receiveOrTimeout(watch, receive, timeout)
-	go sendInstanceNotification(skynet.InstanceRemoved, si)
+	go sendInstanceNotification(skynet.InstanceRemoved, *si)
 
 	v = <-receive
 	if _, fail := v.(error); fail {
@@ -198,8 +199,8 @@ func TestInstanceNotificationsUpdatePool(t *testing.T) {
 	}
 }
 
-func serviceInfo() skynet.ServiceInfo {
-	si := skynet.NewServiceInfo(nil)
+func serviceInfo() *skynet.ServiceInfo {
+	si := skynet.NewServiceInfo("TestService", "1.0.0")
 	si.Registered = true
 
 	return si
@@ -210,7 +211,7 @@ func resetClient() {
 
 	network = "tcp"
 	knownNetworks = []string{"tcp", "tcp4", "tcp6", "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unix", "unixgram", "unixpacket"}
-	config = skynet.ClientConfig{IdleConnectionsToInstance: 5, MaxConnectionsToInstance: 10, IdleTimeout: 10 * time.Minute}
+	conf = config.ClientConfig{IdleConnectionsToInstance: 5, MaxConnectionsToInstance: 10, IdleTimeout: 10 * time.Minute}
 
 	pool = NewPool()
 	LoadBalancerFactory = roundrobin.New

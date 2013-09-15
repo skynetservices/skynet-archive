@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/config"
 	"github.com/skynetservices/skynet2/daemon"
 	"github.com/skynetservices/skynet2/log"
 	"github.com/skynetservices/skynet2/rpc/bsonrpc"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -29,7 +31,7 @@ type ClientInfo struct {
 }
 
 type Service struct {
-	skynet.ServiceInfo
+	*skynet.ServiceInfo
 	Delegate       ServiceDelegate
 	methods        map[string]reflect.Value
 	RPCServ        *rpc.Server
@@ -53,9 +55,10 @@ type Service struct {
 }
 
 // Wraps your custom service in Skynet
-func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
+func CreateService(sd ServiceDelegate, si *skynet.ServiceInfo) (s *Service) {
 	s = &Service{
 		Delegate:       sd,
+		ServiceInfo:    si,
 		methods:        make(map[string]reflect.Value),
 		connectionChan: make(chan *net.TCPConn),
 		registeredChan: make(chan bool),
@@ -64,15 +67,13 @@ func CreateService(sd ServiceDelegate, c *skynet.ServiceConfig) (s *Service) {
 		shuttingDown:   false,
 	}
 
-	s.ServiceConfig = c
-
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
 	rpcForwarder := NewServiceRPC(s)
-	s.RPCServ.RegisterName(s.ServiceConfig.Name, rpcForwarder)
+	s.RPCServ.RegisterName(si.Name, rpcForwarder)
 
 	// Daemon doesn't accept commands over pipe
-	if c.Name != "SkynetDaemon" {
+	if si.Name != "SkynetDaemon" {
 		// Listen for admin requests
 		go s.serveAdminRequests()
 	}
@@ -91,13 +92,13 @@ func (s *Service) register() {
 		return
 	}
 
-	err := skynet.GetServiceManager().Register(s.ServiceConfig.UUID)
+	err := skynet.GetServiceManager().Register(s.ServiceInfo.UUID)
 	if err != nil {
 		log.Println(log.ERROR, "Failed to register service: "+err.Error())
 	}
 
 	s.Registered = true
-	log.Printf(log.INFO, "%+v\n", ServiceRegistered{s.ServiceConfig})
+	log.Printf(log.INFO, "%+v\n", ServiceRegistered{s.ServiceInfo})
 	s.Delegate.Registered(s) // Call user defined callback
 }
 
@@ -112,13 +113,13 @@ func (s *Service) unregister() {
 		return
 	}
 
-	err := skynet.GetServiceManager().Unregister(s.ServiceConfig.UUID)
+	err := skynet.GetServiceManager().Unregister(s.UUID)
 	if err != nil {
 		log.Println(log.ERROR, "Failed to unregister service: "+err.Error())
 	}
 
 	s.Registered = false
-	log.Printf(log.INFO, "%+v\n", ServiceUnregistered{s.ServiceConfig})
+	log.Printf(log.INFO, "%+v\n", ServiceUnregistered{s.ServiceInfo})
 	s.Delegate.Unregistered(s) // Call user defined callback
 }
 
@@ -146,7 +147,7 @@ func (s *Service) shutdown() {
 
 	s.activeRequests.Wait()
 
-	err := skynet.GetServiceManager().Remove(s.ServiceInfo)
+	err := skynet.GetServiceManager().Remove(*s.ServiceInfo)
 	if err != nil {
 		log.Println(log.ERROR, "Failed to remove service: "+err.Error())
 	}
@@ -168,7 +169,7 @@ func (s *Service) Start() (done *sync.WaitGroup) {
 	bindWait := &sync.WaitGroup{}
 
 	bindWait.Add(1)
-	go s.listen(s.ServiceConfig.ServiceAddr, bindWait)
+	go s.listen(s.ServiceAddr, bindWait)
 
 	// Watch signals for shutdown
 	c := make(chan os.Signal, 1)
@@ -188,14 +189,16 @@ func (s *Service) Start() (done *sync.WaitGroup) {
 	}()
 	done = s.doneGroup
 
-	s.ServiceInfo.Registered = s.ServiceConfig.Registered
+	if r, err := config.Bool(s.Name, s.Version, "register"); err != nil {
+		s.Registered = r
+	}
 
-	err := skynet.GetServiceManager().Add(s.ServiceInfo)
+	err := skynet.GetServiceManager().Add(*s.ServiceInfo)
 	if err != nil {
 		log.Println(log.ERROR, "Failed to add service: "+err.Error())
 	}
 
-	if s.ServiceConfig.Registered {
+	if s.Registered {
 		s.Register()
 	}
 
@@ -224,14 +227,14 @@ func (s *Service) listen(addr skynet.BindAddr, bindWait *sync.WaitGroup) {
 	}
 
 	log.Printf(log.INFO, "%+v\n", ServiceListening{
-		Addr:          &addr,
-		ServiceConfig: s.ServiceConfig,
+		Addr:        &addr,
+		ServiceInfo: s.ServiceInfo,
 	})
 
 	// We may have changed port due to conflict, ensure config has the correct port now
 	a, _ := skynet.BindAddrFromString(addr.String())
-	s.ServiceConfig.ServiceAddr.IPAddress = a.IPAddress
-	s.ServiceConfig.ServiceAddr.Port = a.Port
+	s.ServiceAddr.IPAddress = a.IPAddress
+	s.ServiceAddr.Port = a.Port
 
 	bindWait.Done()
 
@@ -257,7 +260,7 @@ loop:
 	for {
 		select {
 		case conn := <-s.connectionChan:
-			clientID := skynet.UUID()
+			clientID := config.NewUUID()
 
 			s.clientMutex.Lock()
 			s.ClientInfo[clientID] = ClientInfo{
@@ -309,8 +312,16 @@ loop:
 }
 
 func (s *Service) serveAdminRequests() {
-	pipeReader := os.NewFile(uintptr(os.Stderr.Fd()+1), "")
-	pipeWriter := os.NewFile(uintptr(os.Stderr.Fd()+2), "")
+	rId := os.Stderr.Fd() + 1
+	wId := os.Stderr.Fd() + 2
+
+	if runtime.GOOS == "darwin" {
+		rId++
+		wId++
+	}
+
+	pipeReader := os.NewFile(uintptr(rId), "")
+	pipeWriter := os.NewFile(uintptr(wId), "")
 	s.pipe = daemon.NewPipe(pipeReader, pipeWriter)
 
 	b := make([]byte, daemon.MAX_PIPE_BYTES)

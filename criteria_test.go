@@ -19,21 +19,15 @@ var testCases []matchTestCase = []matchTestCase{
 		},
 		MatchingInstances: []ServiceInfo{
 			ServiceInfo{
-				ServiceConfig: &ServiceConfig{
-					Region: "Tampa",
-				},
+				Region: "Tampa",
 			},
 		},
 		NonMatchingInstances: []ServiceInfo{
 			ServiceInfo{
-				ServiceConfig: &ServiceConfig{
-					Region: "Chicago",
-				},
+				Region: "Chicago",
 			},
 			ServiceInfo{
-				ServiceConfig: &ServiceConfig{
-					Region: "Dallas",
-				},
+				Region: "Dallas",
 			},
 		},
 	},

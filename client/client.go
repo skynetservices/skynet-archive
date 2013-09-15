@@ -6,6 +6,7 @@ import (
 	"github.com/skynetservices/skynet2/client/conn"
 	"github.com/skynetservices/skynet2/client/loadbalancer"
 	"github.com/skynetservices/skynet2/client/loadbalancer/roundrobin"
+	"github.com/skynetservices/skynet2/config"
 	"sync"
 	"time"
 )
@@ -22,7 +23,7 @@ func init() {
 var (
 	network        = "tcp"
 	knownNetworks  = []string{"tcp", "tcp4", "tcp6", "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unix", "unixgram", "unixpacket"}
-	config         = skynet.ClientConfig{IdleConnectionsToInstance: 5, MaxConnectionsToInstance: 10, IdleTimeout: 10 * time.Minute}
+	conf           = config.ClientConfig{IdleConnectionsToInstance: 5, MaxConnectionsToInstance: 10, IdleTimeout: 10 * time.Minute}
 	serviceClients = []ServiceClientProvider{}
 
 	closeChan       = make(chan bool, 1)
@@ -69,8 +70,8 @@ func SetLoadBalancerFactory(factory loadbalancer.Factory) {
 /*
 client.SetConfig() sets the client configuration for all Clients
 */
-func SetConfig(c skynet.ClientConfig) {
-	config = c
+func SetConfig(c config.ClientConfig) {
+	conf = c
 }
 
 /*

@@ -1,14 +1,14 @@
-package skynet
+package config
 
 import (
 	"crypto/rand"
 	"fmt"
+	"github.com/skynetservices/skynet2/log"
 	"io"
-	"log"
 )
 
-// UUID() provides unique identifier strings.
-func UUID() string {
+// NewUUID() provides unique identifier strings.
+func NewUUID() string {
 	b := make([]byte, 16)
 	_, err := io.ReadFull(rand.Reader, b)
 	if err != nil {

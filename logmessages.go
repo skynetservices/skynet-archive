@@ -9,8 +9,8 @@ type ServiceDiscovered struct {
 }
 
 func (sd ServiceDiscovered) String() string {
-	return fmt.Sprintf("Discovered service %q at %s", sd.Service.ServiceConfig.Name,
-		sd.Service.ServiceConfig.ServiceAddr)
+	return fmt.Sprintf("Discovered service %q at %s", sd.Service.Name,
+		sd.Service.ServiceAddr)
 }
 
 type ServiceRemoved struct {
@@ -18,14 +18,14 @@ type ServiceRemoved struct {
 }
 
 func (sr ServiceRemoved) String() string {
-	return fmt.Sprintf("Removed service %q at %s", sr.Service.ServiceConfig.Name,
-		sr.Service.ServiceConfig.ServiceAddr)
+	return fmt.Sprintf("Removed service %q at %s", sr.Service.Name,
+		sr.Service.ServiceAddr)
 }
 
 type ServiceCreated struct {
-	ServiceConfig *ServiceConfig
+	ServiceInfo *ServiceInfo
 }
 
 func (sc ServiceCreated) String() string {
-	return fmt.Sprintf("Created service %q", sc.ServiceConfig.Name)
+	return fmt.Sprintf("Created service %q", sc.ServiceInfo.Name)
 }

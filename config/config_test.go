@@ -1,4 +1,4 @@
-package skynet
+package config
 
 import (
 	"flag"
@@ -12,46 +12,6 @@ func clearEnv() {
 	os.Setenv("SKYNET_MAX_PORT", "")
 	os.Setenv("SKYNET_REGION", "")
 	os.Setenv("SKYNET_VERSION", "")
-}
-
-func TestGetServiceConfigFromFlags(t *testing.T) {
-	clearEnv()
-
-	os.Args = []string{"test", "--l=localhost:1234", "--region=TestRegion"}
-
-	config, _ := GetServiceConfigFromFlags(os.Args[1:])
-
-	if config.ServiceAddr.IPAddress != "localhost" {
-		t.Error("Address not set through flag")
-	}
-
-	if config.ServiceAddr.Port != 1234 {
-		t.Error("Port not set through flag")
-	}
-
-	if config.Region != "TestRegion" {
-		t.Error("Region not set through flag")
-	}
-}
-
-func TestGetServiceConfigFromFlagsDefaults(t *testing.T) {
-	clearEnv()
-
-	os.Args = []string{"test"}
-
-	config, _ := GetServiceConfigFromFlags(os.Args[1:])
-
-	if config.ServiceAddr.IPAddress != "127.0.0.1" {
-		t.Error("Address not set to default value")
-	}
-
-	if config.ServiceAddr.Port != 9000 {
-		t.Error("Port not set to default value")
-	}
-
-	if config.Region != "unknown" {
-		t.Error("Region not set to default value")
-	}
 }
 
 func TestSplitFlagsetFromArgs(t *testing.T) {
