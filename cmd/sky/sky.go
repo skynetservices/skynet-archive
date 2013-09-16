@@ -28,7 +28,7 @@ func main() {
 		CommandLineHelp()
 	case "build", "b":
 		flagset := flag.NewFlagSet("build", flag.ExitOnError)
-		configFile := flagset.String("config", "./build.cfg", "build config file")
+		configFile := flagset.String("build", "./build.cfg", "build config file")
 		flagsetArgs, _ := config.SplitFlagsetFromArgs(flagset, args)
 
 		err := flagset.Parse(flagsetArgs)
@@ -40,7 +40,7 @@ func main() {
 		Build(*configFile)
 	case "deploy", "d":
 		flagset := flag.NewFlagSet("deploy", flag.ExitOnError)
-		configFile := flagset.String("config", "./build.cfg", "build config file")
+		configFile := flagset.String("build", "./build.cfg", "build config file")
 		flagsetArgs, _ := config.SplitFlagsetFromArgs(flagset, args)
 
 		err := flagset.Parse(flagsetArgs)
