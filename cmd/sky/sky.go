@@ -4,37 +4,23 @@ import (
 	"flag"
 	"fmt"
 	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/client"
+	"github.com/skynetservices/skynet2/config"
 	"github.com/skynetservices/skynet2/log"
-	"github.com/skynetservices/zkmanager"
+	_ "github.com/skynetservices/zkmanager"
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
-
-var Config *skynet.ClientConfig
 
 func main() {
 	log.SetLogLevel(log.ERROR)
 
 	var args []string
-	Config, args = skynet.GetClientConfigFromFlags(os.Args)
-	Config.MaxConnectionsToInstance = 10
-	client.SetConfig(*Config)
-	criteria, args := criteriaFromArgs(args)
-
-	args = args[1:]
+	criteria, args := criteriaFromArgs(os.Args[1:])
 
 	if len(args) == 0 {
 		CommandLineHelp()
 		return
-	}
-
-	// We dont need a zookeeper connection for builds
-	if args[0] != "build" && args[0] != "b" {
-		// TODO: We need to timeout here, if no zookeeper is up it just hangs
-		skynet.SetServiceManager(zkmanager.NewZookeeperServiceManager(skynet.GetDefaultEnvVar("SKYNET_ZOOKEEPER", "localhost:2181"), 1*time.Second))
 	}
 
 	switch args[0] {
@@ -42,8 +28,8 @@ func main() {
 		CommandLineHelp()
 	case "build", "b":
 		flagset := flag.NewFlagSet("build", flag.ExitOnError)
-		config := flagset.String("config", "./build.cfg", "build config file")
-		flagsetArgs, _ := skynet.SplitFlagsetFromArgs(flagset, args)
+		configFile := flagset.String("config", "./build.cfg", "build config file")
+		flagsetArgs, _ := config.SplitFlagsetFromArgs(flagset, args)
 
 		err := flagset.Parse(flagsetArgs)
 		if err != nil {
@@ -51,11 +37,11 @@ func main() {
 			return
 		}
 
-		Build(*config)
+		Build(*configFile)
 	case "deploy", "d":
 		flagset := flag.NewFlagSet("deploy", flag.ExitOnError)
-		config := flagset.String("config", "./build.cfg", "build config file")
-		flagsetArgs, _ := skynet.SplitFlagsetFromArgs(flagset, args)
+		configFile := flagset.String("config", "./build.cfg", "build config file")
+		flagsetArgs, _ := config.SplitFlagsetFromArgs(flagset, args)
 
 		err := flagset.Parse(flagsetArgs)
 		if err != nil {
@@ -63,7 +49,7 @@ func main() {
 			return
 		}
 
-		Deploy(*config, criteria)
+		Deploy(*configFile, criteria)
 	case "hosts":
 		ListHosts(criteria)
 	case "regions":
@@ -195,7 +181,7 @@ func criteriaFromArgs(args []string) (*skynet.Criteria, []string) {
 	hosts := flagset.String("hosts", "", "hosts")
 	registered := flagset.String("registered", "", "registered")
 
-	flagsetArgs, args := skynet.SplitFlagsetFromArgs(flagset, args)
+	flagsetArgs, args := config.SplitFlagsetFromArgs(flagset, args)
 
 	err := flagset.Parse(flagsetArgs)
 	if err != nil {
