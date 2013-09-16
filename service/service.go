@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
