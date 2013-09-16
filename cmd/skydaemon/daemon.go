@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/config"
 	"github.com/skynetservices/skynet2/daemon"
 	"github.com/skynetservices/skynet2/log"
 	"github.com/skynetservices/skynet2/service"
@@ -70,7 +71,7 @@ func (sd *SkynetDaemon) Stopped(s *service.Service) {
 }
 
 func (s *SkynetDaemon) StartSubService(requestInfo *skynet.RequestInfo, in daemon.StartSubServiceRequest, out *daemon.StartSubServiceResponse) (err error) {
-	out.UUID = skynet.UUID()
+	out.UUID = config.NewUUID()
 
 	log.Printf(log.TRACE, "%+v", SubserviceStart{
 		BinaryName: in.BinaryName,
