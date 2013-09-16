@@ -317,13 +317,8 @@ loop:
 }
 
 func (s *Service) serveAdminRequests() {
-	rId := os.Stderr.Fd() + 1
-	wId := os.Stderr.Fd() + 2
-
-	if runtime.GOOS == "darwin" {
-		rId++
-		wId++
-	}
+	rId := os.Stderr.Fd() + 2
+	wId := os.Stderr.Fd() + 3
 
 	pipeReader := os.NewFile(uintptr(rId), "")
 	pipeWriter := os.NewFile(uintptr(wId), "")
