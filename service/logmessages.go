@@ -47,7 +47,7 @@ type ServiceListening struct {
 }
 
 func (sc ServiceListening) String() string {
-	return fmt.Sprintf("Service %q listening on %s", sc.ServiceInfo.Name, sc.Addr)
+	return fmt.Sprintf("Service %q %q listening on %s in region %q", sc.ServiceInfo.Name, sc.ServiceInfo.Version, sc.Addr, sc.ServiceInfo.Region)
 }
 
 type ServiceRegistered struct {
