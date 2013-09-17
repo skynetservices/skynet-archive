@@ -193,7 +193,7 @@ func (s *Service) Start() (done *sync.WaitGroup) {
 	}()
 	done = s.doneGroup
 
-	if r, err := config.Bool(s.Name, s.Version, "register"); err != nil {
+	if r, err := config.Bool(s.Name, s.Version, "service.register"); err != nil {
 		s.Registered = r
 	}
 
