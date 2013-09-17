@@ -52,9 +52,6 @@ type ServiceClient struct {
 	instanceNotifications chan skynet.InstanceNotification
 	timeoutChan           chan timeoutLengths
 	shutdownChan          chan bool
-
-	// TODO: remove this if we dont need it, but i think we need it for items that go into the RequestInfo
-	//cconfig       skynet.ClientConfig
 }
 
 /*
@@ -293,7 +290,7 @@ func (c *ServiceClient) handleInstanceNotification(n skynet.InstanceNotification
 
 func getRetryTimeout(service, version string) time.Duration {
 	if d, err := config.String(service, version, "client.timeout.retry"); err == nil {
-		if timeout, err := time.ParseDuration(d); err != nil {
+		if timeout, err := time.ParseDuration(d); err == nil {
 			return timeout
 		}
 
@@ -305,7 +302,7 @@ func getRetryTimeout(service, version string) time.Duration {
 
 func getGiveupTimeout(service, version string) time.Duration {
 	if d, err := config.String(service, version, "client.timeout.total"); err == nil {
-		if timeout, err := time.ParseDuration(d); err != nil {
+		if timeout, err := time.ParseDuration(d); err == nil {
 			return timeout
 		}
 
