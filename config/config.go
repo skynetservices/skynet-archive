@@ -96,7 +96,7 @@ func getSection(service, version string) string {
 		return s
 	}
 
-	return "service"
+	return service
 }
 
 func getFlagName(f string) (name string) {
