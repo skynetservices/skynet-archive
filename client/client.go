@@ -204,7 +204,7 @@ func getMaxConnectionsToInstance(s skynet.ServiceInfo) int {
 
 func getIdleTimeout(s skynet.ServiceInfo) time.Duration {
 	if d, err := config.String(s.Name, s.Version, "client.timeout.idle"); err == nil {
-		if timeout, err := time.ParseDuration(d); err != nil {
+		if timeout, err := time.ParseDuration(d); err == nil {
 			return timeout
 		}
 
