@@ -5,6 +5,7 @@ import (
 	"github.com/robfig/config"
 	"github.com/skynetservices/skynet2/log"
 	"os"
+	"runtime"
 )
 
 var defaultConfigFiles = []string{
@@ -59,6 +60,11 @@ func init() {
 	// Set default log level from config, this can be overriden at the service level when the service is created
 	if l, err := conf.RawStringDefault("log.level"); err == nil {
 		log.SetLogLevel(log.LevelFromString(l))
+	}
+
+	// Set GOMAXPROCS
+	if i, err := conf.Int("DEFAULT", "runtime.gomaxprocs"); err == nil {
+		runtime.GOMAXPROCS(i)
 	}
 }
 
