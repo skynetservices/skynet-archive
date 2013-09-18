@@ -1,11 +1,15 @@
 package stats
 
+import (
+	"time"
+)
+
 var reporters []Reporter
 
 type Reporter interface {
 	UpdateHostStats(host string, stats Host)
 	MethodCalled(method string)
-	MethodCompleted(method string, duration int64, err error)
+	MethodCompleted(method string, duration time.Duration, err error)
 }
 
 func AddReporter(r Reporter) {
@@ -24,7 +28,7 @@ func MethodCalled(method string) {
 	}
 }
 
-func MethodCompleted(method string, duration int64, err error) {
+func MethodCompleted(method string, duration time.Duration, err error) {
 	for _, r := range reporters {
 		go r.MethodCompleted(method, duration, err)
 	}

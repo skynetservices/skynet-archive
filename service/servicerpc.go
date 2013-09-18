@@ -156,7 +156,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		panic("illegal out param type")
 	}
 
-	startTime := time.Now().UnixNano()
+	startTime := time.Now()
 
 	params := []reflect.Value{
 		reflect.ValueOf(srpc.service.Delegate),
@@ -167,7 +167,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 
 	returns := m.Call(params)
 
-	duration := time.Now().UnixNano() - startTime
+	duration := time.Now().Sub(startTime)
 
 	mcp := MethodCompletion{
 		MethodName:  in.Method,
