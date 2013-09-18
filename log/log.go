@@ -1,15 +1,13 @@
 package log
 
 import (
+	"io"
 	"log"
-	"os"
 )
 
 /* TODO:
 - Should possibly add Debug, Debugf type helper methods
 */
-
-var logger *log.Logger
 
 type LogLevel int8
 
@@ -51,8 +49,8 @@ func (l LogLevel) Interface() interface{} {
 }
 
 func init() {
-	// Default the logger, implementors can override the Output if they'd like to change it
-	logger = log.New(os.Stdout, "skynet: ", log.LstdFlags)
+	log.SetFlags(log.LstdFlags)
+	log.SetPrefix("skynet: ")
 }
 
 func Fatal(v ...interface{}) {
@@ -74,7 +72,7 @@ func Fatalln(v ...interface{}) {
 }
 
 func Flags() int {
-	return logger.Flags()
+	return log.Flags()
 }
 
 func Panic(v ...interface{}) {
@@ -96,7 +94,7 @@ func Panicln(v ...interface{}) {
 }
 
 func Prefix() string {
-	return logger.Prefix()
+	return log.Prefix()
 }
 
 func Print(level LogLevel, v ...interface{}) {
@@ -106,18 +104,18 @@ func Print(level LogLevel, v ...interface{}) {
 
 		switch level {
 		case FATAL:
-			logger.Fatal(args...)
+			log.Fatal(args...)
 		case PANIC:
-			logger.Panic(args...)
+			log.Panic(args...)
 		default:
-			logger.Print(args...)
+			log.Print(args...)
 		}
 	}
 }
 
 func Printf(level LogLevel, format string, v ...interface{}) {
 	if minLevel <= level {
-		logger.Printf(level.String()+format, v...)
+		log.Printf(level.String()+format, v...)
 	}
 }
 
@@ -125,16 +123,20 @@ func Println(level LogLevel, v ...interface{}) {
 	if minLevel <= level {
 		l := []interface{}{level.Interface()}
 		l = append(l, v)
-		logger.Println(l...)
+		log.Println(l...)
 	}
 }
 
 func SetFlags(flag int) {
-	logger.SetFlags(flag)
+	log.SetFlags(flag)
 }
 
 func SetPrefix(prefix string) {
-	logger.SetPrefix(prefix)
+	log.SetPrefix(prefix)
+}
+
+func SetOutput(w io.Writer) {
+	log.SetOutput(w)
 }
 
 func SetLogLevel(level LogLevel) {
