@@ -28,8 +28,8 @@ func NewClientCodec(conn io.ReadWriteCloser) (codec rpc.ClientCodec) {
 }
 
 func (cc *ccodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
-	log.Println(log.TRACE, "RPC Server Entered: WriteRequest")
-	defer log.Println(log.TRACE, "RPC Server Leaving: WriteRequest")
+	log.Println(log.TRACE, "RPC Client Entered: WriteRequest")
+	defer log.Println(log.TRACE, "RPC Client Leaving: WriteRequest")
 
 	err = cc.enc.Encode(req)
 	if err != nil {
@@ -47,8 +47,8 @@ func (cc *ccodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
 }
 
 func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {
-	log.Println(log.TRACE, "RPC Server Entered: ReadResponseHeader")
-	defer log.Println(log.TRACE, "RPC Server Leaving: ReadResponseHeader")
+	log.Println(log.TRACE, "RPC Client Entered: ReadResponseHeader")
+	defer log.Println(log.TRACE, "RPC Client Leaving: ReadResponseHeader")
 
 	err = cc.dec.Decode(res)
 
@@ -59,8 +59,8 @@ func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {
 }
 
 func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
-	log.Println(log.TRACE, "RPC Server Entered: ReadResponseBody")
-	defer log.Println(log.TRACE, "RPC Server Leaving: ReadResponseBody")
+	log.Println(log.TRACE, "RPC Client Entered: ReadResponseBody")
+	defer log.Println(log.TRACE, "RPC Client Leaving: ReadResponseBody")
 
 	if v == nil {
 		err = errors.New("Response object cannot be nil")
@@ -79,8 +79,8 @@ func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
 }
 
 func (cc *ccodec) Close() (err error) {
-	log.Println(log.TRACE, "RPC Server Entered: Close")
-	defer log.Println(log.TRACE, "RPC Server Leaving: Close")
+	log.Println(log.TRACE, "RPC Client Entered: Close")
+	defer log.Println(log.TRACE, "RPC Client Leaving: Close")
 
 	err = cc.conn.Close()
 
