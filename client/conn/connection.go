@@ -146,7 +146,7 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 	}
 
 	sin.In = bson.Binary{
-		0x80,
+		0x00,
 		b,
 	}
 

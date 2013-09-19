@@ -190,7 +190,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	}
 
 	out.Out = bson.Binary{
-		0x80,
+		0x00,
 		b,
 	}
 
