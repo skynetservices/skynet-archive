@@ -9,8 +9,8 @@ import (
 )
 
 var defaultConfigFiles = []string{
-	"/etc/skynet/skynet.conf",
 	"./skynet.conf",
+	"/etc/skynet/skynet.conf",
 }
 
 var configFile string
