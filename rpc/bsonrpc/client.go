@@ -3,6 +3,7 @@ package bsonrpc
 import (
 	"bufio"
 	"errors"
+	"github.com/skynetservices/skynet2/log"
 	"io"
 	"net/rpc"
 )
@@ -29,31 +30,52 @@ func NewClientCodec(conn io.ReadWriteCloser) (codec rpc.ClientCodec) {
 func (cc *ccodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
 	err = cc.enc.Encode(req)
 	if err != nil {
+		log.Println(log.ERROR, "RPC Client Error enconding request rpc request: ", err)
 		return
 	}
+
 	err = cc.enc.Encode(v)
 	if err != nil {
+		log.Println(log.ERROR, "RPC Client Error enconding request value: ", err)
 		return
 	}
+
 	return cc.encBuf.Flush()
 }
 
 func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {
 	err = cc.dec.Decode(res)
+
+	if err != nil {
+		log.Println(log.ERROR, "RPC Client Error decoding response header: ", err)
+	}
 	return
 }
 
 func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
 	if v == nil {
-		return errors.New("Response object cannot be nil")
+		err = errors.New("Response object cannot be nil")
+		if err != nil {
+			log.Println(log.ERROR, "RPC Client Error reading response body: ", err)
+		}
+		return
 	}
 
 	err = cc.dec.Decode(v)
+
+	if err != nil {
+		log.Println(log.ERROR, "RPC Client Error decoding response body: ", err)
+	}
 	return
 }
 
 func (cc *ccodec) Close() (err error) {
 	err = cc.conn.Close()
+
+	if err != nil {
+		log.Println(log.ERROR, "RPC Client Error closing connection: ", err)
+	}
+
 	return
 }
 

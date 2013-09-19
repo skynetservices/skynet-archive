@@ -2,6 +2,7 @@ package bsonrpc
 
 import (
 	"bufio"
+	"github.com/skynetservices/skynet2/log"
 	"io"
 	"net/rpc"
 )
@@ -27,21 +28,29 @@ func NewServerCodec(conn io.ReadWriteCloser) (codec rpc.ServerCodec) {
 
 func (sc *scodec) ReadRequestHeader(rq *rpc.Request) (err error) {
 	err = sc.dec.Decode(rq)
+	if err != nil {
+		log.Println(log.ERROR, "RPC Server Error decoding request header: ", err)
+	}
 	return
 }
 
 func (sc *scodec) ReadRequestBody(v interface{}) (err error) {
 	err = sc.dec.Decode(v)
+	if err != nil {
+		log.Println(log.ERROR, "RPC Server Error decoding request body: ", err)
+	}
 	return
 }
 
 func (sc *scodec) WriteResponse(rs *rpc.Response, v interface{}) (err error) {
 	err = sc.enc.Encode(rs)
 	if err != nil {
+		log.Println(log.ERROR, "RPC Server Error encoding rpc response: ", err)
 		return
 	}
 	err = sc.enc.Encode(v)
 	if err != nil {
+		log.Println(log.ERROR, "RPC Server Error encoding response value: ", err)
 		return
 	}
 	return sc.encBuf.Flush()
@@ -49,6 +58,10 @@ func (sc *scodec) WriteResponse(rs *rpc.Response, v interface{}) (err error) {
 
 func (sc *scodec) Close() (err error) {
 	err = sc.conn.Close()
+	if err != nil {
+		log.Println(log.ERROR, "RPC Server Error closing connection: ", err)
+		return
+	}
 	return
 }
 

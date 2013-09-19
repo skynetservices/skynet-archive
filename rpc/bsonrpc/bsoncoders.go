@@ -3,6 +3,7 @@ package bsonrpc
 import (
 	"bufio"
 	"fmt"
+	"github.com/skynetservices/skynet2/log"
 	"io"
 	"labix.org/v2/mgo/bson"
 )
@@ -25,7 +26,9 @@ func (e *Encoder) Encode(v interface{}) (err error) {
 		return
 	}
 	if l := len(buf); n != l {
-		return fmt.Errorf("Wrote %d bytes, should have wrote %d", n, l)
+		err = fmt.Errorf("Wrote %d bytes, should have wrote %d", n, l)
+		log.Println(log.ERROR, "Error encoding message: ", err)
+		return
 	}
 	return
 }
@@ -46,9 +49,13 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 		return io.EOF
 	}
 	if n != 4 {
-		return fmt.Errorf("Corrupted BSON stream: could only read %d", n)
+		err = fmt.Errorf("Corrupted BSON stream: could only read %d", n)
+		log.Println(log.ERROR, "Error decoding message (reading length): ", err)
+		return
 	}
+
 	if err != nil {
+		log.Println(log.ERROR, "Error decoding message (reading length): ", err)
 		return
 	}
 
@@ -61,10 +68,12 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 	copy(buf[0:4], lbuf[:])
 	n, err = io.ReadFull(d.r, buf[4:])
 	if err != nil {
+		log.Println(log.ERROR, "Error decoding message (reading message): ", err)
 		return
 	}
 	if n+4 != length {
-		return fmt.Errorf("Expected %d bytes, read %d", length, n)
+		err = fmt.Errorf("Expected %d bytes, read %d", length, n)
+		log.Println(log.ERROR, "Error decoding message (reading message): ", err)
 	}
 
 	err = bson.Unmarshal(buf, pv)
