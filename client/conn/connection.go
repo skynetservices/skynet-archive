@@ -101,7 +101,6 @@ Conn.SetIdleTimeout() amount of time that can pass between requests before conne
 */
 func (c *Conn) SetIdleTimeout(timeout time.Duration) {
 	c.idleTimeout = timeout
-	c.setDeadline(timeout)
 }
 
 /*
@@ -150,42 +149,48 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 		b,
 	}
 
-	sout := skynet.ServiceRPCOutRead{}
+	type Resp struct {
+		Out skynet.ServiceRPCOutRead
+		Err error
+	}
 
-	// Set timeout for this request, then set it back to idle timeout
-	c.setDeadline(timeout)
-	defer c.setDeadline(c.idleTimeout)
+	respChan := make(chan *Resp)
 
-	log.Println(log.TRACE, fmt.Sprintf("Sending Method call %s with ClientID %s to: %s", sin.Method, sin.ClientID, c.addr))
-	err = c.rpcClient.Call(c.serviceName+".Forward", sin, &sout)
-	if err != nil {
-		c.Close()
-		err = serviceError{err.Error()}
+	go func() {
+		log.Println(log.TRACE, fmt.Sprintf("Sending Method call %s with ClientID %s to: %s", sin.Method, sin.ClientID, c.addr))
+		r := &Resp{}
 
+		r.Err = c.rpcClient.Call(c.serviceName+".Forward", sin, &r.Out)
+		respChan <- r
+	}()
+
+	var r *Resp
+	t := time.After(timeout)
+
+	select {
+	case r = <-respChan:
+		if r.Err != nil {
+			c.Close()
+			err = serviceError{r.Err.Error()}
+			return
+		}
+	case <-t:
+		err = fmt.Errorf("Request timeout out after %s", timeout.String())
 		return
 	}
 
-	if sout.ErrString != "" {
-		err = serviceError{sout.ErrString}
+	if r.Out.ErrString != "" {
+		err = serviceError{r.Out.ErrString}
 		return
 	}
 
-	err = bson.Unmarshal(sout.Out, out)
+	err = bson.Unmarshal(r.Out.Out, out)
 	if err != nil {
 		log.Println(log.ERROR, "Error unmarshalling nested document")
 		err = serviceError{err.Error()}
 	}
 
 	return
-}
-
-func (c *Conn) setDeadline(timeout time.Duration) {
-	if timeout == 0 {
-		var t time.Time
-		c.conn.SetDeadline(t)
-	} else {
-		c.conn.SetDeadline(time.Now().Add(timeout))
-	}
 }
 
 /*
