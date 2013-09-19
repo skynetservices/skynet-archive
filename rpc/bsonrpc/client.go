@@ -28,6 +28,9 @@ func NewClientCodec(conn io.ReadWriteCloser) (codec rpc.ClientCodec) {
 }
 
 func (cc *ccodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
+	log.Println(log.TRACE, "RPC Server Entered: WriteRequest")
+	defer log.Println(log.TRACE, "RPC Server Leaving: WriteRequest")
+
 	err = cc.enc.Encode(req)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Client Error enconding request rpc request: ", err)
@@ -44,6 +47,9 @@ func (cc *ccodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
 }
 
 func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {
+	log.Println(log.TRACE, "RPC Server Entered: ReadResponseHeader")
+	defer log.Println(log.TRACE, "RPC Server Leaving: ReadResponseHeader")
+
 	err = cc.dec.Decode(res)
 
 	if err != nil {
@@ -53,6 +59,9 @@ func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {
 }
 
 func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
+	log.Println(log.TRACE, "RPC Server Entered: ReadResponseBody")
+	defer log.Println(log.TRACE, "RPC Server Leaving: ReadResponseBody")
+
 	if v == nil {
 		err = errors.New("Response object cannot be nil")
 		if err != nil {
@@ -70,6 +79,9 @@ func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
 }
 
 func (cc *ccodec) Close() (err error) {
+	log.Println(log.TRACE, "RPC Server Entered: Close")
+	defer log.Println(log.TRACE, "RPC Server Leaving: Close")
+
 	err = cc.conn.Close()
 
 	if err != nil {
