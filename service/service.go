@@ -287,49 +287,49 @@ loop:
 	for {
 		select {
 		case conn := <-s.connectionChan:
-			clientID := config.NewUUID()
-
-			s.clientMutex.Lock()
-			s.ClientInfo[clientID] = ClientInfo{
-				Address: conn.RemoteAddr(),
-			}
-			s.clientMutex.Unlock()
-
-			// send the server handshake
-			sh := skynet.ServiceHandshake{
-				Registered: s.Registered,
-				ClientID:   clientID,
-				Name:       s.Name,
-			}
-
-			encoder := bsonrpc.NewEncoder(conn)
-
-			log.Println(log.TRACE, "Sending ServiceHandshake")
-			err := encoder.Encode(sh)
-			if err != nil {
-				log.Println(log.ERROR, "Failed to encode server handshake", err.Error())
-				continue
-			}
-			if !s.Registered {
-				log.Println(log.ERROR, "Connection attempted while unregistered. Closing connection")
-				conn.Close()
-				continue
-			}
-
-			// read the client handshake
-			var ch skynet.ClientHandshake
-			decoder := bsonrpc.NewDecoder(conn)
-
-			log.Println(log.TRACE, "Reading ClientHandshake")
-			err = decoder.Decode(&ch)
-			if err != nil {
-				log.Println(log.ERROR, "Error calling bsonrpc.NewDecoder: "+err.Error())
-				continue
-			}
-
-			// here do stuff with the client handshake
-			log.Println(log.TRACE, "Handing connection to RPC layer")
 			go func() {
+				clientID := config.NewUUID()
+
+				s.clientMutex.Lock()
+				s.ClientInfo[clientID] = ClientInfo{
+					Address: conn.RemoteAddr(),
+				}
+				s.clientMutex.Unlock()
+
+				// send the server handshake
+				sh := skynet.ServiceHandshake{
+					Registered: s.Registered,
+					ClientID:   clientID,
+					Name:       s.Name,
+				}
+
+				encoder := bsonrpc.NewEncoder(conn)
+
+				log.Println(log.TRACE, "Sending ServiceHandshake")
+				err := encoder.Encode(sh)
+				if err != nil {
+					log.Println(log.ERROR, "Failed to encode server handshake", err.Error())
+					return
+				}
+				if !s.Registered {
+					log.Println(log.ERROR, "Connection attempted while unregistered. Closing connection")
+					conn.Close()
+					return
+				}
+
+				// read the client handshake
+				var ch skynet.ClientHandshake
+				decoder := bsonrpc.NewDecoder(conn)
+
+				log.Println(log.TRACE, "Reading ClientHandshake")
+				err = decoder.Decode(&ch)
+				if err != nil {
+					log.Println(log.ERROR, "Error calling bsonrpc.NewDecoder: "+err.Error())
+					return
+				}
+
+				// here do stuff with the client handshake
+				log.Println(log.TRACE, "Handing connection to RPC layer")
 				s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
 			}()
 		case register := <-s.registeredChan:
