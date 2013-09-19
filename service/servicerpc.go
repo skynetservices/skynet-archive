@@ -106,7 +106,7 @@ func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 // and provides a slot for the RequestInfo. The parameters to the actual RPC
 // calls are transmitted in a []byte, and are then marshalled/unmarshalled on
 // either end.
-func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOut) (err error) {
+func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCInRead, out *skynet.ServiceRPCOutWrite) (err error) {
 	srpc.service.activeRequests.Add(1)
 	defer srpc.service.activeRequests.Done()
 
@@ -140,9 +140,9 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 
 	inValuePtr := reflect.New(m.Type().In(2))
 
-	err = bson.Unmarshal(in.In.Data, inValuePtr.Interface())
+	err = bson.Unmarshal(in.In, inValuePtr.Interface())
 	if err != nil {
-		log.Println(log.ERROR, "Error unmarshaling request", err)
+		log.Println(log.ERROR, "Error unmarshaling request ", err)
 		return
 	}
 

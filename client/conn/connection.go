@@ -133,7 +133,7 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 		return ConnectionClosed
 	}
 
-	sin := skynet.ServiceRPCIn{
+	sin := skynet.ServiceRPCInWrite{
 		RequestInfo: ri,
 		Method:      fn,
 		ClientID:    c.clientID,
@@ -150,7 +150,7 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 		b,
 	}
 
-	sout := skynet.ServiceRPCOut{}
+	sout := skynet.ServiceRPCOutRead{}
 
 	// Set timeout for this request, then set it back to idle timeout
 	c.setDeadline(timeout)
@@ -170,7 +170,7 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 		return
 	}
 
-	err = bson.Unmarshal(sout.Out.Data, out)
+	err = bson.Unmarshal(sout.Out, out)
 	if err != nil {
 		log.Println(log.ERROR, "Error unmarshalling nested document")
 		err = serviceError{err.Error()}
