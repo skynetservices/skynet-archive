@@ -6,6 +6,7 @@ import (
 	"github.com/skynetservices/skynet2/log"
 	"io"
 	"labix.org/v2/mgo/bson"
+	"reflect"
 )
 
 type Encoder struct {
@@ -43,6 +44,9 @@ func NewDecoder(r io.Reader) *Decoder {
 }
 
 func (d *Decoder) Decode(pv interface{}) (err error) {
+	rv := reflect.ValueOf(pv)
+	log.Println(log.TRACE, "Decoding into: ", rv.Type())
+
 	var lbuf [4]byte
 	n, err := d.r.Read(lbuf[:])
 	if n == 0 {
