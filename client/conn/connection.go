@@ -198,6 +198,7 @@ Conn.performHandshake Responsible for performing handshake with service
 */
 func (c *Conn) performHandshake() (err error) {
 	var sh skynet.ServiceHandshake
+	log.Println(log.TRACE, "Reading ServiceHandshake")
 	decoder := bsonrpc.NewDecoder(c.conn)
 
 	err = decoder.Decode(&sh)
@@ -216,6 +217,7 @@ func (c *Conn) performHandshake() (err error) {
 	ch := skynet.ClientHandshake{}
 	encoder := bsonrpc.NewEncoder(c.conn)
 
+	log.Println(log.TRACE, "Writing ClientHandshake")
 	err = encoder.Encode(ch)
 	if err != nil {
 		log.Println(log.ERROR, "Failed to encode ClientHandshake", err)
@@ -229,6 +231,7 @@ func (c *Conn) performHandshake() (err error) {
 		return ServiceUnregistered
 	}
 
+	log.Println(log.TRACE, "Handing connection RPC layer")
 	c.rpcClient = bsonrpc.NewClient(c.conn)
 	c.clientID = sh.ClientID
 

@@ -303,6 +303,8 @@ loop:
 			}
 
 			encoder := bsonrpc.NewEncoder(conn)
+
+			log.Println(log.TRACE, "Sending ServiceHandshake")
 			err := encoder.Encode(sh)
 			if err != nil {
 				log.Println(log.ERROR, "Failed to encode server handshake", err.Error())
@@ -317,6 +319,8 @@ loop:
 			// read the client handshake
 			var ch skynet.ClientHandshake
 			decoder := bsonrpc.NewDecoder(conn)
+
+			log.Println(log.TRACE, "Reading ClientHandshake")
 			err = decoder.Decode(&ch)
 			if err != nil {
 				log.Println(log.ERROR, "Error calling bsonrpc.NewDecoder: "+err.Error())
@@ -324,6 +328,7 @@ loop:
 			}
 
 			// here do stuff with the client handshake
+			log.Println(log.TRACE, "Handing connection to RPC layer")
 			go func() {
 				s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
 			}()
