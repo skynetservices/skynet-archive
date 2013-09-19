@@ -150,6 +150,7 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 	c.setDeadline(timeout)
 	defer c.setDeadline(c.idleTimeout)
 
+	log.Println(log.TRACE, fmt.Sprintf("Sending Method call %s with request +%v to: ", sin.Method, sin, c.addr))
 	err = c.rpcClient.Call(c.serviceName+".Forward", sin, &sout)
 	if err != nil {
 		c.Close()
@@ -195,6 +196,11 @@ func (c *Conn) performHandshake() (err error) {
 		return HandshakeFailed
 	}
 
+	if sh.Name != c.serviceName {
+		log.Println(log.ERROR, "Attempted to send request to incorrect service: "+sh.Name)
+		return HandshakeFailed
+	}
+
 	ch := skynet.ClientHandshake{}
 	encoder := bsonrpc.NewEncoder(c.conn)
 
@@ -207,6 +213,7 @@ func (c *Conn) performHandshake() (err error) {
 	}
 
 	if !sh.Registered {
+		log.Println(log.ERROR, "Attempted to send request to unregistered service")
 		return ServiceUnregistered
 	}
 

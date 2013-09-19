@@ -115,6 +115,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	clientInfo, ok := srpc.service.getClientInfo(in.ClientID)
 	if !ok {
 		err = errors.New("did not provide the ClientID")
+		log.Printf(log.ERROR, "%+v", MethodError{in.RequestInfo, in.Method, err})
 		return
 	}
 
@@ -133,6 +134,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	m, ok := srpc.methods[in.Method]
 	if !ok {
 		err = errors.New(fmt.Sprintf("No such method %q", in.Method))
+		log.Printf(log.ERROR, "%+v", MethodError{in.RequestInfo, in.Method, err})
 		return
 	}
 
@@ -140,6 +142,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 
 	err = bson.Unmarshal(in.In, inValuePtr.Interface())
 	if err != nil {
+		log.Println(log.ERROR, "Error unmarshaling request", err)
 		return
 	}
 
@@ -153,7 +156,9 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	case reflect.Map:
 		outValue = reflect.MakeMap(outType)
 	default:
-		panic("illegal out param type")
+		err = errors.New("illegal out param type")
+		log.Printf(log.ERROR, "%+v", MethodError{in.RequestInfo, in.Method, err})
+		return
 	}
 
 	startTime := time.Now()
@@ -179,6 +184,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 
 	out.Out, err = bson.Marshal(outValue.Interface())
 	if err != nil {
+		log.Printf(log.ERROR, "%+v", MethodError{in.RequestInfo, in.Method, fmt.Errorf("Error marshaling response", err)})
 		return
 	}
 
@@ -187,6 +193,8 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	if erri != nil {
 		rerr, _ = erri.(error)
 		out.ErrString = rerr.Error()
+
+		log.Printf(log.ERROR, "%+v", MethodError{in.RequestInfo, in.Method, fmt.Errorf("Method returned error:", err)})
 	}
 
 	go stats.MethodCompleted(in.Method, duration, rerr)

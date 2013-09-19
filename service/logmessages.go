@@ -34,6 +34,16 @@ func (mi MethodCompletion) String() string {
 	return fmt.Sprintf("Method %q completed with RequestInfo %v and duration %s", mi.MethodName, mi.RequestInfo, mi.Duration.String())
 }
 
+type MethodError struct {
+	RequestInfo *skynet.RequestInfo
+	MethodName  string
+	Error       error
+}
+
+func (me MethodError) String() string {
+	return fmt.Sprintf("Method %q failed with RequestInfo %v and error %s", me.MethodName, me.RequestInfo, me.Error.Error())
+}
+
 type KillSignal struct {
 	Signal syscall.Signal
 }

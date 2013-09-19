@@ -166,6 +166,7 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 	attempts := make(chan sendAttempt)
 
 	var retryTicker <-chan time.Time
+	retryChan := make(chan bool)
 	if retry > 0 {
 		retryTicker = time.Tick(retry)
 	}
@@ -181,8 +182,12 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 	for {
 		select {
 		case <-retryTicker:
+			retryChan <- true
+
+		case <-retryChan:
 			attemptCount++
 			ri.RetryCount++
+			log.Println(log.TRACE, fmt.Sprintf("Sending Attempt# %d with RequestInfo +%v", attemptCount, ri))
 			go c.attemptSend(retry, attempts, ri, fn, in, out)
 
 		case <-timeoutTimer:
@@ -196,6 +201,9 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 				// If there is no retry timer we need to exit as retries were disabled
 				if retryTicker == nil {
 					return err
+				} else {
+					// Don't wait for next retry tick retry now
+					retryChan <- true
 				}
 
 				continue

@@ -299,7 +299,9 @@ loop:
 			sh := skynet.ServiceHandshake{
 				Registered: s.Registered,
 				ClientID:   clientID,
+				Name:       s.Name,
 			}
+
 			encoder := bsonrpc.NewEncoder(conn)
 			err := encoder.Encode(sh)
 			if err != nil {
@@ -307,6 +309,7 @@ loop:
 				continue
 			}
 			if !s.Registered {
+				log.Println(log.ERROR, "Connection attempted while unregistered. Closing connection")
 				conn.Close()
 				continue
 			}
