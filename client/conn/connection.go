@@ -139,9 +139,15 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 		ClientID:    c.clientID,
 	}
 
-	sin.In, err = bson.Marshal(in)
+	var b []byte
+	b, err = bson.Marshal(in)
 	if err != nil {
 		return serviceError{fmt.Sprintf("Error calling bson.Marshal: %v", err)}
+	}
+
+	sin.In = bson.Binary{
+		0x80,
+		b,
 	}
 
 	sout := skynet.ServiceRPCOut{}
@@ -164,7 +170,8 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 		return
 	}
 
-	err = bson.Unmarshal(sout.Out, out)
+	b = make([]byte, 0)
+	err = bson.Unmarshal(b, out)
 	if err != nil {
 		err = serviceError{err.Error()}
 	}

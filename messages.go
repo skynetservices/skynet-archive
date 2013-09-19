@@ -1,5 +1,9 @@
 package skynet
 
+import (
+	"labix.org/v2/mgo/bson"
+)
+
 type RegisterRequest struct {
 }
 
@@ -23,10 +27,10 @@ type ServiceRPCIn struct {
 	ClientID    string
 	Method      string
 	RequestInfo *RequestInfo
-	In          []byte
+	In          bson.Binary
 }
 
 type ServiceRPCOut struct {
-	Out       []byte
+	Out       bson.Binary
 	ErrString string
 }

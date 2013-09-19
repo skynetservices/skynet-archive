@@ -140,7 +140,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 
 	inValuePtr := reflect.New(m.Type().In(2))
 
-	err = bson.Unmarshal(in.In, inValuePtr.Interface())
+	err = bson.Unmarshal(in.In.Data, inValuePtr.Interface())
 	if err != nil {
 		log.Println(log.ERROR, "Error unmarshaling request", err)
 		return
@@ -182,10 +182,16 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 
 	log.Printf(log.INFO, "%+v", mcp)
 
-	out.Out, err = bson.Marshal(outValue.Interface())
+	var b []byte
+	b, err = bson.Marshal(outValue.Interface())
 	if err != nil {
 		log.Printf(log.ERROR, "%+v", MethodError{in.RequestInfo, in.Method, fmt.Errorf("Error marshaling response", err)})
 		return
+	}
+
+	out.Out = bson.Binary{
+		0x80,
+		b,
 	}
 
 	var rerr error = nil
