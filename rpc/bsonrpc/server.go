@@ -28,7 +28,7 @@ func NewServerCodec(conn io.ReadWriteCloser) (codec rpc.ServerCodec) {
 
 func (sc *scodec) ReadRequestHeader(rq *rpc.Request) (err error) {
 	err = sc.dec.Decode(rq)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		log.Println(log.ERROR, "RPC Server Error decoding request header: ", err)
 	}
 	return

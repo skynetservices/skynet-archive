@@ -187,7 +187,7 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 		case <-retryChan:
 			attemptCount++
 			ri.RetryCount++
-			log.Println(log.TRACE, fmt.Sprintf("Sending Attempt# %d with RequestInfo +%v", attemptCount, ri))
+			log.Println(log.TRACE, fmt.Sprintf("Sending Attempt# %d with RequestInfo %+v", attemptCount, ri))
 			go c.attemptSend(retry, attempts, ri, fn, in, out)
 
 		case <-timeoutTimer:
