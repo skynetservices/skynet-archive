@@ -170,9 +170,9 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 		return
 	}
 
-	b = make([]byte, 0)
-	err = bson.Unmarshal(b, out)
+	err = bson.Unmarshal(sout.Out.Data, out)
 	if err != nil {
+		log.Println(log.ERROR, "Error unmarshalling nested document")
 		err = serviceError{err.Error()}
 	}
 
