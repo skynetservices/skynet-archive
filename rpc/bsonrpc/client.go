@@ -64,9 +64,7 @@ func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
 
 	if v == nil {
 		err = errors.New("Response object cannot be nil")
-		if err != nil {
-			log.Println(log.ERROR, "RPC Client Error reading response body: ", err)
-		}
+		log.Println(log.ERROR, "RPC Client Error reading response body: ", err)
 		return
 	}
 

@@ -15,7 +15,7 @@ const (
 	// DefaultIdleConnectionsToInstance is the number of connections to a particular instance that may sit idle.
 	DefaultIdleConnectionsToInstance = 2
 	// DefaultMaxConnectionsToInstance is the maximum number of concurrent connections to a particular instance.
-	DefaultMaxConnectionsToInstance = 5
+	DefaultMaxConnectionsToInstance = 20
 )
 
 // skynet

@@ -192,6 +192,7 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 
 		case <-timeoutTimer:
 			err = RequestTimeout
+			log.Println(log.WARN, fmt.Sprintf("Timing out request after %d attempts within %s %s", attemptCount, giveup.String(), retry.String()))
 			return
 
 		case attempt := <-attempts:
@@ -320,5 +321,5 @@ func getGiveupTimeout(service, version string) time.Duration {
 		log.Println(log.ERROR, "Failed to parse client.timeout.total", err)
 	}
 
-	return config.DefaultRetryDuration
+	return config.DefaultTimeoutDuration
 }
