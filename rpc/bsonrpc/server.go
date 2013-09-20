@@ -1,7 +1,6 @@
 package bsonrpc
 
 import (
-	"bufio"
 	"github.com/kr/pretty"
 	"github.com/skynetservices/skynet2/log"
 	"io"
@@ -10,20 +9,18 @@ import (
 )
 
 type scodec struct {
-	conn   io.ReadWriteCloser
-	enc    *Encoder
-	dec    *Decoder
-	encBuf *bufio.Writer
+	conn    io.ReadWriteCloser
+	Encoder *Encoder
+	Decoder *Decoder
 }
 
 func NewServerCodec(conn io.ReadWriteCloser) (codec rpc.ServerCodec) {
-	encBuf := bufio.NewWriter(conn)
 	sc := &scodec{
-		conn:   conn,
-		enc:    NewEncoder(encBuf),
-		dec:    NewDecoder(conn),
-		encBuf: encBuf,
+		conn:    conn,
+		Encoder: NewEncoder(conn),
+		Decoder: NewDecoder(conn),
 	}
+
 	codec = sc
 	return
 }
@@ -32,7 +29,7 @@ func (sc *scodec) ReadRequestHeader(rq *rpc.Request) (err error) {
 	log.Println(log.TRACE, "RPC Server Entered: ReadRequestHeader")
 	defer log.Println(log.TRACE, "RPC Server Leaving: ReadRequestHeader")
 
-	err = sc.dec.Decode(rq)
+	err = sc.Decoder.Decode(rq)
 	if err != nil && err != io.EOF {
 		log.Println(log.ERROR, "RPC Server Error decoding request header: ", err)
 		sc.Close()
@@ -48,7 +45,7 @@ func (sc *scodec) ReadRequestBody(v interface{}) (err error) {
 	log.Println(log.TRACE, "RPC Server Entered: ReadRequestBody")
 	defer log.Println(log.TRACE, "RPC Server Leaving: ReadRequestBody")
 
-	err = sc.dec.Decode(v)
+	err = sc.Decoder.Decode(v)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Server Error decoding request body: ", err)
 	}
@@ -65,7 +62,7 @@ func (sc *scodec) WriteResponse(rs *rpc.Response, v interface{}) (err error) {
 
 	log.Println(log.TRACE, pretty.Sprintf("RPC Server Writing ResponseHeader %s %+v", reflect.TypeOf(rs), rs))
 
-	err = sc.enc.Encode(rs)
+	err = sc.Encoder.Encode(rs)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Server Error encoding rpc response: ", err)
 		sc.Close()
@@ -74,13 +71,14 @@ func (sc *scodec) WriteResponse(rs *rpc.Response, v interface{}) (err error) {
 
 	log.Println(log.TRACE, pretty.Sprintf("RPC Server Writing Response Value %s %+v", reflect.TypeOf(v), v))
 
-	err = sc.enc.Encode(v)
+	err = sc.Encoder.Encode(v)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Server Error encoding response value: ", err)
 		sc.Close()
 		return
 	}
-	return sc.encBuf.Flush()
+
+	return
 }
 
 func (sc *scodec) Close() (err error) {

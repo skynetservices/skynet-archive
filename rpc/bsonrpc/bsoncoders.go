@@ -1,7 +1,6 @@
 package bsonrpc
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/skynetservices/skynet2/log"
 	"io"
@@ -41,8 +40,7 @@ type Decoder struct {
 }
 
 func NewDecoder(r io.Reader) *Decoder {
-	buf := bufio.NewReader(r)
-	return &Decoder{r: buf}
+	return &Decoder{r: r}
 }
 
 func (d *Decoder) Decode(pv interface{}) (err error) {
@@ -71,14 +69,16 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 	copy(buf[0:4], lbuf[:])
 
 	n, err = io.ReadFull(d.r, buf[4:])
+
+	log.Println(log.TRACE, fmt.Sprintf("Read %d bytes of %d from connection, received bytes: ", n+4, length), buf)
+
 	if err != nil {
 		return
 	}
 
-	log.Println(log.TRACE, fmt.Sprintf("Read %d bytes of %d from connection, received bytes: ", n+4, length), buf)
-
 	if n+4 != length {
 		err = fmt.Errorf("Expected %d bytes, read %d", length, n)
+		return
 	}
 
 	if pv != nil {

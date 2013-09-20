@@ -303,10 +303,10 @@ loop:
 					Name:       s.Name,
 				}
 
-				encoder := bsonrpc.NewEncoder(conn)
+				codec := bsonrpc.NewServerCodec(conn)
 
 				log.Println(log.TRACE, "Sending ServiceHandshake")
-				err := encoder.Encode(sh)
+				err := codec.Encoder.Encode(sh)
 				if err != nil {
 					log.Println(log.ERROR, "Failed to encode server handshake", err.Error())
 					return
@@ -319,18 +319,16 @@ loop:
 
 				// read the client handshake
 				var ch skynet.ClientHandshake
-				decoder := bsonrpc.NewDecoder(conn)
-
 				log.Println(log.TRACE, "Reading ClientHandshake")
-				err = decoder.Decode(&ch)
+				err = codec.Decoder.Decode(&ch)
 				if err != nil {
-					log.Println(log.ERROR, "Error calling bsonrpc.NewDecoder: "+err.Error())
+					log.Println(log.ERROR, "Error decoding ClientHandshake: "+err.Error())
 					return
 				}
 
 				// here do stuff with the client handshake
 				log.Println(log.TRACE, "Handing connection to RPC layer")
-				s.RPCServ.ServeCodec(bsonrpc.NewServerCodec(conn))
+				s.RPCServ.ServeCodec(codec)
 			}()
 		case register := <-s.registeredChan:
 			if register {
