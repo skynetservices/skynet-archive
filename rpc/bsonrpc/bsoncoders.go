@@ -65,7 +65,7 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 		(int(lbuf[2]) << 16) |
 		(int(lbuf[3]) << 24)
 
-	fmt.Println(log.TRACE, "Message length parsed as: ", length)
+	log.Println(log.TRACE, "Message length parsed as: ", length)
 
 	buf := make([]byte, length)
 	copy(buf[0:4], lbuf[:])
