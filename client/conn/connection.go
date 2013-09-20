@@ -87,7 +87,6 @@ func NewConnectionFromNetConn(serviceName string, c net.Conn) (conn Connection, 
 	cn.serviceName = serviceName
 
 	cn.rpcClientCodec = bsonrpc.NewClientCodec(cn.conn)
-	cn.rpcClient = rpc.NewClientWithCodec(cn.rpcClientCodec)
 
 	err = cn.performHandshake()
 
@@ -220,14 +219,14 @@ func (c *Conn) performHandshake() (err error) {
 	err = c.rpcClientCodec.Decoder.Decode(&sh)
 	if err != nil {
 		log.Println(log.ERROR, "Failed to decode ServiceHandshake", err)
-		c.conn.Close()
+		c.Close()
 
 		return HandshakeFailed
 	}
 
 	if sh.Name != c.serviceName {
 		log.Println(log.ERROR, "Attempted to send request to incorrect service: "+sh.Name)
-		c.conn.Close()
+		c.Close()
 		return HandshakeFailed
 	}
 
@@ -237,7 +236,7 @@ func (c *Conn) performHandshake() (err error) {
 	err = c.rpcClientCodec.Encoder.Encode(ch)
 	if err != nil {
 		log.Println(log.ERROR, "Failed to encode ClientHandshake", err)
-		c.conn.Close()
+		c.Close()
 
 		return HandshakeFailed
 	}
@@ -249,6 +248,8 @@ func (c *Conn) performHandshake() (err error) {
 
 	log.Println(log.TRACE, "Handing connection RPC layer")
 	c.clientID = sh.ClientID
+
+	c.rpcClient = rpc.NewClientWithCodec(c.rpcClientCodec)
 
 	return
 }
