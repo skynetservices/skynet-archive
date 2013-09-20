@@ -250,7 +250,7 @@ func (s *Service) listen(addr skynet.BindAddr, bindWait *sync.WaitGroup) {
 	var err error
 	s.rpcListener, err = addr.Listen()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	log.Printf(log.INFO, "%+v\n", ServiceListening{
