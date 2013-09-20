@@ -75,7 +75,6 @@ func (sc *scodec) Close() (err error) {
 
 	err = sc.conn.Close()
 	if err != nil {
-		sc.Close()
 		log.Println(log.ERROR, "RPC Server Error closing connection: ", err)
 		return
 	}

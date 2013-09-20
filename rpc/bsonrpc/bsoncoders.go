@@ -74,6 +74,9 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 		log.Println(log.ERROR, "Error decoding message (reading message): ", err)
 		return
 	}
+
+	log.Println(log.TRACE, fmt.Sprintf("Read %d bytes from connection", n+4))
+
 	if n+4 != length {
 		err = fmt.Errorf("Expected %d bytes, read %d", length, n)
 		log.Println(log.ERROR, "Error decoding message (reading message): ", err)
