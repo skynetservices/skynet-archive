@@ -173,12 +173,18 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 	}()
 
 	var r *Resp
+
+	if timeout == 0 {
+		timeout = 15 * time.Minute
+	}
+
 	t := time.After(timeout)
 
 	select {
 	case r = <-respChan:
 		if r.Err != nil {
 			err = serviceError{r.Err.Error()}
+			c.Close()
 			return
 		}
 	case <-t:

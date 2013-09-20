@@ -64,6 +64,7 @@ func (cc *ClientCodec) ReadResponseHeader(res *rpc.Response) (err error) {
 	if err == nil {
 		log.Println(log.TRACE, pretty.Sprintf("RPC Client Read ResponseHeader %s %+v", reflect.TypeOf(res), res))
 	}
+
 	return
 }
 
