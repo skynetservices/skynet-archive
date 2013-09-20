@@ -3,12 +3,14 @@ package conn
 import (
 	"errors"
 	"fmt"
+	"github.com/kr/pretty"
 	"github.com/skynetservices/skynet2"
 	"github.com/skynetservices/skynet2/log"
 	"github.com/skynetservices/skynet2/rpc/bsonrpc"
 	"labix.org/v2/mgo/bson"
 	"net"
 	"net/rpc"
+	"reflect"
 	"time"
 )
 
@@ -161,6 +163,8 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 		r := &Resp{}
 
 		r.Err = c.rpcClient.Call(c.serviceName+".Forward", sin, &r.Out)
+		log.Println(log.TRACE, fmt.Sprintf("Method call %s with ClientID %s from: %s completed", sin.Method, sin.ClientID, c.addr))
+
 		respChan <- r
 	}()
 
@@ -190,6 +194,8 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 		err = serviceError{err.Error()}
 		c.Close()
 	}
+
+	log.Println(log.TRACE, pretty.Sprintf("Method call %s with ClientID %s from: %s returned: %s %+v", sin.Method, sin.ClientID, c.addr, reflect.TypeOf(out), out))
 
 	return
 }
