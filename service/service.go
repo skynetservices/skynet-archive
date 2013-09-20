@@ -309,6 +309,7 @@ loop:
 				err := codec.Encoder.Encode(sh)
 				if err != nil {
 					log.Println(log.ERROR, "Failed to encode server handshake", err.Error())
+					conn.Close()
 					return
 				}
 				if !s.Registered {
@@ -323,6 +324,7 @@ loop:
 				err = codec.Decoder.Decode(&ch)
 				if err != nil {
 					log.Println(log.ERROR, "Error decoding ClientHandshake: "+err.Error())
+					conn.Close()
 					return
 				}
 
