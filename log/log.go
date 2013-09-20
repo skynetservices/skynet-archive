@@ -14,8 +14,8 @@ type LogLevel int8
 var minLevel LogLevel
 
 const (
-	DEBUG LogLevel = iota
-	TRACE
+	TRACE LogLevel = iota
+	DEBUG
 	INFO
 	WARN
 	ERROR
