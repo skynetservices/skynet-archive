@@ -16,4 +16,5 @@ type ServiceHandshake struct {
 
 // ClientHandshake is sent by the client to the service after receipt of the ServiceHandshake.
 type ClientHandshake struct {
+	ClientID string
 }

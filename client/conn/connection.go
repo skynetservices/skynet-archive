@@ -224,13 +224,17 @@ func (c *Conn) performHandshake() (err error) {
 		return HandshakeFailed
 	}
 
+	c.clientID = sh.ClientID
+
 	if sh.Name != c.serviceName {
 		log.Println(log.ERROR, "Attempted to send request to incorrect service: "+sh.Name)
 		c.Close()
 		return HandshakeFailed
 	}
 
-	ch := skynet.ClientHandshake{}
+	ch := skynet.ClientHandshake{
+		ClientID: c.clientID,
+	}
 
 	log.Println(log.TRACE, "Writing ClientHandshake")
 	err = c.rpcClientCodec.Encoder.Encode(ch)
@@ -247,7 +251,6 @@ func (c *Conn) performHandshake() (err error) {
 	}
 
 	log.Println(log.TRACE, "Handing connection RPC layer")
-	c.clientID = sh.ClientID
 
 	c.rpcClient = rpc.NewClientWithCodec(c.rpcClientCodec)
 
