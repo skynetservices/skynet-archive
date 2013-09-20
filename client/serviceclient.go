@@ -166,7 +166,7 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 	attempts := make(chan sendAttempt)
 
 	var retryTicker <-chan time.Time
-	retryChan := make(chan bool)
+	retryChan := make(chan bool, 1)
 	if retry > 0 {
 		retryTicker = time.Tick(retry)
 	}
