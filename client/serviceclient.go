@@ -192,7 +192,7 @@ func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo
 
 		case <-timeoutTimer:
 			err = RequestTimeout
-			log.Println(log.WARN, fmt.Sprintf("Timing out request after %d attempts within %s %s", attemptCount, giveup.String(), retry.String()))
+			log.Println(log.WARN, fmt.Sprintf("Timing out request after %d attempts within %s ", attemptCount, giveup.String()))
 			return
 
 		case attempt := <-attempts:
