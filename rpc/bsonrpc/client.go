@@ -34,12 +34,14 @@ func (cc *ccodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
 	err = cc.enc.Encode(req)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Client Error enconding request rpc request: ", err)
+		cc.Close()
 		return
 	}
 
 	err = cc.enc.Encode(v)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Client Error enconding request value: ", err)
+		cc.Close()
 		return
 	}
 
@@ -53,6 +55,7 @@ func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {
 	err = cc.dec.Decode(res)
 
 	if err != nil {
+		cc.Close()
 		log.Println(log.ERROR, "RPC Client Error decoding response header: ", err)
 	}
 	return
@@ -71,6 +74,7 @@ func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
 	err = cc.dec.Decode(v)
 
 	if err != nil {
+		cc.Close()
 		log.Println(log.ERROR, "RPC Client Error decoding response body: ", err)
 	}
 	return
@@ -82,7 +86,7 @@ func (cc *ccodec) Close() (err error) {
 
 	err = cc.conn.Close()
 
-	if err != nil {
+	if err != nil && err.Error() != "use of closed network connection" {
 		log.Println(log.ERROR, "RPC Client Error closing connection: ", err)
 	}
 

@@ -33,6 +33,7 @@ func (sc *scodec) ReadRequestHeader(rq *rpc.Request) (err error) {
 	err = sc.dec.Decode(rq)
 	if err != nil && err != io.EOF {
 		log.Println(log.ERROR, "RPC Server Error decoding request header: ", err)
+		sc.Close()
 	}
 	return
 }
@@ -55,11 +56,13 @@ func (sc *scodec) WriteResponse(rs *rpc.Response, v interface{}) (err error) {
 	err = sc.enc.Encode(rs)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Server Error encoding rpc response: ", err)
+		sc.Close()
 		return
 	}
 	err = sc.enc.Encode(v)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Server Error encoding response value: ", err)
+		sc.Close()
 		return
 	}
 	return sc.encBuf.Flush()

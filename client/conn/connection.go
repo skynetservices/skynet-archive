@@ -170,12 +170,12 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 	select {
 	case r = <-respChan:
 		if r.Err != nil {
-			c.Close()
 			err = serviceError{r.Err.Error()}
 			return
 		}
 	case <-t:
-		err = fmt.Errorf("Request timeout out after %s", timeout.String())
+		err = fmt.Errorf("Connection: timing out request after %s", timeout.String())
+		c.Close()
 		return
 	}
 
@@ -188,6 +188,7 @@ func (c *Conn) SendTimeout(ri *skynet.RequestInfo, fn string, in interface{}, ou
 	if err != nil {
 		log.Println(log.ERROR, "Error unmarshalling nested document")
 		err = serviceError{err.Error()}
+		c.Close()
 	}
 
 	return
