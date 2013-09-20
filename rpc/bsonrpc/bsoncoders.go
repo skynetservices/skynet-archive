@@ -44,10 +44,7 @@ func NewDecoder(r io.Reader) *Decoder {
 }
 
 func (d *Decoder) Decode(pv interface{}) (err error) {
-	if pv != nil {
-		rv := reflect.ValueOf(pv)
-		log.Println(log.TRACE, "Decoding into: ", rv.Type())
-	}
+	log.Println(log.TRACE, "Decoding into: ", reflect.TypeOf(pv))
 
 	var lbuf [4]byte
 	n, err := d.r.Read(lbuf[:])
@@ -82,9 +79,7 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 		log.Println(log.ERROR, "Error decoding message (reading message): ", err)
 	}
 
-	if pv != nil {
-		err = bson.Unmarshal(buf, pv)
-	}
+	err = bson.Unmarshal(buf, pv)
 
 	return
 }
