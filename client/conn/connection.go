@@ -51,12 +51,13 @@ Conn
 Implementation of Connection
 */
 type Conn struct {
-	addr        string
-	conn        net.Conn
-	clientID    string
-	serviceName string
-	rpcClient   *rpc.Client
-	closed      bool
+	addr           string
+	conn           net.Conn
+	clientID       string
+	serviceName    string
+	rpcClient      *rpc.Client
+	rpcClientCodec *bsonrpc.ClientCodec
+	closed         bool
 
 	idleTimeout time.Duration
 }
@@ -84,6 +85,9 @@ func NewConnectionFromNetConn(serviceName string, c net.Conn) (conn Connection, 
 	cn := &Conn{conn: c}
 	cn.addr = c.RemoteAddr().String()
 	cn.serviceName = serviceName
+
+	cn.rpcClientCodec = bsonrpc.NewClientCodec(cn.conn)
+	cn.rpcClient = rpc.NewClientWithCodec(cn.rpcClientCodec)
 
 	err = cn.performHandshake()
 
@@ -206,9 +210,8 @@ Conn.performHandshake Responsible for performing handshake with service
 func (c *Conn) performHandshake() (err error) {
 	var sh skynet.ServiceHandshake
 	log.Println(log.TRACE, "Reading ServiceHandshake")
-	decoder := bsonrpc.NewDecoder(c.conn)
 
-	err = decoder.Decode(&sh)
+	err = c.rpcClientCodec.Decoder.Decode(&sh)
 	if err != nil {
 		log.Println(log.ERROR, "Failed to decode ServiceHandshake", err)
 		c.conn.Close()
@@ -218,14 +221,14 @@ func (c *Conn) performHandshake() (err error) {
 
 	if sh.Name != c.serviceName {
 		log.Println(log.ERROR, "Attempted to send request to incorrect service: "+sh.Name)
+		c.conn.Close()
 		return HandshakeFailed
 	}
 
 	ch := skynet.ClientHandshake{}
-	encoder := bsonrpc.NewEncoder(c.conn)
 
 	log.Println(log.TRACE, "Writing ClientHandshake")
-	err = encoder.Encode(ch)
+	err = c.rpcClientCodec.Encoder.Encode(ch)
 	if err != nil {
 		log.Println(log.ERROR, "Failed to encode ClientHandshake", err)
 		c.conn.Close()
@@ -239,7 +242,6 @@ func (c *Conn) performHandshake() (err error) {
 	}
 
 	log.Println(log.TRACE, "Handing connection RPC layer")
-	c.rpcClient = bsonrpc.NewClient(c.conn)
 	c.clientID = sh.ClientID
 
 	return

@@ -1,7 +1,6 @@
 package bsonrpc
 
 import (
-	"bufio"
 	"errors"
 	"github.com/kr/pretty"
 	"github.com/skynetservices/skynet2/log"
@@ -10,32 +9,29 @@ import (
 	"reflect"
 )
 
-type ccodec struct {
-	conn   io.ReadWriteCloser
-	enc    *Encoder
-	dec    *Decoder
-	encBuf *bufio.Writer
+type ClientCodec struct {
+	conn    io.ReadWriteCloser
+	Encoder *Encoder
+	Decoder *Decoder
 }
 
-func NewClientCodec(conn io.ReadWriteCloser) (codec rpc.ClientCodec) {
-	encBuf := bufio.NewWriter(conn)
-	cc := &ccodec{
-		conn:   conn,
-		enc:    NewEncoder(encBuf),
-		dec:    NewDecoder(conn),
-		encBuf: encBuf,
+func NewClientCodec(conn io.ReadWriteCloser) (codec *ClientCodec) {
+	cc := &ClientCodec{
+		conn:    conn,
+		Encoder: NewEncoder(conn),
+		Decoder: NewDecoder(conn),
 	}
 	codec = cc
 	return
 }
 
-func (cc *ccodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
+func (cc *ClientCodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
 	log.Println(log.TRACE, "RPC Client Entered: WriteRequest")
 	defer log.Println(log.TRACE, "RPC Client Leaving: WriteRequest")
 
 	log.Println(log.TRACE, pretty.Sprintf("RPC Client Writing RequestHeader %s %+v", reflect.TypeOf(req), req))
 
-	err = cc.enc.Encode(req)
+	err = cc.Encoder.Encode(req)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Client Error enconding request rpc request: ", err)
 		cc.Close()
@@ -44,21 +40,21 @@ func (cc *ccodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
 
 	log.Println(log.TRACE, pretty.Sprintf("RPC Client Writing Request Value %s %+v", reflect.TypeOf(v), v))
 
-	err = cc.enc.Encode(v)
+	err = cc.Encoder.Encode(v)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Client Error enconding request value: ", err)
 		cc.Close()
 		return
 	}
 
-	return cc.encBuf.Flush()
+	return
 }
 
-func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {
+func (cc *ClientCodec) ReadResponseHeader(res *rpc.Response) (err error) {
 	log.Println(log.TRACE, "RPC Client Entered: ReadResponseHeader")
 	defer log.Println(log.TRACE, "RPC Client Leaving: ReadResponseHeader")
 
-	err = cc.dec.Decode(res)
+	err = cc.Decoder.Decode(res)
 
 	if err != nil {
 		cc.Close()
@@ -71,7 +67,7 @@ func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {
 	return
 }
 
-func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
+func (cc *ClientCodec) ReadResponseBody(v interface{}) (err error) {
 	log.Println(log.TRACE, "RPC Client Entered: ReadResponseBody")
 	defer log.Println(log.TRACE, "RPC Client Leaving: ReadResponseBody")
 
@@ -81,7 +77,7 @@ func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
 		return
 	}
 
-	err = cc.dec.Decode(v)
+	err = cc.Decoder.Decode(v)
 
 	if err != nil {
 		cc.Close()
@@ -94,7 +90,7 @@ func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
 	return
 }
 
-func (cc *ccodec) Close() (err error) {
+func (cc *ClientCodec) Close() (err error) {
 	log.Println(log.TRACE, "RPC Client Entered: Close")
 	defer log.Println(log.TRACE, "RPC Client Leaving: Close")
 
