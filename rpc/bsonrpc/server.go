@@ -8,24 +8,23 @@ import (
 	"reflect"
 )
 
-type scodec struct {
+type ServerCodec struct {
 	conn    io.ReadWriteCloser
 	Encoder *Encoder
 	Decoder *Decoder
 }
 
-func NewServerCodec(conn io.ReadWriteCloser) (codec rpc.ServerCodec) {
-	sc := &scodec{
+func NewServerCodec(conn io.ReadWriteCloser) (codec *ServerCodec) {
+	codec = &ServerCodec{
 		conn:    conn,
 		Encoder: NewEncoder(conn),
 		Decoder: NewDecoder(conn),
 	}
 
-	codec = sc
 	return
 }
 
-func (sc *scodec) ReadRequestHeader(rq *rpc.Request) (err error) {
+func (sc *ServerCodec) ReadRequestHeader(rq *rpc.Request) (err error) {
 	log.Println(log.TRACE, "RPC Server Entered: ReadRequestHeader")
 	defer log.Println(log.TRACE, "RPC Server Leaving: ReadRequestHeader")
 
@@ -41,7 +40,7 @@ func (sc *scodec) ReadRequestHeader(rq *rpc.Request) (err error) {
 	return
 }
 
-func (sc *scodec) ReadRequestBody(v interface{}) (err error) {
+func (sc *ServerCodec) ReadRequestBody(v interface{}) (err error) {
 	log.Println(log.TRACE, "RPC Server Entered: ReadRequestBody")
 	defer log.Println(log.TRACE, "RPC Server Leaving: ReadRequestBody")
 
@@ -56,7 +55,7 @@ func (sc *scodec) ReadRequestBody(v interface{}) (err error) {
 	return
 }
 
-func (sc *scodec) WriteResponse(rs *rpc.Response, v interface{}) (err error) {
+func (sc *ServerCodec) WriteResponse(rs *rpc.Response, v interface{}) (err error) {
 	log.Println(log.TRACE, "RPC Server Entered: WriteResponse")
 	defer log.Println(log.TRACE, "RPC Server Leaving: WriteResponse")
 
@@ -81,7 +80,7 @@ func (sc *scodec) WriteResponse(rs *rpc.Response, v interface{}) (err error) {
 	return
 }
 
-func (sc *scodec) Close() (err error) {
+func (sc *ServerCodec) Close() (err error) {
 	log.Println(log.TRACE, "RPC Server Entered: Close")
 	defer log.Println(log.TRACE, "RPC Server Leaving: Close")
 
