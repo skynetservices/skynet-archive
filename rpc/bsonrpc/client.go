@@ -34,14 +34,12 @@ func (cc *ccodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
 	err = cc.enc.Encode(req)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Client Error enconding request rpc request: ", err)
-		cc.Close()
 		return
 	}
 
 	err = cc.enc.Encode(v)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Client Error enconding request value: ", err)
-		cc.Close()
 		return
 	}
 
@@ -56,7 +54,6 @@ func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {
 
 	if err != nil {
 		log.Println(log.ERROR, "RPC Client Error decoding response header: ", err)
-		cc.Close()
 	}
 	return
 }
@@ -70,14 +67,12 @@ func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
 		if err != nil {
 			log.Println(log.ERROR, "RPC Client Error reading response body: ", err)
 		}
-		cc.Close()
 		return
 	}
 
 	err = cc.dec.Decode(v)
 
 	if err != nil {
-		cc.Close()
 		log.Println(log.ERROR, "RPC Client Error decoding response body: ", err)
 	}
 	return
