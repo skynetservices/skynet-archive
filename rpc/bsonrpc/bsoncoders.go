@@ -79,7 +79,9 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 		log.Println(log.ERROR, "Error decoding message (reading message): ", err)
 	}
 
-	err = bson.Unmarshal(buf, pv)
+	if pv != nil {
+		err = bson.Unmarshal(buf, pv)
+	}
 
 	return
 }
