@@ -3,9 +3,11 @@ package bsonrpc
 import (
 	"bufio"
 	"errors"
+	"github.com/kr/pretty"
 	"github.com/skynetservices/skynet2/log"
 	"io"
 	"net/rpc"
+	"reflect"
 )
 
 type ccodec struct {
@@ -31,12 +33,16 @@ func (cc *ccodec) WriteRequest(req *rpc.Request, v interface{}) (err error) {
 	log.Println(log.TRACE, "RPC Client Entered: WriteRequest")
 	defer log.Println(log.TRACE, "RPC Client Leaving: WriteRequest")
 
+	log.Println(log.TRACE, pretty.Sprintf("RPC Client Writing RequestHeader %s %+v", reflect.TypeOf(req), req))
+
 	err = cc.enc.Encode(req)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Client Error enconding request rpc request: ", err)
 		cc.Close()
 		return
 	}
+
+	log.Println(log.TRACE, pretty.Sprintf("RPC Client Writing Request Value %s %+v", reflect.TypeOf(v), v))
 
 	err = cc.enc.Encode(v)
 	if err != nil {
@@ -58,6 +64,10 @@ func (cc *ccodec) ReadResponseHeader(res *rpc.Response) (err error) {
 		cc.Close()
 		log.Println(log.ERROR, "RPC Client Error decoding response header: ", err)
 	}
+
+	if err == nil {
+		log.Println(log.TRACE, pretty.Sprintf("RPC Client Read ResponseHeader %s %+v", reflect.TypeOf(res), res))
+	}
 	return
 }
 
@@ -76,6 +86,10 @@ func (cc *ccodec) ReadResponseBody(v interface{}) (err error) {
 	if err != nil {
 		cc.Close()
 		log.Println(log.ERROR, "RPC Client Error decoding response body: ", err)
+	}
+
+	if err == nil {
+		log.Println(log.TRACE, pretty.Sprintf("RPC Client Read ResponseBody %s %+v", reflect.TypeOf(v), v))
 	}
 	return
 }

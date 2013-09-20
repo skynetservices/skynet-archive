@@ -21,14 +21,18 @@ func (e *Encoder) Encode(v interface{}) (err error) {
 	if err != nil {
 		return
 	}
+
 	n, err := e.w.Write(buf)
 	if err != nil {
 		return
 	}
+
 	if l := len(buf); n != l {
 		err = fmt.Errorf("Wrote %d bytes, should have wrote %d", n, l)
-		return
 	}
+
+	log.Println(log.TRACE, fmt.Sprintf("RPC Wrote %d bytes of %d to connection from buffer: ", n, len(buf)), buf)
+
 	return
 }
 
@@ -50,6 +54,8 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 		return
 	}
 
+	log.Println(log.TRACE, fmt.Sprintf("Read %d bytes of 4 byte length from connection, received bytes: ", n), lbuf)
+
 	if err != nil {
 		return
 	}
@@ -59,14 +65,17 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 		(int(lbuf[2]) << 16) |
 		(int(lbuf[3]) << 24)
 
+	fmt.Println(log.TRACE, "Message length parsed as: ", length)
+
 	buf := make([]byte, length)
 	copy(buf[0:4], lbuf[:])
+
 	n, err = io.ReadFull(d.r, buf[4:])
 	if err != nil {
 		return
 	}
 
-	log.Println(log.TRACE, fmt.Sprintf("Read %d bytes from connection", n+4))
+	log.Println(log.TRACE, fmt.Sprintf("Read %d bytes of %d from connection, received bytes: ", n+4, length), buf)
 
 	if n+4 != length {
 		err = fmt.Errorf("Expected %d bytes, read %d", length, n)

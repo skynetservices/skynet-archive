@@ -2,9 +2,11 @@ package bsonrpc
 
 import (
 	"bufio"
+	"github.com/kr/pretty"
 	"github.com/skynetservices/skynet2/log"
 	"io"
 	"net/rpc"
+	"reflect"
 )
 
 type scodec struct {
@@ -35,6 +37,10 @@ func (sc *scodec) ReadRequestHeader(rq *rpc.Request) (err error) {
 		log.Println(log.ERROR, "RPC Server Error decoding request header: ", err)
 		sc.Close()
 	}
+
+	if err == nil {
+		log.Println(log.TRACE, pretty.Sprintf("RPC Server Read RequestHeader %s %+v", reflect.TypeOf(rq), rq))
+	}
 	return
 }
 
@@ -46,6 +52,10 @@ func (sc *scodec) ReadRequestBody(v interface{}) (err error) {
 	if err != nil {
 		log.Println(log.ERROR, "RPC Server Error decoding request body: ", err)
 	}
+
+	if err == nil {
+		log.Println(log.TRACE, pretty.Sprintf("RPC Server Read RequestBody %s %+v", reflect.TypeOf(v), v))
+	}
 	return
 }
 
@@ -53,12 +63,17 @@ func (sc *scodec) WriteResponse(rs *rpc.Response, v interface{}) (err error) {
 	log.Println(log.TRACE, "RPC Server Entered: WriteResponse")
 	defer log.Println(log.TRACE, "RPC Server Leaving: WriteResponse")
 
+	log.Println(log.TRACE, pretty.Sprintf("RPC Server Writing ResponseHeader %s %+v", reflect.TypeOf(rs), rs))
+
 	err = sc.enc.Encode(rs)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Server Error encoding rpc response: ", err)
 		sc.Close()
 		return
 	}
+
+	log.Println(log.TRACE, pretty.Sprintf("RPC Server Writing Response Value %s %+v", reflect.TypeOf(v), v))
+
 	err = sc.enc.Encode(v)
 	if err != nil {
 		log.Println(log.ERROR, "RPC Server Error encoding response value: ", err)
