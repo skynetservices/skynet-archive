@@ -6,6 +6,7 @@ import (
 	"github.com/skynetservices/skynet2/log"
 	"os"
 	"runtime"
+	"time"
 )
 
 var defaultConfigFiles = []string{
@@ -78,6 +79,14 @@ func Bool(service, version, option string) (bool, error) {
 	s := getSection(service, version)
 
 	return conf.Bool(s, option)
+}
+
+func Duration(service, version, option string) (d time.Duration, err error) {
+	s, err := String(service, version, option)
+	if err != nil {
+		return
+	}
+	return time.ParseDuration(s)
 }
 
 func Int(service, version, option string) (int, error) {
