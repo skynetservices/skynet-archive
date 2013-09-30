@@ -1,10 +1,15 @@
 ![logo](https://github.com/skynetservices/skynet/raw/master/documentation/SkyNetLogo.png)
 
-Temporary Repo working on next generation of Skynet, less pointers to things all over the place, more interfaces, better stats. ZooKeeper integration by default but is swappable by implementing an interface.
+
+
+
+
+##Documentation
+Skynet will use either local or remote syslog for all logging.
 
 
 ##Open Source - MIT Software License
-Copyright (c) 2012 Brian Ketelsen
+Copyright (c) 2013 Brian Ketelsen
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
