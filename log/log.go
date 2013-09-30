@@ -159,6 +159,28 @@ func Println(level LogLevel, messages ...interface{}) {
 	return
 }
 
+func Printf(level LogLevel, format string, messages ...interface{}) {
+
+	switch level {
+	case DEBUG:
+		Debugf(format, messages)
+	case TRACE:
+		Tracef(format, messages)
+	case INFO:
+		Infof(format, messages)
+	case WARN:
+		Warnf(format, messages)
+	case ERROR:
+		Errorf(format, messages)
+	case FATAL:
+		Fatalf(format, messages)
+	case PANIC:
+		Panicf(format, messages)
+	}
+
+	return
+}
+
 func SetSyslogHost(host string) {
 	syslogHost = host
 }
