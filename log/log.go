@@ -1,8 +1,9 @@
 package log
 
 import (
-	"io"
-	"log"
+	"fmt"
+	"log/syslog"
+	"strconv"
 )
 
 /* TODO:
@@ -11,7 +12,11 @@ import (
 
 type LogLevel int8
 
+var syslogHost string
+var syslogPort int = 0
+
 var minLevel LogLevel
+var logger *syslog.Writer
 
 const (
 	TRACE LogLevel = iota
@@ -23,120 +28,140 @@ const (
 	PANIC
 )
 
-func (l LogLevel) String() string {
-	switch l {
-	case DEBUG:
-		return "DEBUG "
-	case TRACE:
-		return "TRACE "
-	case INFO:
-		return "INFO "
-	case WARN:
-		return "WARN "
-	case ERROR:
-		return "ERROR "
-	case FATAL:
-		return "FATAL "
-	case PANIC:
-		return "PANIC "
-	}
+func Initialize() {
 
-	return ""
-}
+	var e error
 
-func (l LogLevel) Interface() interface{} {
-	return interface{}(l.String())
-}
+	if len(syslogHost) > 0 {
 
-func init() {
-	log.SetFlags(log.LstdFlags)
-	log.SetPrefix("skynet: ")
-}
-
-func Fatal(v ...interface{}) {
-	if minLevel <= FATAL {
-		Print(FATAL, v...)
-	}
-}
-
-func Fatalf(format string, v ...interface{}) {
-	if minLevel <= FATAL {
-		Printf(FATAL, format, v...)
-	}
-}
-
-func Fatalln(v ...interface{}) {
-	if minLevel <= FATAL {
-		Println(FATAL, v...)
-	}
-}
-
-func Flags() int {
-	return log.Flags()
-}
-
-func Panic(v ...interface{}) {
-	if minLevel <= PANIC {
-		Print(PANIC, v...)
-	}
-}
-
-func Panicf(format string, v ...interface{}) {
-	if minLevel <= PANIC {
-		Printf(PANIC, format, v...)
-	}
-}
-
-func Panicln(v ...interface{}) {
-	if minLevel <= PANIC {
-		Println(PANIC, v...)
-	}
-}
-
-func Prefix() string {
-	return log.Prefix()
-}
-
-func Print(level LogLevel, v ...interface{}) {
-	if minLevel <= level {
-		args := []interface{}{level.Interface()}
-		args = append(args, v)
-
-		switch level {
-		case FATAL:
-			log.Fatal(args...)
-		case PANIC:
-			log.Panic(args...)
-		default:
-			log.Print(args...)
+		logger, e = syslog.New(syslog.LOG_INFO|syslog.LOG_USER, "skynet")
+		if e != nil {
+			panic(e)
+		}
+	} else {
+		logger, e = syslog.Dial("tcp4", syslogHost+":"+ strconv.Itoa(syslogPort), syslog.LOG_INFO|syslog.LOG_USER, "skynet")
+			if e != nil {
+			panic(e)
 		}
 	}
+
 }
 
-func Printf(level LogLevel, format string, v ...interface{}) {
-	if minLevel <= level {
-		log.Printf(level.String()+format, v...)
+func Panic(message interface{}) {
+	logger.Emerg(message.(string))
+}
+
+func Panicf(format string, messages ...interface{}) {
+	m := fmt.Sprintf(format, messages...)
+	logger.Emerg(m)
+}
+
+func Fatal(message interface{}) {
+	if minLevel <= FATAL {
+		logger.Crit(message.(string))
 	}
 }
 
-func Println(level LogLevel, v ...interface{}) {
-	if minLevel <= level {
-		l := []interface{}{level.Interface()}
-		l = append(l, v)
-		log.Println(l...)
+func Fatalf(format string, messages ...interface{}) {
+	if minLevel <= FATAL {
+		m := fmt.Sprintf(format, messages...)
+		logger.Crit(m)
 	}
 }
 
-func SetFlags(flag int) {
-	log.SetFlags(flag)
+func Error(message interface{}) {
+	if minLevel <= ERROR {
+		logger.Err(message.(string))
+	}
 }
 
-func SetPrefix(prefix string) {
-	log.SetPrefix(prefix)
+func Errorf(format string, messages ...interface{}) {
+	if minLevel <= ERROR {
+		m := fmt.Sprintf(format, messages...)
+		logger.Err(m)
+	}
 }
 
-func SetOutput(w io.Writer) {
-	log.SetOutput(w)
+func Warn(message interface{}) {
+	if minLevel <= WARN {
+		logger.Warning(message.(string))
+	}
+}
+
+func Warnf(format string, messages ...interface{}) {
+	if minLevel <= WARN {
+		m := fmt.Sprintf(format, messages...)
+		logger.Warning(m)
+	}
+}
+
+func Info(message interface{}) {
+	if minLevel <= INFO {
+		logger.Info(message.(string))
+	}
+}
+
+func Infof(format string, messages ...interface{}) {
+	if minLevel <= INFO {
+		m := fmt.Sprintf(format, messages...)
+		logger.Info(m)
+	}
+}
+
+func Debug(message interface{}) {
+	if minLevel <= DEBUG {
+		logger.Debug(message.(string))
+	}
+}
+
+func Debugf(format string, messages ...interface{}) {
+	if minLevel <= DEBUG {
+		m := fmt.Sprintf(format, messages...)
+		logger.Debug(m)
+	}
+}
+
+func Trace(message interface{}) {
+	if minLevel <= TRACE {
+		logger.Debug(message.(string))
+	}
+}
+
+func Tracef(format string, messages ...interface{}) {
+	if minLevel <= TRACE {
+		m := fmt.Sprintf(format, messages...)
+		logger.Debug(m)
+	}
+}
+
+func Println(level LogLevel, messages ...interface{}) {
+
+	switch level {
+	case DEBUG:
+		Debugf("%v",messages)
+	case TRACE:
+		Tracef("%v",messages)
+	case INFO:
+		Infof("%v",messages)
+	case WARN:
+		Warnf("%v",messages)
+	case ERROR:
+		Errorf("%v",messages)
+	case FATAL:
+		Fatalf("%v",messages)
+	case PANIC:
+		Panicf("%v",messages)
+	}
+
+	return
+}
+
+func SetSyslogHost(host string) {
+	syslogHost = host
+}
+
+func SetSyslogPort(port int) {
+	syslogPort = port
 }
 
 func SetLogLevel(level LogLevel) {

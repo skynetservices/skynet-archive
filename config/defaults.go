@@ -27,6 +27,8 @@ const (
 	DefaultMinPort     = 9000
 	DefaultMaxPort     = 9999
 
+	DefaultSyslogHost = ""
+	DefaultSyslogPort = 514
 	DefaultLogLevel = log.DEBUG
 )
 

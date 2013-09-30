@@ -63,6 +63,16 @@ func init() {
 		log.SetLogLevel(log.LevelFromString(l))
 	}
 
+		// Set default log level from config, this can be overriden at the service level when the service is created
+	if lh, err := conf.RawStringDefault("log.sysloghost"); err == nil {
+		log.SetSyslogHost(lh)
+	}
+
+		// Set syslog port
+	if i, err := conf.Int("DEFAULT", "log.syslogport"); err == nil {
+		log.SetSyslogPort(i)
+	}
+
 	// Set GOMAXPROCS
 	if i, err := conf.Int("DEFAULT", "runtime.gomaxprocs"); err == nil {
 		runtime.GOMAXPROCS(i)
