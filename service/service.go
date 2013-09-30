@@ -71,7 +71,9 @@ func CreateService(sd ServiceDelegate, si *skynet.ServiceInfo) (s *Service) {
 		log.SetLogLevel(log.LevelFromString(l))
 	}
 
-	logWriter := log.NewMultiWriter()
+
+// I hope I can just rip all this out
+/*	logWriter := log.NewMultiWriter()
 
 	if logStdout, err := config.Bool(s.Name, s.Version, "service.log.stdout"); err == nil {
 		if logStdout {
@@ -86,13 +88,15 @@ func CreateService(sd ServiceDelegate, si *skynet.ServiceInfo) (s *Service) {
 		f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
 
 		if err != nil {
-			log.Fatal("Failed to open log file: ", logFile, err)
+			log.Println(log.PANIC,"Failed to open log file: ", logFile, err)
 		}
 
 		logWriter.AddWriter(f)
 	}
 
 	log.SetOutput(logWriter)
+*/
+
 
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()
