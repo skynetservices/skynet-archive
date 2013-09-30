@@ -1,7 +1,7 @@
 // Package log provides syslog logging to a local or remote
 // Syslog logger.  To specify a remote syslog host, set the
 // "log.sysloghost" key in the Skynet configuration.  Specify
-// the port with "log.syslogport".  If "log.sysloghost" is not provided, 
+// the port with "log.syslogport".  If "log.sysloghost" is not provided,
 // skynet will log to local syslog.
 package log
 
@@ -10,10 +10,6 @@ import (
 	"log/syslog"
 	"strconv"
 )
-
-/* TODO:
-- Should possibly add Debug, Debugf type helper methods
-*/
 
 type LogLevel int8
 
@@ -46,8 +42,8 @@ func Initialize() {
 			panic(e)
 		}
 	} else {
-		logger, e = syslog.Dial("tcp4", syslogHost+":"+ strconv.Itoa(syslogPort), syslog.LOG_INFO|syslog.LOG_USER, "skynet")
-			if e != nil {
+		logger, e = syslog.Dial("tcp4", syslogHost+":"+strconv.Itoa(syslogPort), syslog.LOG_INFO|syslog.LOG_USER, "skynet")
+		if e != nil {
 			panic(e)
 		}
 	}
@@ -145,19 +141,19 @@ func Println(level LogLevel, messages ...interface{}) {
 
 	switch level {
 	case DEBUG:
-		Debugf("%v",messages)
+		Debugf("%v", messages)
 	case TRACE:
-		Tracef("%v",messages)
+		Tracef("%v", messages)
 	case INFO:
-		Infof("%v",messages)
+		Infof("%v", messages)
 	case WARN:
-		Warnf("%v",messages)
+		Warnf("%v", messages)
 	case ERROR:
-		Errorf("%v",messages)
+		Errorf("%v", messages)
 	case FATAL:
-		Fatalf("%v",messages)
+		Fatalf("%v", messages)
 	case PANIC:
-		Panicf("%v",messages)
+		Panicf("%v", messages)
 	}
 
 	return
