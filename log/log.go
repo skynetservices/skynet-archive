@@ -1,3 +1,8 @@
+// Package log provides syslog logging to a local or remote
+// Syslog logger.  To specify a remote syslog host, set the
+// "log.sysloghost" key in the Skynet configuration.  Specify
+// the port with "log.syslogport".  If "log.sysloghost" is not provided, 
+// skynet will log to local syslog.
 package log
 
 import (
@@ -28,6 +33,8 @@ const (
 	PANIC
 )
 
+// Call Initialize after setting (or not setting) SyslogHost and SyslogPort when
+// they're read from configuration source.
 func Initialize() {
 
 	var e error
