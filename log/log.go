@@ -50,8 +50,8 @@ func Initialize() {
 
 }
 
-func Panic(message interface{}) {
-	logger.Emerg(message.(string))
+func Panic(messages ...interface{}) {
+	logger.Emerg(fromMulti(messages))
 }
 
 func Panicf(format string, messages ...interface{}) {
@@ -59,9 +59,9 @@ func Panicf(format string, messages ...interface{}) {
 	logger.Emerg(m)
 }
 
-func Fatal(message interface{}) {
+func Fatal(messages ...interface{}) {
 	if minLevel <= FATAL {
-		logger.Crit(message.(string))
+		logger.Crit(fromMulti(messages))
 	}
 }
 
@@ -72,9 +72,9 @@ func Fatalf(format string, messages ...interface{}) {
 	}
 }
 
-func Error(message interface{}) {
+func Error(messages ...interface{}) {
 	if minLevel <= ERROR {
-		logger.Err(message.(string))
+		logger.Err(fromMulti(messages))
 	}
 }
 
@@ -85,9 +85,9 @@ func Errorf(format string, messages ...interface{}) {
 	}
 }
 
-func Warn(message interface{}) {
+func Warn(messages ...interface{}) {
 	if minLevel <= WARN {
-		logger.Warning(message.(string))
+		logger.Warning(fromMulti(messages))
 	}
 }
 
@@ -98,9 +98,9 @@ func Warnf(format string, messages ...interface{}) {
 	}
 }
 
-func Info(message interface{}) {
+func Info(messages ...interface{}) {
 	if minLevel <= INFO {
-		logger.Info(message.(string))
+		logger.Info(fromMulti(messages))
 	}
 }
 
@@ -111,9 +111,9 @@ func Infof(format string, messages ...interface{}) {
 	}
 }
 
-func Debug(message interface{}) {
+func Debug(messages ...interface{}) {
 	if minLevel <= DEBUG {
-		logger.Debug(message.(string))
+		logger.Debug(fromMulti(messages))
 	}
 }
 
@@ -124,9 +124,9 @@ func Debugf(format string, messages ...interface{}) {
 	}
 }
 
-func Trace(message interface{}) {
+func Trace(messages ...interface{}) {
 	if minLevel <= TRACE {
-		logger.Debug(message.(string))
+		logger.Debug(fromMulti(messages))
 	}
 }
 
@@ -195,6 +195,17 @@ func SetLogLevel(level LogLevel) {
 
 func GetLogLevel() LogLevel {
 	return minLevel
+}
+
+func fromMulti(messages ...interface{}) string{
+	var r string
+	for x :=0; x < len(messages); x++  {
+		r = r + messages[x].(string)
+		if x < len(messages) {
+			r = r + "  "
+		}
+	}
+	return r
 }
 
 func LevelFromString(l string) (level LogLevel) {
