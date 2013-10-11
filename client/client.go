@@ -2,183 +2,214 @@ package client
 
 import (
 	"errors"
-	"fmt"
-	"github.com/skynetservices/skynet"
-	"github.com/skynetservices/skynet/pools"
-	"github.com/skynetservices/skynet/rpc/bsonrpc"
-	"net"
-	"net/rpc"
-	"os"
+	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/client/conn"
+	"github.com/skynetservices/skynet2/client/loadbalancer"
+	"github.com/skynetservices/skynet2/client/loadbalancer/roundrobin"
+	"github.com/skynetservices/skynet2/config"
+	"github.com/skynetservices/skynet2/log"
 	"sync"
+	"time"
+)
+
+const (
+	DIAL_TIMEOUT = 500 * time.Millisecond
+)
+
+func init() {
+	go mux()
+}
+
+// TODO: implement a way to report/remove instances that fail a number of times
+var (
+	network        = "tcp"
+	knownNetworks  = []string{"tcp", "tcp4", "tcp6", "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unix", "unixgram", "unixpacket"}
+	serviceClients = []ServiceClientProvider{}
+
+	closeChan       = make(chan bool, 1)
+	instanceWatcher = make(chan skynet.InstanceNotification, 100)
+
+	pool                ConnectionPooler     = NewPool()
+	LoadBalancerFactory loadbalancer.Factory = roundrobin.New
+	waiter              sync.WaitGroup
 )
 
 var (
-	ErrServiceUnregistered = errors.New("Service is unregistered")
-	ErrRequestTimeout      = errors.New("Service request timed out")
+	UnknownNetworkError = errors.New("Unknown network")
 )
 
-type ServiceResource struct {
-	rpcClient *rpc.Client
-	service   *skynet.ServiceInfo
-	clientID  string
-	closed    bool
+/*
+client.GetNetwork() returns the network used for client connections (default tcp)
+tcp, tcp4, tcp6, udp, udp4, udp6, ip, ip4, ip6, unix, unixgram, unixpacket
+*/
+func GetNetwork() string {
+	return network
 }
 
-func (s ServiceResource) Close() {
-	s.closed = true
-	s.rpcClient.Close()
+/*
+client.SetNetwork() sets the network used for client connections (default tcp)
+tcp, tcp4, tcp6, udp, udp4, udp6, ip, ip4, ip6, unix, unixgram, unixpacket
+*/
+func SetNetwork(network string) error {
+	for _, n := range knownNetworks {
+		if n == network {
+			return nil
+		}
+	}
+
+	return UnknownNetworkError
 }
 
-func (s ServiceResource) IsClosed() bool {
-	return s.closed
+/*
+client.SetLoadBalancer() provide a custom load balancer to determine the order in which instances are sent requests
+*/
+func SetLoadBalancerFactory(factory loadbalancer.Factory) {
+	LoadBalancerFactory = factory
 }
 
-type Client struct {
-	DoozerConn *skynet.DoozerConnection
+/*
+client.GetServiceFromCriteria() Returns a client specific to the skynet.Criteria provided.
+Only instances that match this criteria will service the requests.
 
-	Config *skynet.ClientConfig
-	Log    skynet.SemanticLogger `json:"-"`
+The core reason to use this over GetService() is that the load balancer will use the order of the criteria items to determine which datacenter it should roll over to first etc.
+*/
+func GetServiceFromCriteria(c *skynet.Criteria) ServiceClientProvider {
+	sc := NewServiceClient(c)
 
-	servicePools    map[string]*servicePool
-	instanceMonitor *InstanceMonitor
+	// This should block, we dont want to return the ServiceClient before the client has fully registered it
+	addServiceClient(sc)
+
+	return sc
 }
 
-func NewClient(config *skynet.ClientConfig) *Client {
-	// Sanity checks (nil pointers are baaad)
-	if config.Log == nil {
-		config.Log = skynet.NewConsoleSemanticLogger("skynet", os.Stderr)
-	}
+/*
+client.Close() Closes all ServiceClient's and releases their network resources
+*/
+func Close() {
+	waiter.Add(1)
 
-	if config.DoozerConfig == nil {
-		config.DoozerConfig = &skynet.DoozerConfig{Uri: "localhost:8046"}
-	}
+	closeChan <- true
 
-	if config.MaxConnectionsToInstance == 0 {
-		config.Log.Fatal("Must allow at least one instance connection")
-	}
-
-	doozerConn := skynet.NewDoozerConnectionFromConfig(*config.DoozerConfig,
-		config.Log)
-	client := &Client{
-		Config:       config,
-		DoozerConn:   doozerConn,
-		Log:          config.Log,
-		servicePools: map[string]*servicePool{},
-	}
-
-	client.Log.Trace(fmt.Sprintf("Created client '%+v'", client))
-
-	client.DoozerConn.Connect()
-
-	client.instanceMonitor = NewInstanceMonitor(client.DoozerConn, false)
-
-	return client
+	// Wait for all ServiceClient's to finish and close their connections
+	waiter.Wait()
 }
 
-func (c *Client) doozer() *skynet.DoozerConnection {
-	if c.DoozerConn == nil {
-		c.DoozerConn = skynet.NewDoozerConnectionFromConfig(
-			*c.Config.DoozerConfig, c.Config.Log)
-
-		c.DoozerConn.Connect()
+/*
+client.GetService() Returns a client specific to the criteria provided
+Empty values will be treated as wildcards and will be determined to match everything
+*/
+func GetService(name string, version string, region string, host string) ServiceClientProvider {
+	criteria := &skynet.Criteria{
+		Services: []skynet.ServiceCriteria{
+			skynet.ServiceCriteria{Name: name, Version: version},
+		},
 	}
 
-	return c.DoozerConn
-}
-
-var servicePoolMutex sync.Mutex
-
-func (c *Client) getServicePool(instance *skynet.ServiceInfo) (sp *servicePool) {
-	servicePoolMutex.Lock()
-	defer servicePoolMutex.Unlock()
-
-	key := getInstanceKey(instance)
-
-	var ok bool
-	if sp, ok = c.servicePools[key]; ok {
-		return
+	if region != "" {
+		criteria.AddRegion(region)
 	}
 
-	dbgf("making service pool, size = %d, %d\n",
-		c.Config.IdleConnectionsToInstance, c.Config.MaxConnectionsToInstance)
-
-	sp = &servicePool{
-		service: instance,
-		pool: pools.NewResourcePool(getConnectionFactory(instance),
-			c.Config.IdleConnectionsToInstance,
-			c.Config.MaxConnectionsToInstance),
+	if host != "" {
+		criteria.AddHost(host)
 	}
-	return
-}
 
-func (c *Client) GetServiceFromQuery(q *skynet.Query) (s *ServiceClient) {
-
-	s = newServiceClient(q, c)
+	s := GetServiceFromCriteria(criteria)
 
 	return s
 }
 
-// This will not fail if no services currently exist, this saves from chicken and egg issues with dependencies between services
-// TODO: We should probably determine a way of supplying secondary conditions, for example it's ok to go to a different data center only if there are no instances in our current datacenter
-func (c *Client) GetService(name string, version string, region string, host string) *ServiceClient {
-	registered := true
-	query := &skynet.Query{
-		DoozerConn: c.DoozerConn,
-		Service:    name,
-		Version:    version,
-		Host:       host,
-		Region:     region,
-		Registered: &registered,
-	}
+func mux() {
+	for {
+		select {
+		case n := <-instanceWatcher:
+			updateInstance(n)
+		case <-closeChan:
+			for _, sc := range serviceClients {
+				sc.Close()
+			}
 
-	return c.GetServiceFromQuery(query)
+			pool.Close()
+			serviceClients = []ServiceClientProvider{}
+			waiter.Done()
+		}
+	}
 }
 
-func getInstanceKey(service *skynet.ServiceInfo) string {
-	return service.Config.ServiceAddr.String()
+/*
+client.acquire will return an idle connection or a new one
+*/
+func acquire(s skynet.ServiceInfo) (c conn.Connection, err error) {
+	return pool.Acquire(s)
 }
 
-func getConnectionFactory(s *skynet.ServiceInfo) (factory pools.Factory) {
-	factory = func() (pools.Resource, error) {
-		conn, err := net.Dial("tcp", s.Config.ServiceAddr.String())
+/*
+client.release will release a resource for use by others. If the idle queue is
+full, the resource will be closed.
+*/
+func release(c conn.Connection) {
+	pool.Release(c)
+}
 
-		if err != nil {
-			// TODO: handle failure here and attempt to connect to a different instance
-			return nil, errors.New("Failed to connect to service: " + s.Config.ServiceAddr.String())
-		}
+func addServiceClient(sc ServiceClientProvider) {
+	serviceClients = append(serviceClients, sc)
 
-		// get the service handshake
-		var sh skynet.ServiceHandshake
-		decoder := bsonrpc.NewDecoder(conn)
+	instances := skynet.GetServiceManager().Watch(sc, instanceWatcher)
 
-		err = decoder.Decode(&sh)
-		if err != nil {
-			conn.Close()
-			return nil, err
-		}
-
-		ch := skynet.ClientHandshake{}
-		encoder := bsonrpc.NewEncoder(conn)
-
-		err = encoder.Encode(ch)
-		if err != nil {
-			conn.Close()
-			return nil, err
-		}
-
-		if !sh.Registered {
-			// this service has unregistered itself, look elsewhere
-			conn.Close()
-			return factory()
-		}
-
-		resource := ServiceResource{
-			rpcClient: bsonrpc.NewClient(conn),
-			service:   s,
-			clientID:  sh.ClientID,
-		}
-
-		return resource, nil
+	for _, i := range instances {
+		pool.AddInstance(i)
+		sc.Notify(skynet.InstanceNotification{Type: skynet.InstanceAdded, Service: i})
 	}
-	return
+}
+
+// TODO: we need a method here to removeServiceClient
+// it should remove instances from the pool if there are no remaining
+// ServiceClients that match the instance, and should end the watch from ServiceManager
+
+// only call from mux()
+func updateInstance(n skynet.InstanceNotification) {
+	// Forward notification on to ServiceClients that match
+	for _, sc := range serviceClients {
+		if sc.Matches(n.Service) {
+			go sc.Notify(n)
+		}
+	}
+
+	// Update our internal pools
+	switch n.Type {
+	case skynet.InstanceAdded:
+		go pool.AddInstance(n.Service)
+	case skynet.InstanceUpdated:
+		go pool.UpdateInstance(n.Service)
+	case skynet.InstanceRemoved:
+		go pool.RemoveInstance(n.Service)
+	}
+
+}
+
+func getIdleConnectionsToInstance(s skynet.ServiceInfo) int {
+	if n, err := config.Int(s.Name, s.Version, "client.conn.idle"); err == nil {
+		return n
+	}
+
+	return config.DefaultIdleConnectionsToInstance
+}
+
+func getMaxConnectionsToInstance(s skynet.ServiceInfo) int {
+	if n, err := config.Int(s.Name, s.Version, "client.conn.max"); err == nil {
+		return n
+	}
+
+	return config.DefaultMaxConnectionsToInstance
+}
+
+func getIdleTimeout(s skynet.ServiceInfo) time.Duration {
+	if d, err := config.String(s.Name, s.Version, "client.timeout.idle"); err == nil {
+		if timeout, err := time.ParseDuration(d); err == nil {
+			return timeout
+		}
+
+		log.Println(log.ERROR, "Failed to parse client.timeout.idle", err)
+	}
+
+	return config.DefaultIdleTimeout
 }

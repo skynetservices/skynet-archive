@@ -1,10 +1,10 @@
 package bsonrpc
 
 import (
-	"errors"
 	"fmt"
-	"github.com/skynetservices/mgo/bson"
+	"github.com/skynetservices/skynet2/log"
 	"io"
+	"labix.org/v2/mgo/bson"
 )
 
 type Encoder struct {
@@ -20,7 +20,17 @@ func (e *Encoder) Encode(v interface{}) (err error) {
 	if err != nil {
 		return
 	}
-	_, err = e.w.Write(buf)
+
+	n, err := e.w.Write(buf)
+	if err != nil {
+		return
+	}
+
+	if l := len(buf); n != l {
+		err = fmt.Errorf("Wrote %d bytes, should have wrote %d", n, l)
+	}
+
+	log.Println(log.TRACE, fmt.Sprintf("RPC Wrote %d bytes of %d to connection from buffer: ", n, len(buf)), buf)
 
 	return
 }
@@ -36,14 +46,14 @@ func NewDecoder(r io.Reader) *Decoder {
 func (d *Decoder) Decode(pv interface{}) (err error) {
 	var lbuf [4]byte
 	n, err := d.r.Read(lbuf[:])
-	if n == 0 {
-		err = io.EOF
-		return
-	}
+
 	if n != 4 {
-		err = errors.New(fmt.Sprintf("Corrupted BSON stream: could only read %d", n))
+		err = fmt.Errorf("Corrupted BSON stream: could only read %d", n)
 		return
 	}
+
+	log.Println(log.TRACE, fmt.Sprintf("Read %d bytes of 4 byte length from connection, received bytes: ", n), lbuf)
+
 	if err != nil {
 		return
 	}
@@ -53,14 +63,27 @@ func (d *Decoder) Decode(pv interface{}) (err error) {
 		(int(lbuf[2]) << 16) |
 		(int(lbuf[3]) << 24)
 
+	log.Println(log.TRACE, "Message length parsed as: ", length)
+
 	buf := make([]byte, length)
 	copy(buf[0:4], lbuf[:])
-	_, err = io.ReadFull(d.r, buf[4:])
+
+	n, err = io.ReadFull(d.r, buf[4:])
+
+	log.Println(log.TRACE, fmt.Sprintf("Read %d bytes of %d from connection, received bytes: ", n+4, length), buf)
+
 	if err != nil {
 		return
 	}
 
-	err = bson.Unmarshal(buf, pv)
+	if n+4 != length {
+		err = fmt.Errorf("Expected %d bytes, read %d", length, n)
+		return
+	}
+
+	if pv != nil {
+		err = bson.Unmarshal(buf, pv)
+	}
 
 	return
 }

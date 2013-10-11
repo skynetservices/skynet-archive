@@ -1,11 +1,16 @@
 package skynet
 
 import (
-	"encoding/json"
-	"path"
+	"fmt"
+	"github.com/skynetservices/skynet2/config"
+	"github.com/skynetservices/skynet2/log"
+	"net"
 	"strconv"
-	"time"
+	"strings"
+	"sync"
 )
+
+var portMutex sync.Mutex
 
 // ServiceStatistics contains information about its service that can
 // be used to estimate load.
@@ -16,58 +21,144 @@ type ServiceStatistics struct {
 	StartTime string
 	// LastRequest is the time when the last request was made.
 	LastRequest string
-	// RequestsServed is the number of requests served by this service
-	// since it began.
-	RequestsServed int64
-
-	// AverageResponseTime is the average time taken to respond to a
-	// request, since startup.
-	// Note: in the future, this may be the average over some sliding window.
-	AverageResponseTime time.Duration
-
-	// TotalDuration is the total time taken by all requests made to
-	// this service.
-	TotalDuration time.Duration `json:"-"`
 }
 
 // ServiceInfo is the publicly reported information about a particular
 // service instance.
 type ServiceInfo struct {
-	// Config is the configuration used to start this instance.
-	Config *ServiceConfig
+	UUID    string
+	Name    string
+	Version string
+	Region  string
+
+	ServiceAddr BindAddr
+
 	// Registered indicates if the instance is currently accepting requests.
 	Registered bool
-	// Stats is transient data about instance load and other things.
-	Stats *ServiceStatistics `json:",omitempty"`
 }
 
-// *ServiceInfo.GetConfigPath() returns the doozer path where it's
-// stored. The statistics are not included.
-func (s *ServiceInfo) GetConfigPath() string {
-	return path.Join("/services", s.Config.Name, s.Config.Version,
-		s.Config.Region, s.Config.ServiceAddr.IPAddress,
-		strconv.Itoa(s.Config.ServiceAddr.Port))
+func (si ServiceInfo) AddrString() string {
+	return si.ServiceAddr.String()
 }
 
-// *ServiceInfo.GetStatsPath() returns the doozer path where it's
-// statistics are stored.
-func (s *ServiceInfo) GetStatsPath() string {
-	return path.Join("/statistics", s.Config.Name, s.Config.Version,
-		s.Config.Region, s.Config.ServiceAddr.IPAddress,
-		strconv.Itoa(s.Config.ServiceAddr.Port))
+func NewServiceInfo(name, version string) (si *ServiceInfo) {
+	// TODO: we need to grab Host/Region/ServiceAddr from config
+	si = &ServiceInfo{
+		Name:    name,
+		Version: version,
+		UUID:    config.UUID(),
+	}
+
+	var host string
+	var minPort, maxPort int
+
+	if r, err := config.String(name, version, "region"); err == nil {
+		si.Region = r
+	} else {
+		si.Region = config.DefaultRegion
+	}
+
+	if h, err := config.String(name, version, "host"); err == nil {
+		host = h
+	} else {
+		host = config.DefaultHost
+	}
+
+	if p, err := config.Int(name, version, "service.port.min"); err == nil {
+		minPort = p
+	} else {
+		minPort = config.DefaultMinPort
+	}
+
+	if p, err := config.Int(name, version, "service.port.max"); err == nil {
+		maxPort = p
+	} else {
+		maxPort = config.DefaultMaxPort
+	}
+
+	log.Println(log.TRACE, host, minPort, maxPort)
+	si.ServiceAddr = BindAddr{IPAddress: host, Port: minPort, MaxPort: maxPort}
+
+	return si
 }
 
-// *ServiceInfo.FetchStats will query the provided doozer connection
-// and update its .Stats field.
-func (s *ServiceInfo) FetchStats(doozer *DoozerConnection) (err error) {
-	rev := doozer.GetCurrentRevision()
-	data, _, err := doozer.Get(s.GetStatsPath(), rev)
-	if err != nil {
+type BindAddr struct {
+	IPAddress string
+	Port      int
+	MaxPort   int
+}
+
+func BindAddrFromString(host string) (ba BindAddr, err error) {
+	if host == "" {
 		return
 	}
-	err = json.Unmarshal(data, &s.Stats)
-	if err != nil {
+	split := strings.Index(host, ":")
+	if split == -1 {
+		err = fmt.Errorf("Must specify a port for address (got %q)", host)
 		return
+	}
+
+	ba = BindAddr{}
+
+	ba.IPAddress = host[:split]
+	if ba.IPAddress == "" {
+		ba.IPAddress = "0.0.0.0"
+	}
+
+	portstr := host[split+1:]
+	if ba.Port, err = strconv.Atoi(portstr); err == nil {
+		return
+	}
+
+	var rindex int
+	if rindex = strings.Index(portstr, "-"); rindex == -1 {
+		err = fmt.Errorf("Couldn't process port for %q: %v", host, err)
+		return
+	}
+
+	maxPortStr := portstr[rindex+1:]
+	portstr = portstr[:rindex]
+
+	if ba.Port, err = strconv.Atoi(portstr); err != nil {
+		err = fmt.Errorf("Couldn't process port for %q: %v", host, err)
+		return
+	}
+	if ba.MaxPort, err = strconv.Atoi(maxPortStr); err != nil {
+		err = fmt.Errorf("Couldn't process port for %q: %v", host, err)
+		return
+	}
+
+	return
+}
+
+func (ba *BindAddr) String() string {
+	if ba == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", ba.IPAddress, ba.Port)
+}
+
+func (ba *BindAddr) Listen() (listener *net.TCPListener, err error) {
+	// Ensure Admin, and RPC don't fight over the same port
+	portMutex.Lock()
+	defer portMutex.Unlock()
+
+	for {
+		var laddr *net.TCPAddr
+		laddr, err = net.ResolveTCPAddr("tcp", ba.String())
+		if err != nil {
+			panic(err)
+		}
+		listener, err = net.ListenTCP("tcp", laddr)
+		if err == nil {
+			return
+		}
+		if ba.Port < ba.MaxPort {
+			ba.Port++
+		} else {
+			return
+		}
+
 	}
 	return
 }

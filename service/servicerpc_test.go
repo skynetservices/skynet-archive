@@ -2,8 +2,8 @@ package service
 
 import (
 	"fmt"
-	"github.com/skynetservices/mgo/bson"
-	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet2"
+	"labix.org/v2/mgo/bson"
 	"net"
 	"testing"
 )
@@ -13,12 +13,10 @@ type M map[string]interface{}
 type EchoRPC struct {
 }
 
-func (e EchoRPC) Started(s *Service)                                       {}
-func (e EchoRPC) Stopped(s *Service)                                       {}
-func (e EchoRPC) Registered(s *Service)                                    {}
-func (e EchoRPC) Unregistered(s *Service)                                  {}
-func (e EchoRPC) MethodCalled(method string)                               {}
-func (e EchoRPC) MethodCompleted(method string, duration int64, err error) {}
+func (e EchoRPC) Started(s *Service)      {}
+func (e EchoRPC) Stopped(s *Service)      {}
+func (e EchoRPC) Registered(s *Service)   {}
+func (e EchoRPC) Unregistered(s *Service) {}
 
 func (e EchoRPC) Foo(rinfo *skynet.RequestInfo, in M, out *M) (err error) {
 	*out = M{
@@ -31,7 +29,7 @@ func (e EchoRPC) Foo(rinfo *skynet.RequestInfo, in M, out *M) (err error) {
 func TestServiceRPCBasic(t *testing.T) {
 	var addr net.Addr
 
-	config := &skynet.ServiceConfig{}
+	config := &skynet.ServiceConfig{Name: "EchoRPC"}
 	service := CreateService(EchoRPC{}, config)
 	service.ClientInfo = make(map[string]ClientInfo, 1)
 

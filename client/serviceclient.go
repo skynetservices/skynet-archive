@@ -1,196 +1,79 @@
 package client
 
 import (
+	"errors"
 	"fmt"
-	"github.com/skynetservices/doozer"
-	"github.com/skynetservices/mgo/bson"
-	"github.com/skynetservices/skynet"
-	"github.com/skynetservices/skynet/pools"
+	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/client/loadbalancer"
+	"github.com/skynetservices/skynet2/config"
+	"github.com/skynetservices/skynet2/log"
+	"reflect"
+	"sync"
 	"time"
 )
 
-const DEBUG = false
+// TODO: Implement SendTimeout()
+// TODO: Implement SendOnceTimeout()
 
-func dbg(items ...interface{}) {
-	if DEBUG {
-		fmt.Println(items...)
-	}
-}
+var (
+	ServiceClientClosed = errors.New("Service client shutdown")
+	RequestTimeout      = errors.New("Request timed out")
+)
 
-func dbgf(format string, items ...interface{}) {
-	if DEBUG {
-		fmt.Printf(format, items...)
-	}
-}
+/*
+ServiceSender Responsible for sending requests to the cluster.
+This is mostly used as way to test that clients make appropriate requests to services without the need to run those services
+*/
+type ServiceClientProvider interface {
+	SetDefaultTimeout(retry, giveup time.Duration)
+	GetDefaultTimeout() (retry, giveup time.Duration)
 
-func dbgerr(name string, err error) {
-	if err != nil {
-		dbgf("(%s) %v\n", name, err)
-	}
-}
+	Close()
 
-const TRACE = false
-
-func ts(name string, items ...interface{}) {
-	if TRACE {
-		fmt.Printf("+%s %v\n", name, items)
-	}
-}
-func te(name string, items ...interface{}) {
-	if TRACE {
-		fmt.Printf("-%s %v\n", name, items)
-	}
-}
-
-type serviceError struct {
-	msg string
-}
-
-func (se serviceError) Error() string {
-	return se.msg
-}
-
-type ServiceClientInterface interface {
-	SetTimeout(retry, giveup time.Duration)
-	GetTimeout() (retry, giveup time.Duration)
 	Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error)
 	SendOnce(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error)
+
+	Notify(n skynet.InstanceNotification)
+	Matches(n skynet.ServiceInfo) bool
 }
 
 type ServiceClient struct {
-	client  *Client
-	Log     skynet.SemanticLogger `json:"-"`
-	cconfig *skynet.ClientConfig
-	query   *skynet.Query
-	// a list of the known instances
-	instances map[string]*servicePool
-
-	chooser *InstanceChooser
-
-	muxChan     chan interface{}
-	timeoutChan chan timeoutLengths
-
-	instanceListener *InstanceListener
-	listenID         string
+	loadBalancer loadbalancer.LoadBalancer
+	criteria     *skynet.Criteria
+	shutdown     bool
+	closed       bool
 
 	retryTimeout  time.Duration
 	giveupTimeout time.Duration
-}
 
-func newServiceClient(query *skynet.Query, c *Client) (sc *ServiceClient) {
-	sc = &ServiceClient{
-		client:        c,
-		Log:           c.Config.Log,
-		cconfig:       c.Config,
-		query:         query,
-		instances:     make(map[string]*servicePool),
-		chooser:       NewInstanceChooser(c),
-		muxChan:       make(chan interface{}),
-		timeoutChan:   make(chan timeoutLengths),
-		retryTimeout:  skynet.DefaultRetryDuration,
-		giveupTimeout: skynet.DefaultTimeoutDuration,
-	}
-	sc.listenID = skynet.UUID()
-	sc.instanceListener = c.instanceMonitor.Listen(sc.listenID, query, true)
+	waiter sync.WaitGroup
 
-	go sc.mux()
-	return
-}
-
-type instanceFileCollector struct {
-	files []string
-}
-
-func (ic *instanceFileCollector) VisitDir(path string, f *doozer.FileInfo) bool {
-	return true
-}
-func (ic *instanceFileCollector) VisitFile(path string, f *doozer.FileInfo) {
-	ic.files = append(ic.files, path)
-}
-
-type servicePool struct {
-	service *skynet.ServiceInfo
-	pool    *pools.ResourcePool
-}
-
-type timeoutLengths struct {
-	retry, giveup time.Duration
-}
-
-func (c *ServiceClient) addInstanceMux(instance *skynet.ServiceInfo) {
-	m := skynet.ServiceDiscovered{instance}
-	key := getInstanceKey(m.Service)
-	_, known := c.instances[key]
-	if !known {
-		// we got a new pool, put it into the wild
-		c.instances[key] = c.client.getServicePool(m.Service)
-		c.chooser.Add(m.Service)
-		// Log event
-		c.Log.Debug(fmt.Sprintf("%T: %+v", m, m))
-	}
-}
-
-func (c *ServiceClient) removeInstanceMux(instance *skynet.ServiceInfo) {
-	m := skynet.ServiceRemoved{instance}
-	key := m.Service.Config.ServiceAddr.String()
-	_, known := c.instances[key]
-	if !known {
-		return
-	}
-	c.chooser.Remove(m.Service)
-	delete(c.instances, m.Service.Config.ServiceAddr.String())
-	// Log event
-	c.Log.Trace(fmt.Sprintf("%T: %+v", m, m))
-}
-
-func (c *ServiceClient) mux() {
-
-	for {
-		select {
-		case ns := <-c.instanceListener.NotificationChan:
-			for _, n := range ns {
-				switch n.Type {
-				case InstanceAddNotification, InstanceUpdateNotification:
-					if n.Service.Registered {
-						c.addInstanceMux(&n.Service)
-					} else {
-						c.removeInstanceMux(&n.Service)
-					}
-				case InstanceRemoveNotification:
-					c.removeInstanceMux(&n.Service)
-				}
-			}
-		case mi := <-c.muxChan:
-			switch m := mi.(type) {
-			case timeoutLengths:
-				c.retryTimeout = m.retry
-				c.giveupTimeout = m.giveup
-			}
-		case c.timeoutChan <- timeoutLengths{
-			retry:  c.retryTimeout,
-			giveup: c.giveupTimeout,
-		}:
-
-		}
-	}
+	// mux channels
+	muxChan               chan interface{}
+	instanceNotifications chan skynet.InstanceNotification
+	timeoutChan           chan timeoutLengths
+	shutdownChan          chan bool
 }
 
 /*
-ServiceClient.SetTimeout() sets the time before ServiceClient.Send() retries requests, and
-the time before ServiceClient.Send() and ServiceClient.SendOnce() give up. Setting retry
-or giveup to 0 indicates no retry or time out.
+client.NewServiceClient Initializes a new ClientService
 */
-func (c *ServiceClient) SetTimeout(retry, giveup time.Duration) {
-	c.muxChan <- timeoutLengths{
-		retry:  retry,
-		giveup: giveup,
-	}
-}
+func NewServiceClient(c *skynet.Criteria) ServiceClientProvider {
+	sc := &ServiceClient{
+		criteria:              c,
+		instanceNotifications: make(chan skynet.InstanceNotification, 100),
+		timeoutChan:           make(chan timeoutLengths),
+		shutdownChan:          make(chan bool),
+		muxChan:               make(chan interface{}),
+		loadBalancer:          LoadBalancerFactory([]skynet.ServiceInfo{}),
 
-func (c *ServiceClient) GetTimeout() (retry, giveup time.Duration) {
-	tls := <-c.timeoutChan
-	retry, giveup = tls.retry, tls.giveup
-	return
+		retryTimeout:  getRetryTimeout(c.Services[0].Name, c.Services[0].Version),
+		giveupTimeout: getGiveupTimeout(c.Services[0].Name, c.Services[0].Version),
+	}
+
+	go sc.mux()
+
+	return sc
 }
 
 /*
@@ -199,7 +82,11 @@ it will send additional requests to other known instances. If no response is hea
 the giveup time has passed, it will return an error.
 */
 func (c *ServiceClient) Send(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
-	retry, giveup := c.GetTimeout()
+	if c.closed {
+		return ServiceClientClosed
+	}
+
+	retry, giveup := c.GetDefaultTimeout()
 	return c.send(retry, giveup, ri, fn, in, out)
 }
 
@@ -208,186 +95,231 @@ ServiceClient.SendOnce() will send a request to one of the available instances. 
 the giveup time has passed, it will return an error.
 */
 func (c *ServiceClient) SendOnce(ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
-	_, giveup := c.GetTimeout()
+	if c.closed {
+		return ServiceClientClosed
+	}
+	_, giveup := c.GetDefaultTimeout()
 	return c.send(0, giveup, ri, fn, in, out)
+}
+
+/*
+ServiceClient.SetTimeout() sets the time before ServiceClient.Send() retries requests, and
+the time before ServiceClient.Send() and ServiceClient.SendOnce() give up. Setting retry
+or giveup to 0 indicates no retry or time out.
+*/
+func (c *ServiceClient) SetDefaultTimeout(retry, giveup time.Duration) {
+	c.muxChan <- timeoutLengths{
+		retry:  retry,
+		giveup: giveup,
+	}
+}
+
+/*
+ServiceClient.GetTimeout() returns current timeout values
+*/
+func (c *ServiceClient) GetDefaultTimeout() (retry, giveup time.Duration) {
+	tls := <-c.timeoutChan
+	retry, giveup = tls.retry, tls.giveup
+
+	return
+}
+
+/*
+ServiceClient.Close() refuses any new requests, and waits for active requests to finish
+*/
+func (c *ServiceClient) Close() {
+	c.shutdownChan <- true
+	c.waiter.Wait()
+}
+
+/*
+ServiceClient.NewRequestInfo() create a new RequestInfo object specific to this service
+*/
+func (c *ServiceClient) NewRequestInfo() (ri *skynet.RequestInfo) {
+	// TODO: Set
+	ri = &skynet.RequestInfo{
+		RequestID: config.NewUUID(),
+	}
+
+	return
+}
+
+/*
+ServiceClient.Matches() determins if the provided Service matches the criteria associated with this client
+*/
+func (c *ServiceClient) Matches(s skynet.ServiceInfo) bool {
+	return c.criteria.Matches(s)
+}
+
+/*
+ServiceClient.Notify() Update available instances based off provided InstanceNotification
+*/
+func (c *ServiceClient) Notify(n skynet.InstanceNotification) {
+	c.instanceNotifications <- n
 }
 
 func (c *ServiceClient) send(retry, giveup time.Duration, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) (err error) {
 	if ri == nil {
-		ri = &skynet.RequestInfo{
-			RequestID: skynet.UUID(),
-		}
+		ri = c.NewRequestInfo()
 	}
 
 	attempts := make(chan sendAttempt)
 
-	var ticker <-chan time.Time
+	var retryTicker <-chan time.Time
+	retryChan := make(chan bool, 1)
 	if retry > 0 {
-		ticker = time.NewTicker(retry).C
+		retryTicker = time.Tick(retry)
 	}
 
-	var timeout <-chan time.Time
+	var timeoutTimer <-chan time.Time
 	if giveup > 0 {
-		timeout = time.NewTimer(giveup).C
+		timeoutTimer = time.NewTimer(giveup).C
 	}
 
-	doneSignal := make(chan bool)
 	attemptCount := 1
-
-	defer func() {
-		go func() {
-			for i := 0; i < attemptCount; i++ {
-				doneSignal <- true
-			}
-		}()
-	}()
-
-	go c.attemptSend(doneSignal, attempts, ri, fn, in)
+	go c.attemptSend(retry, attempts, ri, fn, in, out)
 
 	for {
 		select {
-		case <-ticker:
+		case <-retryTicker:
+			retryChan <- true
+
+		case <-retryChan:
 			attemptCount++
 			ri.RetryCount++
+			log.Println(log.TRACE, fmt.Sprintf("Sending Attempt# %d with RequestInfo %+v", attemptCount, ri))
+			go c.attemptSend(retry, attempts, ri, fn, in, out)
 
-			go c.attemptSend(doneSignal, attempts, ri, fn, in)
-		case <-timeout:
-			if err == nil {
-				err = ErrRequestTimeout
-			}
-			// otherwise use the last error reported from an attempt
+		case <-timeoutTimer:
+			err = RequestTimeout
+			log.Println(log.WARN, fmt.Sprintf("Timing out request after %d attempts within %s ", attemptCount, giveup.String()))
 			return
+
 		case attempt := <-attempts:
-			err = attempt.err
-			if err != nil {
-				if _, ok := err.(serviceError); !ok {
-					// error during transmition, abort this attempt
-					if giveup == 0 {
-						return
-					}
-					continue
+			if attempt.err != nil {
+				log.Println(log.ERROR, "Attempt Error: ", attempt.err)
+
+				// If there is no retry timer we need to exit as retries were disabled
+				if retryTicker == nil {
+					return err
+				} else {
+					// Don't wait for next retry tick retry now
+					retryChan <- true
 				}
+
+				continue
 			}
 
-			unmarshallerr := bson.Unmarshal(attempt.result, out)
-			if unmarshallerr != nil {
-				err = unmarshallerr
-			}
+			// copy into the caller's value
+			v := reflect.Indirect(reflect.ValueOf(out))
+			v.Set(reflect.Indirect(reflect.ValueOf(attempt.result)))
+
 			return
 		}
 	}
-
-	return
 }
 
 type sendAttempt struct {
-	result []byte
 	err    error
+	result interface{}
 }
 
-func (c *ServiceClient) attemptSend(timeout chan bool,
-	attempts chan sendAttempt, ri *skynet.RequestInfo,
-	fn string, in interface{}) {
-
-	ts("attemptSend")
-	defer te("attemptSend")
-
-	// first find an available instance
-	var instance *skynet.ServiceInfo
-	var r pools.Resource
-	var err error
-	for r == nil {
-		var ok bool
-		instance, ok = c.chooser.Choose(timeout)
-		if !ok {
-			dbg("timed out")
-			// must have timed out
-			return
-		}
-		dbg("chose", getInstanceKey(instance))
-		sp := c.instances[getInstanceKey(instance)]
-
-		// then, get a connection to that instance
-		dbg("acquiring connection")
-		r, err = sp.pool.Acquire()
-		dbgerr("sp.pool.Acquire", err)
-		dbg("acquired connection")
-		defer sp.pool.Release(r)
-		if err != nil {
-			if r != nil {
-				r.Close()
-			}
-			// TODO: report connection failure
-			c.chooser.Remove(instance)
-			// Log failure
-			failed := FailedConnection{err}
-			c.Log.Error(fmt.Sprintf("%T: %+v", failed, failed))
-		}
-	}
+func (c *ServiceClient) attemptSend(timeout time.Duration, attempts chan sendAttempt, ri *skynet.RequestInfo, fn string, in interface{}, out interface{}) {
+	s, err := c.loadBalancer.Choose()
 
 	if err != nil {
-		c.Log.Error(fmt.Sprintf("Error: %v", err))
-
 		attempts <- sendAttempt{err: err}
 		return
 	}
 
-	sr := r.(ServiceResource)
+	conn, err := acquire(s)
+	defer release(conn)
 
-	result, serviceErr, err := c.sendToInstance(sr, ri, fn, in)
-	dbgerr("c.sendToInstance", err)
 	if err != nil {
-		// some communication error happened, shut down this connection and remove it from the pool
-		sr.Close()
-		// and remove the instance from the chooser
-		c.chooser.Remove(instance)
+		attempts <- sendAttempt{err: err}
 		return
 	}
 
-	attempts <- sendAttempt{
-		result: result,
-		err:    serviceErr,
+	// Create a new instance of the type, we dont want race conditions where 2 connections are unmarshalling to the same object
+	res := sendAttempt{
+		result: reflect.New(reflect.Indirect(reflect.ValueOf(out)).Type()).Interface(),
+	}
+
+	err = conn.SendTimeout(ri, fn, in, res.result, timeout)
+
+	if err != nil {
+		res.err = err
+	}
+
+	attempts <- res
+}
+
+type timeoutLengths struct {
+	retry, giveup time.Duration
+}
+
+func (c *ServiceClient) mux() {
+	for {
+		select {
+		case mi := <-c.muxChan:
+			switch m := mi.(type) {
+			case timeoutLengths:
+				c.retryTimeout = m.retry
+				c.giveupTimeout = m.giveup
+			}
+		case n := <-c.instanceNotifications:
+			c.handleInstanceNotification(n)
+
+		case c.timeoutChan <- timeoutLengths{
+			retry:  c.retryTimeout,
+			giveup: c.giveupTimeout,
+		}:
+
+		case shutdown := <-c.shutdownChan:
+			// TODO: Close out all channels, and this goroutine after waiting for requests to finish
+			if shutdown {
+				c.closed = true
+				return
+			}
+		}
 	}
 }
 
-// ServiceClient.sendToInstance() tries to make an RPC request on a particular connection to an instance
-func (c *ServiceClient) sendToInstance(sr ServiceResource,
-	requestInfo *skynet.RequestInfo, funcName string, in interface{}) (
-	result []byte, serviceErr, err error) {
-	ts("sendToInstance", requestInfo)
-	defer te("sendToInstance", requestInfo)
+// this should only be called by mux()
+func (c *ServiceClient) handleInstanceNotification(n skynet.InstanceNotification) {
+	// TODO: ensure LoadBalancer is thread safe and call these as goroutines
+	switch n.Type {
+	case skynet.InstanceAdded:
+		c.loadBalancer.AddInstance(n.Service)
+	case skynet.InstanceUpdated:
+		c.loadBalancer.UpdateInstance(n.Service)
+	case skynet.InstanceRemoved:
+		c.loadBalancer.RemoveInstance(n.Service)
+	}
+}
 
-	sr.service.FetchStats(c.client.doozer())
-	dbgf("stats: %+v\n", sr.service.Stats)
+func getRetryTimeout(service, version string) time.Duration {
+	if d, err := config.String(service, version, "client.timeout.retry"); err == nil {
+		if timeout, err := time.ParseDuration(d); err == nil {
+			log.Println(log.TRACE, fmt.Sprintf("Using custom retry duration %q for %q %q", timeout.String(), service, version))
+			return timeout
+		}
 
-	sin := skynet.ServiceRPCIn{
-		RequestInfo: requestInfo,
-		Method:      funcName,
-		ClientID:    sr.clientID,
+		log.Println(log.ERROR, "Failed to parse client.timeout.total", err)
 	}
 
-	sin.In, err = bson.Marshal(in)
-	if err != nil {
-		err = fmt.Errorf("Error calling bson.Marshal: %v", err)
-		return
+	return config.DefaultRetryDuration
+}
+
+func getGiveupTimeout(service, version string) time.Duration {
+	if d, err := config.String(service, version, "client.timeout.total"); err == nil {
+		if timeout, err := time.ParseDuration(d); err == nil {
+			log.Println(log.TRACE, fmt.Sprintf("Using custom giveup duration %q for %q %q", timeout.String(), service, version))
+			return timeout
+		}
+
+		log.Println(log.ERROR, "Failed to parse client.timeout.total", err)
 	}
 
-	sout := skynet.ServiceRPCOut{}
-
-	err = sr.rpcClient.Call(sr.service.Config.Name+".Forward", sin, &sout)
-	if err != nil {
-		sr.Close()
-		dbg("(sr.rpcClient.Call)", err)
-
-		// Log failure
-		c.Log.Error("Error calling sr.rpcClient.Call: " + err.Error())
-	}
-
-	if sout.ErrString != "" {
-		serviceErr = serviceError{sout.ErrString}
-	}
-
-	result = sout.Out
-
-	return
+	return config.DefaultTimeoutDuration
 }

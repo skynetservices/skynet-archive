@@ -1,17 +1,18 @@
 package main
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
-	"github.com/skynetservices/go-shellquote"
-	"github.com/skynetservices/skynet"
-	"github.com/skynetservices/skynet/client"
-	"go/build"
+	"github.com/kballard/go-shellquote"
+	"github.com/skynetservices/skynet2/daemon"
+	"github.com/skynetservices/skynet2/log"
+	"io"
 	"os"
 	"os/exec"
-	"path"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -38,17 +39,19 @@ type SubService struct {
 
 	UUID string
 
-	doozer *skynet.DoozerConnection
+	pipe *daemon.Pipe
+
+	Registered bool
 }
 
-func NewSubService(daemon *SkynetDaemon, servicePath, args, uuid string) (ss *SubService, err error) {
+func NewSubService(binaryName, args, uuid string, registered bool) (ss *SubService, err error) {
 	ss = &SubService{
-		ServicePath: servicePath,
+		ServicePath: binaryName,
 		Args:        args,
 		UUID:        uuid,
-		doozer:      daemon.Service.DoozerConn,
-		// TODO: proper argument splitting
+		Registered:  registered,
 	}
+
 	ss.argv, err = shellquote.Split(args)
 	if err != nil {
 		return
@@ -56,35 +59,45 @@ func NewSubService(daemon *SkynetDaemon, servicePath, args, uuid string) (ss *Su
 
 	ss.argv = append([]string{"-uuid", uuid}, ss.argv...)
 
-	// verify that it exists on the local system
-	// TODO: go get package?
-	pkg, err := build.Import(ss.ServicePath, "", 0)
-	if err != nil {
-		return
+	if !registered {
+		ss.argv = append(ss.argv, "-registered=false")
 	}
 
-	if pkg.Name != "main" {
-		return nil, errors.New("This package is not a binary")
-	}
-
-	_, binName := path.Split(ss.ServicePath)
-	bindir := os.Getenv("GOBIN")
+	bindir := os.Getenv("SKYNET_SERVICE_DIR")
 	if bindir == "" {
-		bindir = pkg.BinDir
+		bindir = "/usr/bin"
 	}
-	binPath := filepath.Join(bindir, binName)
-
-	ss.binPath = binPath
+	ss.binPath = filepath.Join(bindir, binaryName)
 
 	return
 }
 
-func (ss *SubService) Register() {
-	// TODO: connect to admin port or remove this method
+func (ss *SubService) Register() (ok bool) {
+	ok = ss.sendAdminCommand("REGISTER")
+
+	if ok {
+		ss.Registered = true
+	}
+
+	return ok
 }
 
-func (ss *SubService) Deregister() {
-	// TODO: connect to admin port or remove this method
+func (ss *SubService) IsRunning() bool {
+	return ss.running
+}
+
+func (ss *SubService) Unregister() (ok bool) {
+	ok = ss.sendAdminCommand("UNREGISTER")
+
+	if ok {
+		ss.Registered = false
+	}
+
+	return ok
+}
+
+func (ss *SubService) SetLogLevel(level string) bool {
+	return ss.sendAdminCommand("LOG " + level)
 }
 
 func (ss *SubService) Stop() bool {
@@ -94,18 +107,18 @@ func (ss *SubService) Stop() bool {
 	if !ss.running {
 		return false
 	}
+
+	ss.runSignal.Add(1)
+	close(ss.rerunChan)
+
 	ss.running = false
 
-	ss.Deregister()
+	ss.Unregister()
 
 	// halt the rerunner so we can kill the processes without it relaunching
-	ss.runSignal.Add(1)
-	ss.rerunChan <- false
 	ss.runSignal.Wait()
 
-	ss.sendRPCStop()
-
-	return true
+	return ss.sendAdminCommand("SHUTDOWN")
 }
 
 func (ss *SubService) Start() (success bool, err error) {
@@ -118,6 +131,7 @@ func (ss *SubService) Start() (success bool, err error) {
 		return
 	}
 	ss.running = true
+
 	ss.rerunChan = make(chan bool)
 	go ss.rerunner()
 
@@ -131,10 +145,9 @@ func (ss *SubService) Start() (success bool, err error) {
 	return
 }
 
-func (ss *SubService) Restart() {
-	// Because we don't call stop here,
-	// rerunner will spawn a new instance when the old one has stopped
-	ss.sendRPCStop()
+func (ss *SubService) Restart() bool {
+	log.Println(log.INFO, "Restarting service intentially "+ss.UUID)
+	return ss.sendAdminCommand("SHUTDOWN")
 }
 
 func (ss *SubService) startProcess() (proc *os.Process, err error) {
@@ -142,11 +155,21 @@ func (ss *SubService) startProcess() (proc *os.Process, err error) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
+	dRead, ssWrite, err := os.Pipe()
+	ssRead, dWrite, err := os.Pipe()
+
+	// Store Fd's for us to read/write to SubService
+	ss.pipe = daemon.NewPipe(dRead, dWrite)
+
+	// Pass SubService their side of the connection
+	cmd.ExtraFiles = append(cmd.ExtraFiles, ssRead, ssWrite)
+
 	err = cmd.Start()
 	proc = cmd.Process
 	startupTimer := time.NewTimer(RerunWait)
 
 	if proc != nil {
+		go ss.watchSignals()
 		go ss.watchProcess(proc, startupTimer)
 	}
 
@@ -155,8 +178,6 @@ func (ss *SubService) startProcess() (proc *os.Process, err error) {
 
 func (ss *SubService) watchProcess(proc *os.Process, startupTimer *time.Timer) {
 	proc.Wait()
-
-	ss.removeFromDoozer()
 
 	if !ss.running {
 		startupTimer.Stop()
@@ -178,7 +199,6 @@ func (ss *SubService) watchProcess(proc *os.Process, startupTimer *time.Timer) {
 
 func (ss *SubService) rerunner() {
 	for rerun := range ss.rerunChan {
-
 		if !rerun {
 			break
 		}
@@ -194,32 +214,44 @@ func (ss *SubService) rerunner() {
 	ss.runSignal.Done()
 }
 
-func (ss *SubService) removeFromDoozer() {
-	q := skynet.Query{
-		UUID:       ss.UUID,
-		DoozerConn: ss.doozer,
-	}
+func (ss *SubService) watchSignals() {
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM)
 
-	instances := q.FindInstances()
-	for _, instance := range instances {
-		ss.doozer.Del(instance.GetConfigPath(), ss.doozer.GetCurrentRevision())
+	for {
+		select {
+		case sig := <-c:
+			switch sig.(syscall.Signal) {
+			// Trap signals so we don't get restarted
+			case syscall.SIGINT, syscall.SIGKILL, syscall.SIGQUIT,
+				syscall.SIGSEGV, syscall.SIGSTOP, syscall.SIGTERM:
+				ss.Stop()
+			}
+		}
 	}
 }
 
-func (ss *SubService) sendRPCStop() {
-	q := skynet.Query{
-		UUID:       ss.UUID,
-		DoozerConn: ss.doozer,
-	}
-	instances := q.FindInstances()
-	for _, instance := range instances {
-		cladmin := client.Admin{
-			Instance: instance,
-		}
+func (ss *SubService) sendAdminCommand(cmd string) bool {
+	log.Println(log.TRACE, "Writing to admin pipe: "+cmd)
+	_, err := ss.pipe.Write([]byte(cmd))
 
-		cladmin.Stop(skynet.StopRequest{
-			WaitForClients: true,
-		})
+	if err != nil {
+		log.Println(log.ERROR, "Failed to write to admin pipe", err)
+		return false
 	}
 
+	b := make([]byte, daemon.MAX_PIPE_BYTES)
+
+	log.Println(log.TRACE, "Reading from admin pipe")
+	n, err := ss.pipe.Read(b)
+	if err != nil && err != io.EOF {
+		log.Println(log.ERROR, "Failed to read from admin pipe", err)
+		return false
+	}
+
+	if bytes.Equal(b[:n], []byte("ACK")) {
+		return true
+	}
+
+	return false
 }

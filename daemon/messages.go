@@ -1,14 +1,5 @@
 package daemon
 
-type DeployRequest struct {
-	ServicePath string
-	Args        string
-}
-
-type DeployResponse struct {
-	UUID string
-}
-
 type SubServiceInfo struct {
 	UUID        string
 	ServicePath string
@@ -31,16 +22,10 @@ type StopAllSubServicesResponse struct {
 	Stops []StopSubServiceResponse
 }
 
-type StartAllSubServicesRequest struct {
-}
-
-type StartAllSubServicesResponse struct {
-	Count  int
-	Starts []StartSubServiceResponse
-}
-
 type StartSubServiceRequest struct {
-	UUID string
+	BinaryName string
+	Args       string
+	Registered bool
 }
 
 type StartSubServiceResponse struct {
@@ -71,4 +56,49 @@ type RestartAllSubServicesRequest struct {
 type RestartAllSubServicesResponse struct {
 	Count    int
 	Restarts []RestartSubServiceResponse
+}
+
+type RegisterSubServiceRequest struct {
+	UUID string
+}
+
+type RegisterSubServiceResponse struct {
+	Ok   bool
+	UUID string
+}
+
+type UnregisterSubServiceRequest struct {
+	UUID string
+}
+
+type UnregisterSubServiceResponse struct {
+	Ok   bool
+	UUID string
+}
+
+type SubServiceLogLevelRequest struct {
+	UUID  string
+	Level string
+}
+
+type SubServiceLogLevelResponse struct {
+	Ok    bool
+	UUID  string
+	Level string
+}
+
+type LogLevelRequest struct {
+	Level string
+}
+
+type LogLevelResponse struct {
+	Ok    bool
+	Level string
+}
+
+type StopRequest struct {
+}
+
+type StopResponse struct {
+	Ok bool
 }

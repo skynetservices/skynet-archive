@@ -2,8 +2,9 @@ package service
 
 import (
 	"fmt"
-	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet2"
 	"syscall"
+	"time"
 )
 
 type RegisteredMethods struct {
@@ -26,11 +27,21 @@ func (mi MethodCall) String() string {
 type MethodCompletion struct {
 	RequestInfo *skynet.RequestInfo
 	MethodName  string
-	Duration    int64
+	Duration    time.Duration
 }
 
 func (mi MethodCompletion) String() string {
-	return fmt.Sprintf("Method %q completed with RequestInfo %v and duration %dns", mi.MethodName, mi.RequestInfo, mi.Duration)
+	return fmt.Sprintf("Method %q completed with RequestInfo %v and duration %s", mi.MethodName, mi.RequestInfo, mi.Duration.String())
+}
+
+type MethodError struct {
+	RequestInfo *skynet.RequestInfo
+	MethodName  string
+	Error       error
+}
+
+func (me MethodError) String() string {
+	return fmt.Sprintf("Method %q failed with RequestInfo %v and error %s", me.MethodName, me.RequestInfo, me.Error.Error())
 }
 
 type KillSignal struct {
@@ -42,42 +53,26 @@ func (ks KillSignal) String() string {
 }
 
 type ServiceListening struct {
-	ServiceConfig *skynet.ServiceConfig
-	Addr          *skynet.BindAddr
+	ServiceInfo *skynet.ServiceInfo
+	Addr        *skynet.BindAddr
 }
 
 func (sc ServiceListening) String() string {
-	return fmt.Sprintf("Service %q listening on %s", sc.ServiceConfig.Name, sc.Addr)
-}
-
-type AdminListening struct {
-	ServiceConfig *skynet.ServiceConfig
-}
-
-func (al AdminListening) String() string {
-	return fmt.Sprintf("Service %q listening for admin on %s", al.ServiceConfig.Name, al.ServiceConfig.AdminAddr)
-}
-
-type AdminNotListening struct {
-	ServiceConfig *skynet.ServiceConfig
-}
-
-func (al AdminNotListening) String() string {
-	return fmt.Sprintf("Service %q not listening for admin", al.ServiceConfig.Name)
+	return fmt.Sprintf("Service %q %q listening on %s in region %q", sc.ServiceInfo.Name, sc.ServiceInfo.Version, sc.Addr, sc.ServiceInfo.Region)
 }
 
 type ServiceRegistered struct {
-	ServiceConfig *skynet.ServiceConfig
+	ServiceInfo *skynet.ServiceInfo
 }
 
 func (sr ServiceRegistered) String() string {
-	return fmt.Sprintf("Service %q registered", sr.ServiceConfig.Name)
+	return fmt.Sprintf("Service %q registered", sr.ServiceInfo.Name)
 }
 
 type ServiceUnregistered struct {
-	ServiceConfig *skynet.ServiceConfig
+	ServiceInfo *skynet.ServiceInfo
 }
 
 func (sr ServiceUnregistered) String() string {
-	return fmt.Sprintf("Service %q unregistered", sr.ServiceConfig.Name)
+	return fmt.Sprintf("Service %q unregistered", sr.ServiceInfo.Name)
 }

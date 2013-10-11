@@ -3,302 +3,341 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/config"
+	"github.com/skynetservices/skynet2/log"
+	_ "github.com/skynetservices/zkmanager"
 	"os"
 	"strconv"
+	"strings"
 )
-
-var (
-	flagset                 = flag.NewFlagSet("sky", flag.ExitOnError)
-	VersionFlag     *string = flagset.String("version", "", "service version")
-	ServiceNameFlag *string = flagset.String("service", "", "service name")
-	PortFlag        *string = flagset.String("port", "", "port")
-	RegisteredFlag  *string = flagset.String("registered", "", "registered")
-	HostFlag        *string = flagset.String("host", "", "host")
-	RegionFlag      *string = flagset.String("region", "", "region")
-)
-
-var DC *skynet.DoozerConnection
-var config *skynet.ClientConfig
 
 func main() {
-	logger := skynet.NewConsoleSemanticLogger("Sky", os.Stdout)
-	flagsetArgs, additionalArgs := skynet.SplitFlagsetFromArgs(flagset, os.Args[1:])
+	log.SetLogLevel(log.ERROR)
 
-	c, args := skynet.GetClientConfigFromFlags(additionalArgs)
-	c.MaxConnectionsToInstance = 10
-	c.Log = logger
+	var args []string
+	criteria, args := criteriaFromArgs(os.Args[1:])
 
-	config = c
-
-	err := flagset.Parse(flagsetArgs)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	query := &skynet.Query{
-		DoozerConn: Doozer(config.DoozerConfig),
-		Service:    *ServiceNameFlag,
-		Version:    *VersionFlag,
-		Host:       *HostFlag,
-		Region:     *RegionFlag,
-		Port:       *PortFlag,
-	}
-
-	// Runs when no command line arguments were given
 	if len(args) == 0 {
 		CommandLineHelp()
 		return
 	}
 
-	fmt.Println(args[0])
-
 	switch args[0] {
 	case "help", "h":
 		CommandLineHelp()
-	case "services":
-		ListServices(query)
-	case "hosts":
-		ListHosts(query)
-	case "regions":
-		ListRegions(query)
-	case "instances":
-		ListInstances(query)
-	case "versions":
-		ListServiceVersions(query)
-	case "topology":
-		PrintTopology(query)
-	case "register":
-		Register(query)
-	case "unregister":
-		Unregister(query)
-	case "stop":
-		Stop(query)
-	case "restart":
-		Restart(query)
-	case "deploy":
-		fmt.Println(args)
-		if len(args) < 2 {
-			fmt.Println("Usage: deploy <service path> <args>")
+	case "build", "b":
+		flagset := flag.NewFlagSet("build", flag.ExitOnError)
+		configFile := flagset.String("build", "./build.cfg", "build config file")
+		flagsetArgs, _ := config.SplitFlagsetFromArgs(flagset, args)
+
+		err := flagset.Parse(flagsetArgs)
+		if err != nil {
+			log.Fatal(err)
 			return
 		}
 
-		Deploy(query, args[1], args[2:]...)
+		Build(*configFile)
+	case "deploy", "d":
+		flagset := flag.NewFlagSet("deploy", flag.ExitOnError)
+		configFile := flagset.String("build", "./build.cfg", "build config file")
+		flagsetArgs, _ := config.SplitFlagsetFromArgs(flagset, args)
 
+		err := flagset.Parse(flagsetArgs)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		Deploy(*configFile, criteria)
+	case "hosts":
+		ListHosts(criteria)
+	case "regions":
+		ListRegions(criteria)
+	case "services":
+		ListServices(criteria)
+	case "versions":
+		ListVersions(criteria)
+	case "instances":
+		ListInstances(criteria)
+	case "start":
+		Start(criteria, args[1:])
+	case "stop":
+		Stop(criteria)
+	case "restart":
+		Restart(criteria)
+	case "register":
+		Register(criteria)
+	case "unregister":
+		Unregister(criteria)
+	case "log":
+		SetLogLevel(criteria, args[1])
+	case "daemon":
+		if len(args) >= 2 {
+			switch args[1] {
+			case "log":
+				if len(args) >= 3 {
+					SetDaemonLogLevel(criteria, args[2])
+				} else {
+					fmt.Println("Must supply a log level")
+				}
+			case "stop":
+				StopDaemon(criteria)
+			}
+		} else {
+			fmt.Println("Supported subcommands for daemon are log, and stop")
+		}
 	case "cli":
 		InteractiveShell()
-
 	default:
+		fmt.Println("Unknown Command: ", args[0])
 		CommandLineHelp()
 	}
 }
 
-func Doozer(dcfg *skynet.DoozerConfig) *skynet.DoozerConnection {
-	if DC == nil {
-		DC = Connect(dcfg)
-	}
-
-	return DC
+func ListRegions(c *skynet.Criteria) {
+	printList(getRegions(c))
 }
 
-func Connect(dcfg *skynet.DoozerConfig) *skynet.DoozerConnection {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Failed to connect to Doozer")
-			os.Exit(1)
-		}
-	}()
+func getRegions(c *skynet.Criteria) []string {
+	regions, err := skynet.GetServiceManager().ListRegions(c)
 
-	// TODO: This needs to come from command line, or environment variable
-	conn := skynet.NewDoozerConnection(dcfg.Uri, "", false, nil) // nil as the last param will default to a Stdout logger
-	conn.Connect()
-
-	return conn
-}
-
-func ListInstances(q *skynet.Query) {
-	var regFlag *bool
-
-	if *RegisteredFlag == "true" {
-		b := true
-		regFlag = &b
-	} else if *RegisteredFlag == "false" {
-		b := false
-		regFlag = &b
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	q.Registered = regFlag
-
-	results := q.FindInstances()
-
-	for _, instance := range results {
-		registered := ""
-
-		if instance.Registered {
-			registered = " [Registered]"
-		}
-
-		fmt.Println(instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port) + " - " + instance.Config.Name + " " + instance.Config.Version + registered)
-	}
+	return regions
 }
 
-func ListHosts(q *skynet.Query) {
-	results := q.FindHosts()
-
-	for _, host := range results {
-		fmt.Println(host)
-	}
+func ListVersions(c *skynet.Criteria) {
+	printList(getVersions(c))
 }
 
-func ListRegions(q *skynet.Query) {
-	results := q.FindRegions()
+func getVersions(c *skynet.Criteria) []string {
+	versions, err := skynet.GetServiceManager().ListVersions(c)
 
-	for _, region := range results {
-		fmt.Println(region)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return versions
+}
+
+func ListServices(c *skynet.Criteria) {
+	printList(getServices(c))
+}
+
+func getServices(c *skynet.Criteria) []string {
+	services, err := skynet.GetServiceManager().ListServices(c)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return services
+}
+
+func ListHosts(c *skynet.Criteria) {
+	printList(getHosts(c))
+}
+
+func getHosts(c *skynet.Criteria) []string {
+	hosts, err := skynet.GetServiceManager().ListHosts(c)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return hosts
+}
+
+func ListInstances(c *skynet.Criteria) {
+	for _, instance := range getInstances(c) {
+		fmt.Println(instance.ServiceAddr.String() + " - " + instance.Region + " - " + instance.Name + " " + instance.Version + " " + strconv.FormatBool(instance.Registered) + " (" + instance.UUID + ")")
 	}
 }
 
-func ListServices(q *skynet.Query) {
-	results := q.FindServices()
+func getInstances(c *skynet.Criteria) []skynet.ServiceInfo {
+	instances, err := skynet.GetServiceManager().ListInstances(c)
 
-	for _, service := range results {
-		fmt.Println(service)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return instances
+}
+
+func printList(list []string) {
+	for _, v := range list {
+		fmt.Println(v)
 	}
 }
 
-func ListServiceVersions(q *skynet.Query) {
-	if q.Service == "" {
-		fmt.Println("Service name is required")
+func criteriaFromArgs(args []string) (*skynet.Criteria, []string) {
+	flagset := flag.NewFlagSet("deploy", flag.ExitOnError)
+	services := flagset.String("services", "", "services")
+	regions := flagset.String("regions", "", "regions")
+	instances := flagset.String("instances", "", "instances")
+	hosts := flagset.String("hosts", "", "hosts")
+	registered := flagset.String("registered", "", "registered")
+
+	flagsetArgs, args := config.SplitFlagsetFromArgs(flagset, args)
+
+	err := flagset.Parse(flagsetArgs)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	regionCriteria := make([]string, 0, 0)
+
+	if len(*regions) > 0 {
+		regionCriteria = strings.Split(*regions, ",")
+	}
+
+	hostCriteria := make([]string, 0, 0)
+
+	if len(*hosts) > 0 {
+		hostCriteria = strings.Split(*hosts, ",")
+	}
+
+	instanceCriteria := make([]string, 0, 0)
+
+	if len(*instances) > 0 {
+		instanceCriteria = strings.Split(*instances, ",")
+	}
+
+	var reg *bool
+	if *registered == "true" {
+		*reg = true
+	} else if *registered == "false" {
+		*reg = false
+	}
+
+	return &skynet.Criteria{
+		Regions:    regionCriteria,
+		Hosts:      hostCriteria,
+		Instances:  instanceCriteria,
+		Registered: reg,
+		Services:   serviceCriteriaFromCsv(*services),
+	}, args
+}
+
+func serviceCriteriaFromCsv(csv string) (criteria []skynet.ServiceCriteria) {
+	if csv == "" {
 		return
 	}
 
-	results := q.FindServiceVersions()
+	services := strings.Split(csv, ",")
 
-	for _, version := range results {
-		fmt.Println(version)
+	for _, s := range services {
+		criteria = append(criteria, serviceCriteriaFromString(s))
 	}
+
+	return
 }
 
-func PrintTopology(q *skynet.Query) {
-	topology := make(map[string]map[string]map[string]map[string][]*skynet.ServiceInfo)
+func serviceCriteriaFromString(s string) (c skynet.ServiceCriteria) {
+	parts := strings.Split(s, ":")
 
-	results := q.FindInstances()
-
-	// Build topology hash first
-	for _, instance := range results {
-		// Prevent runtime nil pointer dereference
-		if instance.Config == nil {
-			continue
-		}
-		if topology[instance.Config.Region] == nil {
-			topology[instance.Config.Region] = make(map[string]map[string]map[string][]*skynet.ServiceInfo)
-		}
-
-		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress] = make(map[string]map[string][]*skynet.ServiceInfo)
-		}
-
-		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name] = make(map[string][]*skynet.ServiceInfo)
-		}
-
-		if topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] == nil {
-			topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = make([]*skynet.ServiceInfo, 0)
-		}
-
-		topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version] = append(topology[instance.Config.Region][instance.Config.ServiceAddr.IPAddress][instance.Config.Name][instance.Config.Version], instance)
+	c = skynet.ServiceCriteria{
+		Name: parts[0],
 	}
 
-	// Now we can print the correct heirarchy
-	for regionName, region := range topology {
-		fmt.Println("Region: " + regionName)
-
-		for hostName, host := range region {
-			fmt.Println("\tHost: " + hostName)
-
-			for serviceName, service := range host {
-				fmt.Println("\t\tService: " + serviceName)
-
-				for versionName, version := range service {
-					fmt.Println("\t\t\tVersion: " + versionName)
-
-					for _, instance := range version {
-						registered := ""
-
-						if instance.Registered {
-							registered = " [Registered]"
-						}
-
-						fmt.Println("\t\t\t\t" + instance.Config.ServiceAddr.IPAddress + ":" + strconv.Itoa(instance.Config.ServiceAddr.Port) + registered)
-					}
-				}
-			}
-		}
+	if len(parts) > 1 {
+		c.Version = parts[1]
 	}
+
+	return
 }
 
 func CommandLineHelp() {
 	fmt.Print(`Usage: sky [options] command <arguments>
 
-Commands:
+    Commands:
+            cli: Interactive shell for executing commands against skynet cluster
+            build: Uses build.cfg or optional config to build the current project
+                  -config - config file to use
+            deploy: Uses build.cfg or optional config to deploy the current project
+                  -config - config file to use
 
-	cli: Interactive shell for executing commands against skynet cluster
-	hosts: List all hosts available that meet the specified criteria
-		-service - limit results to hosts running the specified service
-		-version - limit results to hosts running the specified version of the service (-service required)
-		-region - limit results to hosts in the specified region
-	instances: List all instances available that meet the specified criteria
-		-service - limit results to instances of the specified service
-		-version - limit results to instances of the specified version of service
-		-region - limit results to instances in the specified region
-		-host - limit results to instances on the specified host
-		-port - limit results to instances on the specified port
-		-registered - (true, false) limit results to instances that are registered (accepting requests)
-	regions: List all regions available that meet the specified criteria
-	services: List all services available that meet the specified criteria
-		-host - limit results to the specified host
-		-port - limit results to the specified port
-		-region - limit results to hosts in the specified region
-		-region - limit results to hosts in the specified region
-	versions: List all services available that meet the specified criteria
-		-service - service name (required)
-		-host - limit results to the specified host
-		-port - limit results to the specified port
-		-region - limit results to hosts in the specified region
-	topology: Print detailed heirarchy of regions/hosts/services/versions/instances
-		-service - limit results to instances of the specified service
-		-version - limit results to instances of the specified version of service
-		-region - limit results to instances in the specified region
-		-host - limit results to instances on the specified host
-		-port - limit results to the specified port
-	deploy: deploy new instances to cluster (deploy <service path> <args>)
-		-region - deploy only to the specified region
-		-host - deploy to the specified host
-	stop: Stop all instances available that meet the specified criteria
-		-service - limit command to instances of the specified service
-		-version - limit command to instances of the specified version of service
-		-region - limit command to instances in the specified region
-		-host - limit command to instances on the specified host
-		-port - limit command to instances on the specified port
-		-registered - (true, false) limit command to instances that are registered (accepting requests)
-	register: Register all instances available that meet the specified criteria
-		-service - limit command to instances of the specified service
-		-version - limit command to instances of the specified version of service
-		-region - limit command to instances in the specified region
-		-host - limit command to instances on the specified host
-		-port - limit command to instances on the specified port
-		-registered - (true, false) limit command to instances that are registered (accepting requests)
-	unregister: Unregister all instances available that meet the specified criteria
-		-service - limit command to instances of the specified service
-		-version - limit command to instances of the specified version of service
-		-region - limit command to instances in the specified region
-		-host - limit command to instances on the specified host
-		-port - limit command to instances on the specified port
-		-registered - (true, false) limit command to instances that are registered (accepting requests)
-		
-		
+            log: Set change log level of service that meet the specified criteria log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
+                  -hosts - change log level for services only on the specified comma separated hosts
+                  -regions - change log level for services in the specified comma separated regions
+                  -registered - change log level only on hosts that have registered instances
+                  -services - change log level only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - change log level only on hosts that have the specified instances on them
 
-`)
+            daemon log: Set change log level of daemons that meet the specified criteria daemon log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
+                  -hosts - change log level for daemons only on the specified comma separated hosts
+                  -regions - change log level for daemons in the specified comma separated regions
+                  -registered - change log level only on daemons that have registered instances
+                  -services - change log level only on daemons that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - change log level only on daemons that have the specified instances on them
+            daemon stop: Stop daemons that meet the specified criteria daemon log <level>, options are DEBUG, TRACE, INFO, WARN, FATAL, PANIC
+                  -hosts - stop daemons only on the specified comma separated hosts
+                  -regions - stop daemons in the specified comma separated regions
+                  -registered - stop daemons that have registered instances
+                  -services - stop daemons that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - stop daemons that have the specified instances on them
 
+            start: Start named service on all hosts that match the supplied criteria "start <flags> <binaryName>"
+                  -hosts - start service only on the specified comma separated hosts
+                  -regions - start service only in the specified comma separated regions
+                  -registered - start service only on hosts that have registered instances
+                  -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - start service on hosts that have the specified instances on them
+            stop: Stop services that match the supplied criteria
+                  -hosts - start service only on the specified comma separated hosts
+                  -regions - start service only in the specified comma separated regions
+                  -registered - start service only on hosts that have registered instances
+                  -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - start service on hosts that have the specified instances on them
+            restart: Restart services that match the supplied criteria
+                  -hosts - start service only on the specified comma separated hosts
+                  -regions - start service only in the specified comma separated regions
+                  -registered - start service only on hosts that have registered instances
+                  -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - start service on hosts that have the specified instances on them
+            register: Register services that match the supplied criteria
+                  -hosts - start service only on the specified comma separated hosts
+                  -regions - start service only in the specified comma separated regions
+                  -registered - start service only on hosts that have registered instances
+                  -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - start service on hosts that have the specified instances on them
+            unregister: Unregister services that match the supplied criteria
+                  -hosts - start service only on the specified comma separated hosts
+                  -regions - start service only in the specified comma separated regions
+                  -registered - start service only on hosts that have registered instances
+                  -services - start service only on hosts that are running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - start service on hosts that have the specified instances on them
+
+            regions: List all regions available that meet the specified criteria
+                  -services - limit results to regions running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -hosts - limit results to regions with the specified comma separated hosts
+                  -registered - limit results to regions that have registered instances
+                  -instances - limit results to regions that have instances specified
+            hosts: List all hosts available that meet the specified criteria
+                  -services - limit results to hosts running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -regions - limit results to hosts in the specified comma separated regions
+                  -registered - limit results to hosts that have registered instances
+                  -instances - limit results to hosts that have instances specified
+            services: List all services available that meet the specified criteria
+                  -hosts - limit results to services running on the specified comma separated hosts
+                  -regions - limit results to services in the specified comma separated regions
+                  -registered - limit results to services that have registered instances
+                  -instances - limit results to services that have instances specified
+            versions: List all versions available that meet the specified criteria
+                  -hosts - limit results to versions running on the specified comma separated hosts
+                  -regions - limit results to versions in the specified comma separated regions
+                  -registered - limit results to versions that have registered instances
+                  -services - limit results to versions running the specified comma separated services example. -services=MyService or --services=MyService:v1
+                  -instances - limit results to versions that have instances specified
+            instances: List all instances available that meet the specified criteria
+                  -hosts - limit results to instances running on the specified comma separated hosts
+                  -regions - limit results to instances in the specified comma separated regions
+                  -registered - limit results to instances that have registered instances
+                  -services - limit results to instances running the specified comma separated services example. -services=MyService or --services=MyService:v1
+            
+            
+  `)
 }

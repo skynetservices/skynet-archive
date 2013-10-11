@@ -3,10 +3,11 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/skynetservices/mgo/bson"
-	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet2/stats"
+	"labix.org/v2/mgo/bson"
 	"reflect"
-	"sync/atomic"
 	"time"
 )
 
@@ -95,7 +96,7 @@ func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 		continue
 
 	problem:
-		fmt.Printf("Bad RPC method for %T: %q %v\n", s.Delegate, m.Name, f)
+		log.Printf(log.WARN, "Bad RPC method for %T: %q %v\n", s.Delegate, m.Name, f)
 	}
 
 	return
@@ -105,15 +106,16 @@ func NewServiceRPC(s *Service) (srpc *ServiceRPC) {
 // and provides a slot for the RequestInfo. The parameters to the actual RPC
 // calls are transmitted in a []byte, and are then marshalled/unmarshalled on
 // either end.
-func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOut) (err error) {
+func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCInRead, out *skynet.ServiceRPCOutWrite) (err error) {
 	srpc.service.activeRequests.Add(1)
 	defer srpc.service.activeRequests.Done()
 
-	srpc.service.Delegate.MethodCalled(in.Method)
+	go stats.MethodCalled(in.Method)
 
 	clientInfo, ok := srpc.service.getClientInfo(in.ClientID)
 	if !ok {
 		err = errors.New("did not provide the ClientID")
+		log.Printf(log.ERROR, "%+v", MethodError{in.RequestInfo, in.Method, err})
 		return
 	}
 
@@ -127,13 +129,12 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		RequestInfo: in.RequestInfo,
 	}
 
-	if srpc.service.Log != nil {
-		srpc.service.Log.Trace(fmt.Sprintf("%+v", mc))
-	}
+	log.Printf(log.INFO, "%+v", mc)
 
 	m, ok := srpc.methods[in.Method]
 	if !ok {
 		err = errors.New(fmt.Sprintf("No such method %q", in.Method))
+		log.Printf(log.ERROR, "%+v", MethodError{in.RequestInfo, in.Method, err})
 		return
 	}
 
@@ -141,6 +142,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 
 	err = bson.Unmarshal(in.In, inValuePtr.Interface())
 	if err != nil {
+		log.Println(log.ERROR, "Error unmarshaling request ", err)
 		return
 	}
 
@@ -154,12 +156,12 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 	case reflect.Map:
 		outValue = reflect.MakeMap(outType)
 	default:
-		panic("illegal out param type")
+		err = errors.New("illegal out param type")
+		log.Printf(log.ERROR, "%+v", MethodError{in.RequestInfo, in.Method, err})
+		return
 	}
 
-	srpc.service.Stats.LastRequest = time.Now().Format("2006-01-02T15:04:05Z-0700")
-
-	startTime := time.Now().UnixNano()
+	startTime := time.Now()
 
 	params := []reflect.Value{
 		reflect.ValueOf(srpc.service.Delegate),
@@ -170,13 +172,7 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 
 	returns := m.Call(params)
 
-	duration := time.Now().UnixNano() - startTime
-
-	// Update stats
-	atomic.AddInt64(&srpc.service.Stats.RequestsServed, 1)
-	atomic.AddInt64((*int64)(&srpc.service.Stats.TotalDuration), int64(duration)) // ns
-
-	srpc.service.Stats.AverageResponseTime = srpc.service.Stats.TotalDuration / time.Duration(srpc.service.Stats.RequestsServed)
+	duration := time.Now().Sub(startTime)
 
 	mcp := MethodCompletion{
 		MethodName:  in.Method,
@@ -184,22 +180,30 @@ func (srpc *ServiceRPC) Forward(in skynet.ServiceRPCIn, out *skynet.ServiceRPCOu
 		Duration:    duration,
 	}
 
-	if srpc.service.Log != nil {
-		srpc.service.Log.Trace(fmt.Sprintf("%+v", mcp))
-	}
+	log.Printf(log.INFO, "%+v", mcp)
 
-	out.Out, err = bson.Marshal(outValue.Interface())
+	var b []byte
+	b, err = bson.Marshal(outValue.Interface())
 	if err != nil {
+		log.Printf(log.ERROR, "%+v", MethodError{in.RequestInfo, in.Method, fmt.Errorf("Error marshaling response", err)})
 		return
 	}
 
-	erri := returns[0].Interface()
-	var rerr error
-	if erri != nil {
-		rerr, _ := erri.(error)
-		out.ErrString = rerr.Error()
+	out.Out = bson.Binary{
+		0x00,
+		b,
 	}
-	srpc.service.Delegate.MethodCompleted(in.Method, duration, rerr)
+
+	var rerr error = nil
+	erri := returns[0].Interface()
+	if erri != nil {
+		rerr, _ = erri.(error)
+		out.ErrString = rerr.Error()
+
+		log.Printf(log.ERROR, "%+v", MethodError{in.RequestInfo, in.Method, fmt.Errorf("Method returned error:", err)})
+	}
+
+	go stats.MethodCompleted(in.Method, duration, rerr)
 
 	return
 }

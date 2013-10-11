@@ -1,105 +1,45 @@
 package main
 
 import (
-	"bufio"
-	"errors"
-	"github.com/skynetservices/skynet"
-	"github.com/skynetservices/skynet/daemon"
-	"github.com/skynetservices/skynet/service"
-	"io"
-	//"log"
-	"os"
-	"strings"
+	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet2/service"
+	_ "github.com/skynetservices/zkmanager"
+	"time"
 )
 
 // Daemon will run and maintain skynet services.
 //
-// Daemon will initially deploy those specified in the file given in
-// the "-config" option
-//
 // Daemon will run the "SkynetDeployment" service, which can be used
 // to remotely spawn new services on the host.
 func main() {
-	config, args := skynet.GetServiceConfig()
+	si := skynet.NewServiceInfo("SkynetDaemon", "2.0.0")
+	deployment := NewSkynetDaemon()
 
-	config.Name = "SkynetDaemon"
-	config.Version = "1"
-
-	// skydaemon does not listen to admin RPC requests
-	config.AdminAddr = nil
-
-	var err error
-	mlogger, err := skynet.NewMongoSemanticLogger(config.MongoConfig.MongoHosts, "skynet",
-		"log", config.UUID)
-	clogger := skynet.NewConsoleSemanticLogger("skydaemon", os.Stdout)
-	config.Log = skynet.NewMultiSemanticLogger(mlogger, clogger)
-	if err != nil {
-		config.Log.Trace("Could not connect to mongo db for logging")
-	}
-
-	deployment := &SkynetDaemon{
-		Log:      config.Log,
-		Services: map[string]*SubService{},
-	}
-
-	s := service.CreateService(deployment, config)
+	s := service.CreateService(deployment, si)
 
 	deployment.Service = s
 
 	// handle panic so that we remove ourselves from the pool in case of catastrophic failure
-	/*defer func() {
+	defer func() {
 		s.Shutdown()
-		if err := recover(); err != nil {
-			log.Println("Unrecovered error occured: ", err)
-		}
-	}()*/
+		deployment.closeStateFile()
 
-	if len(args) == 1 {
-		err := deployConfig(deployment, args[0])
-		if err != nil {
-			config.Log.Error(err.Error())
+		if err := recover(); err != nil {
+			e := err.(error)
+			log.Fatal("Unrecovered error occured: " + e.Error())
 		}
-	}
+	}()
+
+	// Collect Host metrics
+	statTicker := time.Tick((5 * time.Second))
+	go func() {
+		for _ = range statTicker {
+			deployment.updateHostStats(si.ServiceAddr.IPAddress)
+		}
+	}()
 
 	// If we pass false here service will not be Registered
 	// we could do other work/tasks by implementing the Started method and calling Register() when we're ready
-	s.Start(true).Wait()
-}
-
-// deploy each of the services listed in the provided file
-func deployConfig(s *SkynetDaemon, cfg string) (err error) {
-	cfgFile, err := os.Open(cfg)
-	if err != nil {
-		return
-	}
-	br := bufio.NewReader(cfgFile)
-	for {
-		var bline []byte
-		var prefix bool
-		bline, prefix, err = br.ReadLine()
-		if err == io.EOF {
-			err = nil
-			break
-		}
-		if err != nil {
-			return
-		}
-		if prefix {
-			err = errors.New("Config line to long in " + cfg)
-			return
-		}
-		line := strings.TrimSpace(string(bline))
-		if len(line) == 0 {
-			continue
-		}
-
-		split := strings.Index(line, " ")
-		if split == -1 {
-			split = len(line)
-		}
-		servicePath := line[:split]
-		args := strings.TrimSpace(line[split:])
-		s.Deploy(&skynet.RequestInfo{}, daemon.DeployRequest{ServicePath: servicePath, Args: args}, &daemon.DeployResponse{})
-	}
-	return
+	s.Start().Wait()
 }
