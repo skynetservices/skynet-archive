@@ -2,8 +2,8 @@ package skynet
 
 import (
 	"fmt"
-	"github.com/skynetservices/skynet2/config"
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet/config"
+	"github.com/skynetservices/skynet/log"
 	"net"
 	"strconv"
 	"strings"

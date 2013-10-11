@@ -3,7 +3,7 @@ package config
 import (
 	"flag"
 	"github.com/robfig/config"
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet/log"
 	"os"
 	"runtime"
 	"time"

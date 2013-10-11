@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet"
 	"testing"
 )
 

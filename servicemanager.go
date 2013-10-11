@@ -1,7 +1,7 @@
 package skynet
 
 import (
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet/log"
 )
 
 const (

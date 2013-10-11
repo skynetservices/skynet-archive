@@ -2,8 +2,8 @@ package roundrobin
 
 import (
 	"container/list"
-	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/client/loadbalancer"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/client/loadbalancer"
 	"sync"
 )
 

@@ -6,8 +6,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/log"
 	"go/build"
 	"io/ioutil"
 	"os/exec"
@@ -258,7 +258,7 @@ func (b *builder) runTests() {
 
 func (b *builder) testSkynet() {
 	fmt.Println("Testing Skynet")
-	p := path.Join(b.BuildConfig.Jail, "src/github.com/skynetservices/skynet2")
+	p := path.Join(b.BuildConfig.Jail, "src/github.com/skynetservices/skynet")
 
 	b.getPackageDependencies(p)
 

@@ -1,11 +1,11 @@
 package service
 
 import (
-	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/config"
-	"github.com/skynetservices/skynet2/daemon"
-	"github.com/skynetservices/skynet2/log"
-	"github.com/skynetservices/skynet2/rpc/bsonrpc"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/config"
+	"github.com/skynetservices/skynet/daemon"
+	"github.com/skynetservices/skynet/log"
+	"github.com/skynetservices/skynet/rpc/bsonrpc"
 	"io"
 	"net"
 	"net/rpc"
@@ -71,32 +71,30 @@ func CreateService(sd ServiceDelegate, si *skynet.ServiceInfo) (s *Service) {
 		log.SetLogLevel(log.LevelFromString(l))
 	}
 
+	// I hope I can just rip all this out
+	/*	logWriter := log.NewMultiWriter()
 
-// I hope I can just rip all this out
-/*	logWriter := log.NewMultiWriter()
-
-	if logStdout, err := config.Bool(s.Name, s.Version, "service.log.stdout"); err == nil {
-		if logStdout {
+		if logStdout, err := config.Bool(s.Name, s.Version, "service.log.stdout"); err == nil {
+			if logStdout {
+				logWriter.AddWriter(os.Stdout)
+			}
+		} else {
+			// Stdout is enabled by default
 			logWriter.AddWriter(os.Stdout)
 		}
-	} else {
-		// Stdout is enabled by default
-		logWriter.AddWriter(os.Stdout)
-	}
 
-	if logFile, err := config.String(s.Name, s.Version, "service.log.file"); err == nil {
-		f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
+		if logFile, err := config.String(s.Name, s.Version, "service.log.file"); err == nil {
+			f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
 
-		if err != nil {
-			log.Println(log.PANIC,"Failed to open log file: ", logFile, err)
+			if err != nil {
+				log.Println(log.PANIC,"Failed to open log file: ", logFile, err)
+			}
+
+			logWriter.AddWriter(f)
 		}
 
-		logWriter.AddWriter(f)
-	}
-
-	log.SetOutput(logWriter)
-*/
-
+		log.SetOutput(logWriter)
+	*/
 
 	// the main rpc server
 	s.RPCServ = rpc.NewServer()

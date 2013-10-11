@@ -2,7 +2,7 @@ package bsonrpc
 
 import (
 	"github.com/kr/pretty"
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet/log"
 	"io"
 	"net/rpc"
 	"reflect"

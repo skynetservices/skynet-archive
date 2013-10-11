@@ -2,9 +2,9 @@ package client
 
 import (
 	"errors"
-	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/client/conn"
-	"github.com/skynetservices/skynet2/pools"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/client/conn"
+	"github.com/skynetservices/skynet/pools"
 	"sync"
 )
 

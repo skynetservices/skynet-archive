@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/kballard/go-shellquote"
-	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/daemon"
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/daemon"
+	"github.com/skynetservices/skynet/log"
 	"os"
 	"sync"
 	"text/template"

@@ -1,8 +1,8 @@
 package test
 
 import (
-	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/client/conn"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/client/conn"
 )
 
 type Pool struct {

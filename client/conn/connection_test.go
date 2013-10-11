@@ -2,8 +2,8 @@ package conn
 
 import (
 	"errors"
-	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/rpc/bsonrpc"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/rpc/bsonrpc"
 	"labix.org/v2/mgo/bson"
 	"net"
 	"net/rpc"

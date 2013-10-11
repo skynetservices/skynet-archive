@@ -4,7 +4,7 @@ import (
 	"code.google.com/p/go.crypto/ssh"
 	"code.google.com/p/gopass"
 	"errors"
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet/log"
 )
 
 type SSHConn struct {

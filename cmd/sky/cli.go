@@ -7,7 +7,7 @@ Implement Build/Deploy
 import (
 	"fmt"
 	"github.com/sbinet/liner"
-	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet"
 	"regexp"
 	"strconv"
 	"strings"

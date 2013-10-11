@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/config"
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/config"
+	"github.com/skynetservices/skynet/log"
 	_ "github.com/skynetservices/zkmanager"
 	"os"
 	"strconv"

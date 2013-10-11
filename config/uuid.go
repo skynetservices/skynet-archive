@@ -3,7 +3,7 @@ package config
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet/log"
 	"io"
 )
 

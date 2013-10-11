@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet"
 )
 
 type ServiceManager struct {

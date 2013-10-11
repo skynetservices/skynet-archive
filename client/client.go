@@ -2,12 +2,12 @@ package client
 
 import (
 	"errors"
-	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/client/conn"
-	"github.com/skynetservices/skynet2/client/loadbalancer"
-	"github.com/skynetservices/skynet2/client/loadbalancer/roundrobin"
-	"github.com/skynetservices/skynet2/config"
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/client/conn"
+	"github.com/skynetservices/skynet/client/loadbalancer"
+	"github.com/skynetservices/skynet/client/loadbalancer/roundrobin"
+	"github.com/skynetservices/skynet/config"
+	"github.com/skynetservices/skynet/log"
 	"sync"
 	"time"
 )

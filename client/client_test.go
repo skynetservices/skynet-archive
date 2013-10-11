@@ -2,9 +2,9 @@ package client
 
 import (
 	"errors"
-	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/client/loadbalancer/roundrobin"
-	"github.com/skynetservices/skynet2/test"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/client/loadbalancer/roundrobin"
+	"github.com/skynetservices/skynet/test"
 	"testing"
 	"time"
 )

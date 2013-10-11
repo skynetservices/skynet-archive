@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet/log"
 	"time"
 )
 
@@ -29,7 +29,7 @@ const (
 
 	DefaultSyslogHost = ""
 	DefaultSyslogPort = 514
-	DefaultLogLevel = log.DEBUG
+	DefaultLogLevel   = log.DEBUG
 )
 
 func GetDefaultBindAddr() string {

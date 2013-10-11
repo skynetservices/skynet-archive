@@ -2,7 +2,7 @@ package bsonrpc
 
 import (
 	"fmt"
-	"github.com/skynetservices/skynet2/log"
+	"github.com/skynetservices/skynet/log"
 	"io"
 	"labix.org/v2/mgo/bson"
 )

@@ -2,7 +2,7 @@ package loadbalancer
 
 import (
 	"errors"
-	"github.com/skynetservices/skynet2"
+	"github.com/skynetservices/skynet"
 )
 
 var (

@@ -1,9 +1,9 @@
 package client
 
 import (
-	"github.com/skynetservices/skynet2"
-	"github.com/skynetservices/skynet2/client/conn"
-	"github.com/skynetservices/skynet2/test"
+	"github.com/skynetservices/skynet"
+	"github.com/skynetservices/skynet/client/conn"
+	"github.com/skynetservices/skynet/test"
 	"labix.org/v2/mgo/bson"
 	"testing"
 	"time"
